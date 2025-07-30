@@ -11,6 +11,8 @@ from core.application.dto.content_request import ContentGenerationRequest, Conte
 from core.domain.entities.content import ContentType, ContentFormat
 from core.domain.value_objects.provider_config import ProviderConfig, LLMProvider
 from core.domain.value_objects.generation_params import GenerationParams
+from core.infrastructure.factories.provider_factory import LLMProviderFactory
+from core.infrastructure.config.settings import get_settings
 from ..dependencies import get_content_use_case
 
 logger = logging.getLogger(__name__)
@@ -87,8 +89,7 @@ class ContentListResponseModel(BaseModel):
 @router.post("/generate", response_model=ContentGenerationResponseModel)
 async def generate_content(
     request: ContentGenerationRequestModel,
-    background_tasks: BackgroundTasks,
-    use_case: GenerateContentUseCase = Depends(get_content_use_case)
+    background_tasks: BackgroundTasks
 ):
     """
     Generate content based on the provided parameters.
@@ -98,6 +99,11 @@ async def generate_content(
     """
     try:
         logger.info(f"Received content generation request: {request.dict()}")
+        logger.info(f"🔧 Requested provider: {request.provider}")
+
+        # Get use case with dynamic provider selection
+        use_case = get_content_use_case(provider_type=request.provider)
+        logger.info(f"✅ Use case created with provider: {request.provider}")
 
         # Convert API model to application DTO
         try:
@@ -219,6 +225,64 @@ async def list_content(
     except Exception as e:
         logger.error(f"Error listing content: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+class ProviderInfo(BaseModel):
+    """Information about an LLM provider."""
+    name: str
+    available: bool
+    models: List[str]
+    default_model: str
+
+
+class ProvidersResponse(BaseModel):
+    """Response model for available providers."""
+    providers: List[ProviderInfo]
+    default_provider: str
+
+
+@router.get("/providers", response_model=ProvidersResponse)
+async def get_available_providers():
+    """
+    Get available LLM providers and their models.
+
+    Returns information about all configured providers,
+    their availability status, and supported models.
+    """
+    try:
+        settings = get_settings()
+        available_providers = LLMProviderFactory.get_available_providers(settings)
+        default_provider = LLMProviderFactory.get_default_provider(settings)
+
+        providers_info = []
+
+        for provider_name in ["openai", "anthropic", "deepseek"]:
+            try:
+                provider_enum = LLMProvider(provider_name)
+
+                # Create a dummy config to get available models
+                dummy_config = ProviderConfig(provider=provider_enum)
+                models = dummy_config.get_available_models()
+                default_model = dummy_config._get_default_model()
+
+                providers_info.append(ProviderInfo(
+                    name=provider_name,
+                    available=available_providers.get(provider_name, False),
+                    models=models,
+                    default_model=default_model
+                ))
+            except ValueError:
+                # Skip invalid provider names
+                continue
+
+        return ProvidersResponse(
+            providers=providers_info,
+            default_provider=default_provider.value
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting providers: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to get providers: {str(e)}")
 
 
 @router.get("/{content_id}", response_model=ContentGenerationResponseModel)

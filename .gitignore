@@ -114,6 +114,9 @@ node_modules/
 # Data and cache directories
 data/cache/
 data/chroma/
+data/output/content/
+data/output/metadata/
+data/workflows/instances/
 *.json.bak
 diagnostic_results.json
 validation_results.json
