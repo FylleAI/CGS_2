@@ -12,6 +12,7 @@ from ...domain.repositories.agent_repository import AgentRepository
 from ...application.interfaces.llm_provider_interface import LLMProviderInterface
 from ...domain.value_objects.provider_config import ProviderConfig
 from ..logging.agent_logger import agent_logger, LogLevel, InteractionType
+from ..logging.cost_calculator import cost_calculator, TokenUsage, CostBreakdown
 
 logger = logging.getLogger(__name__)
 
@@ -120,26 +121,35 @@ class AgentExecutor:
 
             # Execute LLM call with timing
             start_time = time.time()
-            response = await self.llm_provider.generate_content(
+            llm_response = await self.llm_provider.generate_content(
                 prompt=prompt,
                 config=dynamic_config,
                 system_message=system_message
             )
             duration_ms = (time.time() - start_time) * 1000
 
-            # Estimate tokens and cost (simplified)
-            estimated_tokens = len(prompt.split()) + len(response.split())
-            estimated_cost = self._estimate_cost(estimated_tokens, dynamic_config.provider.value)
+            # Extract actual response content
+            response = llm_response.content if hasattr(llm_response, 'content') else str(llm_response)
 
-            # Log LLM response
+            # Get real token usage from API response
+            token_usage = self._extract_token_usage(llm_response)
+
+            # Calculate accurate cost
+            cost_breakdown = cost_calculator.calculate_cost(
+                provider=dynamic_config.provider.value,
+                model=dynamic_config.model,
+                token_usage=token_usage
+            )
+
+            # Log LLM response with real usage data
             agent_logger.log_llm_response(
                 session_id=session_id,
                 request_id=request_id,
                 provider=dynamic_config.provider.value,
                 model=dynamic_config.model,
                 response=response,
-                tokens_used=estimated_tokens,
-                cost_usd=estimated_cost,
+                tokens_used=token_usage.total_tokens,
+                cost_usd=cost_breakdown.total_cost,
                 duration_ms=duration_ms
             )
 
@@ -446,14 +456,50 @@ class AgentExecutor:
             logger.warning(f"⚠️ Failed to create dynamic config: {e}, using default")
             return self.provider_config
 
-    def _estimate_cost(self, tokens: int, provider: str) -> float:
-        """Estimate cost based on tokens and provider."""
-        # Simplified cost estimation (per 1K tokens)
-        cost_per_1k = {
-            'openai': 0.002,  # GPT-4 approximate
-            'anthropic': 0.008,  # Claude approximate
-            'deepseek': 0.0002  # DeepSeek approximate
-        }
+    def _extract_token_usage(self, llm_response) -> TokenUsage:
+        """Extract real token usage from LLM API response."""
+        try:
+            # Check if response has usage information
+            if hasattr(llm_response, 'usage') and llm_response.usage:
+                usage = llm_response.usage
 
-        rate = cost_per_1k.get(provider.lower(), 0.002)
-        return (tokens / 1000) * rate
+                # Handle different response formats
+                if isinstance(usage, dict):
+                    return TokenUsage(
+                        prompt_tokens=usage.get('prompt_tokens', 0),
+                        completion_tokens=usage.get('completion_tokens', 0),
+                        total_tokens=usage.get('total_tokens', 0),
+                        reasoning_tokens=usage.get('reasoning_tokens', 0),
+                        cached_tokens=usage.get('cached_tokens', 0)
+                    )
+                else:
+                    # Handle object-style usage
+                    return TokenUsage(
+                        prompt_tokens=getattr(usage, 'prompt_tokens', 0),
+                        completion_tokens=getattr(usage, 'completion_tokens', 0),
+                        total_tokens=getattr(usage, 'total_tokens', 0),
+                        reasoning_tokens=getattr(usage, 'reasoning_tokens', 0),
+                        cached_tokens=getattr(usage, 'cached_tokens', 0)
+                    )
+
+            # Fallback to estimation if no usage data
+            logger.warning("⚠️ No token usage data in LLM response, falling back to estimation")
+            return self._estimate_token_usage(llm_response)
+
+        except Exception as e:
+            logger.error(f"❌ Error extracting token usage: {e}")
+            return self._estimate_token_usage(llm_response)
+
+    def _estimate_token_usage(self, llm_response) -> TokenUsage:
+        """Fallback token estimation when real usage is not available."""
+        response_text = llm_response.content if hasattr(llm_response, 'content') else str(llm_response)
+
+        # Simple word-based estimation (rough approximation)
+        estimated_completion_tokens = len(response_text.split())
+        estimated_prompt_tokens = estimated_completion_tokens // 2  # Rough estimate
+
+        return TokenUsage(
+            prompt_tokens=estimated_prompt_tokens,
+            completion_tokens=estimated_completion_tokens,
+            total_tokens=estimated_prompt_tokens + estimated_completion_tokens
+        )

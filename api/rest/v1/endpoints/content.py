@@ -55,6 +55,19 @@ class ContentGenerationRequestModel(BaseModel):
     brand_voice: Optional[str] = None
 
 
+class WorkflowMetricsModel(BaseModel):
+    """Model for workflow execution metrics."""
+    total_cost: float = 0.0
+    total_tokens: int = 0
+    duration_seconds: float = 0.0
+    agents_used: int = 0
+    success_rate: float = 1.0
+    tasks_completed: int = 0
+    tasks_failed: int = 0
+    tool_calls: int = 0
+    llm_calls: int = 0
+
+
 class ContentGenerationResponseModel(BaseModel):
     """API model for content generation response."""
     content_id: str
@@ -73,6 +86,7 @@ class ContentGenerationResponseModel(BaseModel):
     error_message: Optional[str] = None
     warnings: List[str] = []
     metadata: dict = {}
+    workflow_metrics: Optional[WorkflowMetricsModel] = None
 
 
 class ContentListResponseModel(BaseModel):
@@ -178,6 +192,21 @@ async def generate_content(
             logger.error(f"Error during content generation: {str(e)}")
             raise
         
+        # Convert workflow metrics if present
+        workflow_metrics = None
+        if response.workflow_metrics:
+            workflow_metrics = WorkflowMetricsModel(
+                total_cost=response.workflow_metrics.total_cost,
+                total_tokens=response.workflow_metrics.total_tokens,
+                duration_seconds=response.workflow_metrics.duration_seconds,
+                agents_used=response.workflow_metrics.agents_used,
+                success_rate=response.workflow_metrics.success_rate,
+                tasks_completed=response.workflow_metrics.tasks_completed,
+                tasks_failed=response.workflow_metrics.tasks_failed,
+                tool_calls=response.workflow_metrics.tool_calls,
+                llm_calls=response.workflow_metrics.llm_calls
+            )
+
         # Convert application DTO to API model
         return ContentGenerationResponseModel(
             content_id=str(response.content_id),
@@ -195,7 +224,8 @@ async def generate_content(
             success=response.success,
             error_message=response.error_message,
             warnings=response.warnings,
-            metadata=response.metadata
+            metadata=response.metadata,
+            workflow_metrics=workflow_metrics
         )
         
     except ValueError as e:

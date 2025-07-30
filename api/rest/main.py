@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from core.infrastructure.config.settings import get_settings
 from .v1.endpoints import content, workflows, agents, system, knowledge_base
+from .endpoints import logging as logging_endpoints
 from .middleware import LoggingMiddleware
 from .exceptions import setup_exception_handlers
 
@@ -87,6 +88,10 @@ def create_app() -> FastAPI:
         knowledge_base.router,
         prefix="/api/v1",
         tags=["knowledge-base"]
+    )
+    app.include_router(
+        logging_endpoints.router,
+        tags=["logging"]
     )
     
     # Health check endpoint

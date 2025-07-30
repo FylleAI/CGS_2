@@ -4,6 +4,7 @@ Base workflow handler for dynamic workflow execution.
 
 import json
 import logging
+import time
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List, Optional
 from pathlib import Path
@@ -11,6 +12,7 @@ from pathlib import Path
 from ....domain.entities.task import Task, TaskStatus
 from ....domain.entities.workflow import Workflow
 from ...utils.template_utils import substitute_template
+from ...logging.workflow_reporter import workflow_reporter
 
 logger = logging.getLogger(__name__)
 
@@ -47,44 +49,80 @@ class WorkflowHandler(ABC):
     async def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute the complete workflow with dynamic context.
-        
+
         Args:
             context: Dynamic context with all variables from frontend
-            
+
         Returns:
             Updated context with execution results
         """
-        logger.info(f"🚀 Starting workflow execution: {self.workflow_type}")
+        workflow_id = context.get('workflow_id', f"{self.workflow_type}_{int(time.time())}")
+        logger.info(f"🚀 Starting workflow execution: {self.workflow_type} (ID: {workflow_id})")
         logger.debug(f"📊 Input context keys: {list(context.keys())}")
-        
+
+        # Start workflow tracking
+        workflow_reporter.start_workflow_tracking(
+            workflow_id=workflow_id,
+            workflow_type=self.workflow_type,
+            context=context
+        )
+
         try:
             # 1. Validate inputs (can be overridden)
             self.validate_inputs(context)
             logger.debug("✅ Input validation passed")
-            
+
             # 2. Prepare context (can be overridden)
             context = self.prepare_context(context)
             logger.debug("✅ Context preparation completed")
-            
+
             # 3. Create workflow with dynamic tasks
             workflow = self.create_workflow(context)
             logger.debug(f"✅ Created workflow with {len(workflow.tasks)} tasks")
-            
+
             # 4. Execute tasks with conditional logic
             execution_results = await self.execute_tasks(workflow, context)
             context.update(execution_results)
-            
+
             # 5. Post-process results (can be overridden)
             print(f"🔧 CALLING POST-PROCESSING: {type(self).__name__}")
             context = self.post_process_workflow(context)
             print(f"🔧 POST-PROCESSING RETURNED: {type(context)}")
             logger.debug("✅ Post-processing completed")
-            
+
+            # Get final output for reporting
+            final_output = context.get('final_content', context.get('content', ''))
+
+            # Complete workflow tracking
+            workflow_metrics = workflow_reporter.complete_workflow_tracking(
+                workflow_id=workflow_id,
+                final_output=final_output,
+                success=True
+            )
+
+            # Add metrics to context for API response
+            if workflow_metrics:
+                context['workflow_metrics'] = {
+                    'total_cost': workflow_metrics.total_cost,
+                    'total_tokens': workflow_metrics.total_tokens,
+                    'duration_seconds': workflow_metrics.total_duration_ms / 1000,
+                    'agents_used': len(workflow_metrics.agents_used),
+                    'success_rate': workflow_metrics.success_rate
+                }
+
             logger.info(f"🎉 Workflow execution completed: {self.workflow_type}")
             return context
-            
+
         except Exception as e:
             logger.error(f"❌ Workflow execution failed: {self.workflow_type} - {str(e)}")
+
+            # Complete workflow tracking with error
+            workflow_reporter.complete_workflow_tracking(
+                workflow_id=workflow_id,
+                final_output="",
+                success=False
+            )
+
             raise
     
     def create_workflow(self, context: Dict[str, Any]) -> Workflow:

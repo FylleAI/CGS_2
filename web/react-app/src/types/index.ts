@@ -67,6 +67,14 @@ export interface ProvidersResponse {
   default_provider: string;
 }
 
+export interface WorkflowMetrics {
+  total_cost: number;
+  total_tokens: number;
+  duration_seconds: number;
+  agents_used: number;
+  success_rate: number;
+}
+
 export interface GenerationResponse {
   contentId: string;
   title: string;
@@ -76,6 +84,7 @@ export interface GenerationResponse {
   generationTime: number;
   success: boolean;
   errorMessage?: string;
+  workflowMetrics?: WorkflowMetrics;
 }
 
 export interface AppState {
