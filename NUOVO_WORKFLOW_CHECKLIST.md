@@ -86,11 +86,17 @@ class {NomeWorkflow}Handler(WorkflowHandler):
     def post_process_workflow(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Final post-processing."""
         try:
-            # Aggiungi post-processing finale
+            # Aggiungi post-processing finale specifico del workflow
+
+            # CRITICAL: Always call parent method to preserve workflow_metrics
+            context = super().post_process_workflow(context)
+            logger.info("✅ Parent post-processing completed - workflow_metrics preserved")
+
             return context
         except Exception as e:
             logger.error(f"❌ POST-PROCESSING ERROR: {str(e)}")
-            return context
+            # Even in case of error, call parent to preserve workflow_metrics
+            return super().post_process_workflow(context)
 ```
 
 **Checklist Handler**:

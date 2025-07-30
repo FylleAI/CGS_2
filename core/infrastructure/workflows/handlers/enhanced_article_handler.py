@@ -292,10 +292,14 @@ class EnhancedArticleHandler(WorkflowHandler):
             logger.info("🎉 Enhanced article workflow completed successfully")
             logger.debug(f"📊 Final summary: {summary}")
 
+            # CRITICAL: Call parent method to ensure workflow_metrics are included
+            context = super().post_process_workflow(context)
+            logger.info("✅ Parent post-processing completed - workflow_metrics preserved")
+
             return context
 
         except Exception as e:
             logger.error(f"❌ POST-PROCESSING ERROR: {str(e)}")
             logger.exception("Full traceback:")
-            # Return context as-is if post-processing fails
-            return context
+            # Even in case of error, call parent to preserve workflow_metrics
+            return super().post_process_workflow(context)
