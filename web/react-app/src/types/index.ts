@@ -55,6 +55,18 @@ export interface GenerationRequest {
   ragContentIds?: string[];
 }
 
+export interface ProviderInfo {
+  name: string;
+  available: boolean;
+  models: string[];
+  default_model: string;
+}
+
+export interface ProvidersResponse {
+  providers: ProviderInfo[];
+  default_provider: string;
+}
+
 export interface GenerationResponse {
   contentId: string;
   title: string;
