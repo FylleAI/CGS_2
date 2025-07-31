@@ -17,7 +17,7 @@ class ProviderSettings(BaseModel):
     # Anthropic settings
     anthropic_api_key: Optional[str] = None
     anthropic_base_url: Optional[str] = None
-    anthropic_default_model: str = "claude-3-5-sonnet-20241022"
+    anthropic_default_model: str = "claude-3-7-sonnet-latest"
     
     # DeepSeek settings
     deepseek_api_key: Optional[str] = None

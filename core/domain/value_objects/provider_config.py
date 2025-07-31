@@ -64,7 +64,7 @@ class ProviderConfig:
         """Get default model for the provider."""
         defaults = {
             LLMProvider.OPENAI: "gpt-4o",
-            LLMProvider.ANTHROPIC: "claude-3-5-sonnet-20241022",
+            LLMProvider.ANTHROPIC: "claude-3-7-sonnet-latest",
             LLMProvider.DEEPSEEK: "deepseek-chat"
         }
         return defaults.get(self.provider, "gpt-4o")
@@ -84,11 +84,12 @@ class ProviderConfig:
                 "o3-mini"
             ],
             LLMProvider.ANTHROPIC: [
-                "claude-3-haiku-20240307",
-                "claude-3-sonnet-20240229",
-                "claude-3-opus-20240229",
-                "claude-3-5-sonnet-20241022",
-                "claude-3-5-haiku-20241022"
+                "claude-3-5-haiku-20241022",
+                "claude-3-5-haiku-latest",
+                "claude-3-7-sonnet-20250219",
+                "claude-3-7-sonnet-latest",
+                "claude-sonnet-4-20250514",
+                "claude-opus-4-20250514"
             ],
             LLMProvider.DEEPSEEK: [
                 "deepseek-chat",
@@ -187,7 +188,7 @@ class ProviderConfig:
         )
     
     @classmethod
-    def create_anthropic_config(cls, model: str = "claude-3-5-sonnet-20241022", temperature: float = 0.7) -> "ProviderConfig":
+    def create_anthropic_config(cls, model: str = "claude-3-7-sonnet-latest", temperature: float = 0.7) -> "ProviderConfig":
         """Create Anthropic configuration."""
         return cls(
             provider=LLMProvider.ANTHROPIC,

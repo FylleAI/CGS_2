@@ -106,11 +106,14 @@ class AgentExecutor:
             # Prepare prompt
             prompt = self._prepare_prompt(task_description, context, agent_tools)
 
+            # Get dynamic provider config from context or use default
+            dynamic_config = self._get_dynamic_provider_config(context)
+
             # Log LLM request
             request_id = agent_logger.log_llm_request(
                 session_id=session_id,
-                provider=self.provider_config.provider.value,
-                model=self.provider_config.model,
+                provider=dynamic_config.provider.value,
+                model=dynamic_config.model,
                 prompt=prompt,
                 system_message=system_message
             )
@@ -119,21 +122,21 @@ class AgentExecutor:
             start_time = time.time()
             response = await self.llm_provider.generate_content(
                 prompt=prompt,
-                config=self.provider_config,
+                config=dynamic_config,
                 system_message=system_message
             )
             duration_ms = (time.time() - start_time) * 1000
 
             # Estimate tokens and cost (simplified)
             estimated_tokens = len(prompt.split()) + len(response.split())
-            estimated_cost = self._estimate_cost(estimated_tokens, self.provider_config.provider.value)
+            estimated_cost = self._estimate_cost(estimated_tokens, dynamic_config.provider.value)
 
             # Log LLM response
             agent_logger.log_llm_response(
                 session_id=session_id,
                 request_id=request_id,
-                provider=self.provider_config.provider.value,
-                model=self.provider_config.model,
+                provider=dynamic_config.provider.value,
+                model=dynamic_config.model,
                 response=response,
                 tokens_used=estimated_tokens,
                 cost_usd=estimated_cost,
@@ -381,6 +384,67 @@ class AgentExecutor:
                 agent_response = agent_response.replace(tool_call, error_text)
 
         return agent_response
+
+    def _get_dynamic_provider_config(self, context: Dict[str, Any]) -> ProviderConfig:
+        """
+        Get dynamic provider configuration from context or use default.
+
+        This method checks the context for provider, model, and temperature
+        settings and creates a new ProviderConfig if they exist, otherwise
+        returns the default configuration.
+        """
+        # Check if context has provider configuration
+        provider_name = context.get('provider')
+        model = context.get('model')
+        temperature = context.get('temperature')
+
+        # If no dynamic config in context, use default
+        if not provider_name and not model:
+            return self.provider_config
+
+        # Create dynamic config
+        try:
+            # Use provider from context or default
+            if provider_name:
+                from ...domain.value_objects.provider_config import LLMProvider
+                provider = LLMProvider(provider_name)
+            else:
+                provider = self.provider_config.provider
+
+            # Use model from context or default for provider
+            if not model:
+                # Get default model for the provider
+                defaults = {
+                    LLMProvider.OPENAI: "gpt-4o",
+                    LLMProvider.ANTHROPIC: "claude-3-7-sonnet-latest",
+                    LLMProvider.DEEPSEEK: "deepseek-chat"
+                }
+                model = defaults.get(provider, self.provider_config.model)
+
+            # Use temperature from context or default
+            if temperature is None:
+                temperature = self.provider_config.temperature
+
+            # Create new config with dynamic values
+            dynamic_config = ProviderConfig(
+                provider=provider,
+                model=model,
+                temperature=temperature,
+                max_tokens=self.provider_config.max_tokens,
+                top_p=self.provider_config.top_p,
+                frequency_penalty=self.provider_config.frequency_penalty,
+                presence_penalty=self.provider_config.presence_penalty,
+                api_key=self.provider_config.api_key,
+                base_url=self.provider_config.base_url,
+                additional_params=self.provider_config.additional_params
+            )
+
+            logger.debug(f"🔧 Using dynamic config: {provider.value}/{model} (temp: {temperature})")
+            return dynamic_config
+
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to create dynamic config: {e}, using default")
+            return self.provider_config
 
     def _estimate_cost(self, tokens: int, provider: str) -> float:
         """Estimate cost based on tokens and provider."""

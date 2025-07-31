@@ -32,6 +32,7 @@ import { useAppStore } from '../store/appStore';
 import { GenerationRequest } from '../types';
 import apiService from '../services/api';
 import RAGContentSelector from './RAGContentSelector';
+import ProviderSelector from './ProviderSelector';
 
 // Enhanced Article Schema - Adattato dal workflow originale
 const enhancedArticleSchema = yup.object({
@@ -175,6 +176,8 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
   const { selectedClient, selectedWorkflow } = useAppStore();
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedRAGContents, setSelectedRAGContents] = useState<string[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<string>('openai');
+  const [selectedModel, setSelectedModel] = useState<string>('gpt-4o');
 
   // Determine schema based on workflow
   const getValidationSchema = () => {
@@ -201,8 +204,15 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
   });
 
   function getDefaultValues() {
+    const baseDefaults = {
+      provider: selectedProvider,
+      model: selectedModel,
+      temperature: 0.7,
+    };
+
     if (selectedWorkflow?.id === 'enhanced_article') {
       return {
+        ...baseDefaults,
         topic: '',
         target_word_count: 800,
         target: selectedClient?.targetAudience || '',
@@ -213,6 +223,7 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
       };
     } else if (selectedWorkflow?.id === 'newsletter_premium') {
       return {
+        ...baseDefaults,
         newsletter_topic: '',
         target_word_count: 600,
         target: selectedClient?.targetAudience || '',
@@ -222,6 +233,7 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
       };
     } else if (selectedWorkflow?.id === 'premium_newsletter') {
       return {
+        ...baseDefaults,
         newsletter_topic: '',
         premium_sources: '',
         target_audience: selectedClient?.targetAudience || '',
@@ -232,7 +244,7 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
         custom_instructions: '',
       };
     }
-    return {};
+    return baseDefaults;
   }
 
   // Reset form when workflow changes
@@ -753,6 +765,16 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
       {selectedWorkflow.id === 'enhanced_article' && renderEnhancedArticleForm()}
       {selectedWorkflow.id === 'newsletter_premium' && renderNewsletterPremiumForm()}
       {selectedWorkflow.id === 'premium_newsletter' && renderPremiumNewsletterForm()}
+
+      {/* Provider Selection */}
+      <Divider sx={{ my: 4 }} />
+      <ProviderSelector
+        control={control}
+        selectedProvider={selectedProvider}
+        selectedModel={selectedModel}
+        onProviderChange={setSelectedProvider}
+        onModelChange={setSelectedModel}
+      />
 
       {/* RAG Content Selection */}
       {selectedClient?.ragEnabled && (

@@ -6,12 +6,14 @@ import {
   GenerationRequest,
   GenerationResponse,
   SystemInfo,
-  ApiResponse
+  ApiResponse,
+  ProviderInfo,
+  ProvidersResponse
 } from '../types';
 
 // Configure axios instance
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
   timeout: 120000, // Increased to 2 minutes for content generation
   headers: {
     'Content-Type': 'application/json',
@@ -54,6 +56,30 @@ export const apiService = {
   async getHealth(): Promise<any> {
     const response = await api.get('/health');
     return response.data;
+  },
+
+  // Provider endpoints
+  async getAvailableProviders(): Promise<ProvidersResponse> {
+    console.log('🔧 Fetching available LLM providers');
+    try {
+      const response = await api.get<ProvidersResponse>('/api/v1/content/providers');
+      console.log('✅ Providers fetched successfully:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching providers:', error);
+      // Fallback to default providers
+      return {
+        providers: [
+          {
+            name: 'openai',
+            available: true,
+            models: ['gpt-4o', 'gpt-4', 'gpt-3.5-turbo'],
+            default_model: 'gpt-4o'
+          }
+        ],
+        default_provider: 'openai'
+      };
+    }
   },
 
   // Client profiles endpoints
@@ -318,6 +344,10 @@ export const apiService = {
       client_profile: request.clientProfile,
       workflow_type: request.workflowType,
       selected_documents: request.ragContentIds || [], // Pass selected RAG content IDs
+      // Provider selection
+      provider: request.parameters.provider || 'openai',
+      model: request.parameters.model || 'gpt-4o',
+      temperature: request.parameters.temperature || 0.7,
       ...request.parameters
     };
 
