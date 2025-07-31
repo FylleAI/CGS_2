@@ -75,14 +75,28 @@ class ContentGenerationRequest:
 
 
 @dataclass
+class WorkflowMetrics:
+    """Workflow execution metrics."""
+    total_cost: float = 0.0
+    total_tokens: int = 0
+    duration_seconds: float = 0.0
+    agents_used: int = 0
+    success_rate: float = 1.0
+    tasks_completed: int = 0
+    tasks_failed: int = 0
+    tool_calls: int = 0
+    llm_calls: int = 0
+
+
+@dataclass
 class ContentGenerationResponse:
     """
     Response DTO for content generation.
-    
+
     This DTO encapsulates the result of content generation,
     including the generated content and metadata about the process.
     """
-    
+
     content_id: UUID
     title: str
     body: str
@@ -99,6 +113,7 @@ class ContentGenerationResponse:
     error_message: Optional[str] = None
     warnings: List[str] = None
     metadata: Dict[str, Any] = None
+    workflow_metrics: Optional[WorkflowMetrics] = None
     
     def __post_init__(self) -> None:
         """Initialize default values."""
