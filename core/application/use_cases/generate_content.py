@@ -12,7 +12,7 @@ from ...domain.entities.agent import Agent, AgentRole
 from ...domain.repositories.content_repository import ContentRepository
 from ...domain.repositories.workflow_repository import WorkflowRepository
 from ...domain.repositories.agent_repository import AgentRepository
-from ..dto.content_request import ContentGenerationRequest, ContentGenerationResponse
+from ..dto.content_request import ContentGenerationRequest, ContentGenerationResponse, WorkflowMetrics
 from ..interfaces.llm_provider_interface import LLMProviderInterface
 from ..interfaces.rag_interface import RAGInterface
 from ...infrastructure.orchestration.task_orchestrator import TaskOrchestrator
@@ -97,7 +97,23 @@ class GenerateContentUseCase:
             # 5. Calculate execution time
             execution_time = (datetime.utcnow() - start_time).total_seconds()
 
-            # 6. Create response
+            # 6. Extract workflow metrics from result
+            workflow_metrics = None
+            if 'workflow_metrics' in workflow_result:
+                metrics_data = workflow_result['workflow_metrics']
+                workflow_metrics = WorkflowMetrics(
+                    total_cost=metrics_data.get('total_cost', 0.0),
+                    total_tokens=metrics_data.get('total_tokens', 0),
+                    duration_seconds=metrics_data.get('duration_seconds', 0.0),
+                    agents_used=metrics_data.get('agents_used', 0),
+                    success_rate=metrics_data.get('success_rate', 1.0),
+                    tasks_completed=metrics_data.get('tasks_completed', 0),
+                    tasks_failed=metrics_data.get('tasks_failed', 0),
+                    tool_calls=metrics_data.get('tool_calls', 0),
+                    llm_calls=metrics_data.get('llm_calls', 0)
+                )
+
+            # 7. Create response
             response = ContentGenerationResponse(
                 content_id=saved_content.id,
                 title=saved_content.title,
@@ -112,6 +128,7 @@ class GenerateContentUseCase:
                 tasks_completed=workflow_result.get('tasks_completed', 0),
                 total_tasks=workflow_result.get('total_tasks', 0),
                 success=True,
+                workflow_metrics=workflow_metrics,
                 metadata={
                     "workflow_type": request.workflow_type,
                     "client_profile": request.client_profile,

@@ -31,6 +31,7 @@ import {
 import { format } from 'date-fns';
 
 import { GenerationResponse } from '../types';
+import WorkflowMetrics from './WorkflowMetrics';
 
 interface GenerationResultsProps {
   result?: GenerationResponse;
@@ -199,6 +200,13 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
                       </Button>
                     )}
                   </Box>
+
+                  {/* Workflow Metrics */}
+                  {result.workflowMetrics && (
+                    <Box sx={{ mb: 2 }}>
+                      <WorkflowMetrics metrics={result.workflowMetrics} />
+                    </Box>
+                  )}
 
                   {/* Content Preview */}
                   <Collapse in={isExpanded}>

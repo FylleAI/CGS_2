@@ -6,42 +6,83 @@ import {
   GenerationRequest,
   GenerationResponse,
   SystemInfo,
-  ApiResponse,
-  ProviderInfo,
   ProvidersResponse
 } from '../types';
+import { frontendLogger, EventType } from './logger';
 
 // Configure axios instance
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
   timeout: 120000, // Increased to 2 minutes for content generation
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Request interceptor for logging
+// Request interceptor for enhanced logging
 api.interceptors.request.use(
   (config) => {
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    const requestId = frontendLogger.logApiRequest(
+      config.method?.toUpperCase() || 'UNKNOWN',
+      config.url || '',
+      {
+        headers: config.headers,
+        data: config.data ? JSON.stringify(config.data).substring(0, 500) : undefined
+      }
+    );
+
+    // Store request ID and start time for response logging
+    (config as any).metadata = {
+      requestId,
+      startTime: Date.now()
+    };
+
     return config;
   },
   (error) => {
-    console.error('API Request Error:', error);
+    frontendLogger.error(EventType.API_ERROR, 'API Request setup failed', {
+      error: error.message,
+      stack: error.stack
+    });
     return Promise.reject(error);
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor for enhanced logging and error handling
 api.interceptors.response.use(
   (response) => {
+    const metadata = (response.config as any).metadata;
+    const duration = Date.now() - (metadata?.startTime || 0);
+
+    frontendLogger.logApiResponse(
+      metadata?.requestId || 'unknown',
+      response.status,
+      duration,
+      {
+        responseSize: JSON.stringify(response.data).length,
+        contentType: response.headers['content-type']
+      }
+    );
+
     return response;
   },
   (error) => {
-    console.error('API Response Error:', error);
+    const metadata = (error.config as any)?.metadata;
+    const duration = Date.now() - (metadata?.startTime || 0);
+
+    frontendLogger.logApiError(
+      metadata?.requestId || 'unknown',
+      error,
+      duration
+    );
+
     if (error.response?.status === 401) {
-      // Handle unauthorized
+      frontendLogger.warn(EventType.USER_ACTION, 'Unauthorized access attempt', {
+        url: error.config?.url,
+        status: error.response.status
+      });
     }
+
     return Promise.reject(error);
   }
 );
@@ -335,7 +376,12 @@ export const apiService = {
 
   // Content generation endpoint
   async generateContent(request: GenerationRequest): Promise<GenerationResponse> {
-    console.log('🚀 Starting content generation with request:', request);
+    // Start workflow tracking
+    const workflowId = frontendLogger.logWorkflowStart(request.workflowType, {
+      clientProfile: request.clientProfile,
+      parameters: request.parameters,
+      ragContentIds: request.ragContentIds
+    });
 
     const payload = {
       topic: request.parameters.topic || request.parameters.newsletter_topic,
@@ -348,17 +394,23 @@ export const apiService = {
       provider: request.parameters.provider || 'openai',
       model: request.parameters.model || 'gpt-4o',
       temperature: request.parameters.temperature || 0.7,
+      workflow_id: workflowId, // Include workflow ID for backend tracking
       ...request.parameters
     };
 
-    console.log('📤 Sending payload to backend:', payload);
+    frontendLogger.info(EventType.WORKFLOW_START, 'Content generation started', {
+      workflowId,
+      workflowType: request.workflowType,
+      payload: { ...payload, selected_documents: payload.selected_documents.length }
+    });
 
     try {
       const response = await api.post<any>('/api/v1/content/generate', payload, {
         timeout: 180000 // 3 minutes for content generation specifically
       });
 
-      console.log('✅ Content generation successful:', response.data);
+      // Extract workflow metrics from backend response
+      const backendMetrics = response.data.workflow_metrics;
 
       // Transform backend response to frontend format
       const result: GenerationResponse = {
@@ -368,13 +420,18 @@ export const apiService = {
         contentType: response.data.content_type || response.data.contentType || 'article',
         wordCount: response.data.word_count || response.data.wordCount || 0,
         generationTime: response.data.generation_time_seconds || response.data.generationTime || 0,
-        success: true
+        success: true,
+        workflowMetrics: backendMetrics // Include backend metrics in response
       };
+
+      // Log workflow completion
+      frontendLogger.logWorkflowComplete(workflowId, result, backendMetrics);
 
       return result;
 
     } catch (error) {
-      console.error('❌ Content generation failed:', error);
+      // Log workflow error
+      frontendLogger.logWorkflowError(workflowId, error);
       throw error;
     }
   }

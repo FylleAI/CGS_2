@@ -2,6 +2,31 @@
 
 A refactored, clean architecture implementation of the Content Generation System following Domain-Driven Design principles.
 
+## ✨ **Key Features**
+
+### 🤖 **Multi-Agent Workflows**
+- **Enhanced Article**: Research-driven content with RAG integration
+- **Premium Newsletter**: Advanced newsletter generation with source analysis
+- **Extensible Framework**: Easy addition of new workflow types
+
+### 💰 **Real-Time Analytics**
+- **Cost Tracking**: Accurate LLM cost calculation from API responses
+- **Performance Metrics**: Token usage, duration, success rates
+- **Agent Analytics**: Individual agent performance tracking
+- **Workflow Insights**: Complete execution analytics
+
+### 🏗️ **Clean Architecture**
+- **Domain-Driven Design**: Pure business logic separation
+- **Dependency Inversion**: Framework-agnostic core
+- **Extensible Design**: Easy provider and workflow addition
+- **Test-Driven**: Comprehensive testing suite
+
+### 🌐 **Modern Frontend**
+- **React Interface**: Modern, responsive UI
+- **Real-Time Updates**: Live workflow metrics
+- **Knowledge Base Integration**: Document management
+- **Multi-Provider Support**: OpenAI, Anthropic, DeepSeek
+
 ## Architecture Overview
 
 This project implements Clean Architecture with clear separation of concerns:
@@ -85,9 +110,25 @@ pytest tests/e2e/
 
 ## Documentation
 
-- [Architecture Guide](docs/architecture/README.md)
-- [API Documentation](docs/api/README.md)
-- [User Guide](docs/user_guide/README.md)
+### 📚 **Core Documentation**
+- [Architecture Guide](docs/architecture/README.md) - Clean Architecture implementation
+- [Enhanced Logging System](ENHANCED_LOGGING_SYSTEM.md) - Real-time analytics and cost tracking
+- [Workflow Implementation Index](WORKFLOW_IMPLEMENTATION_INDEX.md) - Complete workflow guide
+
+### 🚀 **Development Guides**
+- [New Workflow Checklist](NUOVO_WORKFLOW_CHECKLIST.md) - Step-by-step workflow creation
+- [Premium Newsletter Guide](PREMIUM_NEWSLETTER_IMPLEMENTATION_GUIDE.md) - Advanced workflow example
+- [Frontend Integration Guide](frontend_integration_guide.md) - React frontend integration
+
+### 🔧 **Setup & Configuration**
+- [Supabase Setup Guide](supabase_setup_guide.md) - Database configuration
+- [Migration Guide](MIGRATION_GUIDE.md) - Legacy system migration
+- [Error Recovery Guide](ERROR_RECOVERY_GUIDE.md) - Troubleshooting
+
+### 📊 **System Status**
+- [System Status Report](SYSTEM_STATUS_REPORT.md) - Current implementation status
+- [Debugging Checkpoint](DEBUGGING_CHECKPOINT.md) - Latest debugging session
+- [Quick Reference](QUICK_REFERENCE.md) - Commands and shortcuts
 
 ## Migration from Legacy System
 
