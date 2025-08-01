@@ -390,10 +390,26 @@ The future of {topic} promises continued evolution and new opportunities for tho
                     tools=[]
                 )
 
-            # Find agent by role
-            agents = await agent_repository.get_by_role(AgentRole(task.agent_role))
-            if agents:
-                return agents[0]  # Return first matching agent
+            # Find agent by role, preferring client-specific agents
+            client_profile = context.get('client_name', context.get('client_profile', 'default'))
+
+            # First try to get client-specific agents
+            if client_profile and client_profile != 'default':
+                client_agents = await agent_repository.get_by_client_profile(client_profile)
+                for agent in client_agents:
+                    if agent.role.value.lower() == task.agent_role.lower():
+                        logger.info(f"✅ Found client-specific agent: {agent.name} for role {task.agent_role}")
+                        return agent
+
+            # Fallback to general agents by role
+            try:
+                agent_role_enum = AgentRole(task.agent_role.upper())
+                agents = await agent_repository.get_by_role(agent_role_enum)
+                if agents:
+                    logger.info(f"✅ Found general agent: {agents[0].name} for role {task.agent_role}")
+                    return agents[0]  # Return first matching agent
+            except ValueError:
+                logger.warning(f"Invalid agent role: {task.agent_role}")
 
             logger.warning(f"No agent found for role: {task.agent_role}")
             return None
