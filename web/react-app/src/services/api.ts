@@ -12,7 +12,7 @@ import { frontendLogger, EventType } from './logger';
 
 // Configure axios instance
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000',
   timeout: 120000, // Increased to 2 minutes for content generation
   headers: {
     'Content-Type': 'application/json',
@@ -203,6 +203,91 @@ export const apiService = {
         ]
       },
       {
+        id: 'siebert_premium_newsletter',
+        name: 'siebert_premium_newsletter',
+        displayName: 'Siebert Premium Newsletter',
+        description: 'Optimized Gen Z newsletter with Perplexity AI research and 8-section format',
+        category: 'newsletter',
+        requiredFields: [
+          {
+            id: 'topic',
+            name: 'topic',
+            label: 'Newsletter Topic',
+            type: 'textarea',
+            required: true,
+            placeholder: 'Enter the main financial theme for this newsletter edition',
+            validation: { min: 5, max: 200 }
+          },
+          {
+            id: 'target_word_count',
+            name: 'target_word_count',
+            label: 'Target Word Count',
+            type: 'number',
+            required: true,
+            placeholder: '1000',
+            validation: { min: 800, max: 1200 }
+          }
+        ],
+        optionalFields: [
+          {
+            id: 'target_audience',
+            name: 'target_audience',
+            label: 'Target Audience',
+            type: 'select',
+            required: false,
+            options: [
+              { value: 'Gen Z investors and young professionals', label: 'Gen Z Investors (Default)' },
+              { value: 'Millennial professionals building wealth', label: 'Millennial Professionals' },
+              { value: 'Mixed Gen Z and Millennial audience', label: 'Mixed Audience' }
+            ]
+          },
+          {
+            id: 'cultural_trends',
+            name: 'cultural_trends',
+            label: 'Cultural Trends',
+            type: 'textarea',
+            required: false,
+            placeholder: 'TikTok trends, viral topics, current events, gaming references...'
+          },
+          {
+            id: 'exclude_topics',
+            name: 'exclude_topics',
+            label: 'Topics to Exclude',
+            type: 'text',
+            required: false,
+            placeholder: 'crypto day trading, get rich quick schemes, penny stocks'
+          },
+          {
+            id: 'research_timeframe',
+            name: 'research_timeframe',
+            label: 'Research Timeframe',
+            type: 'select',
+            required: false,
+            options: [
+              { value: 'last 7 days', label: 'Last 7 days (Default)' },
+              { value: 'yesterday', label: 'Yesterday' },
+              { value: 'last month', label: 'Last month' }
+            ]
+          },
+          {
+            id: 'premium_sources',
+            name: 'premium_sources',
+            label: 'Premium Research Sources',
+            type: 'textarea',
+            required: false,
+            placeholder: 'Custom premium sources (one per line). Leave empty to use Siebert defaults.'
+          },
+          {
+            id: 'custom_instructions',
+            name: 'custom_instructions',
+            label: 'Custom Instructions',
+            type: 'textarea',
+            required: false,
+            placeholder: 'Additional requirements or focus areas for this edition...'
+          }
+        ]
+      },
+      {
         id: 'premium_newsletter',
         name: 'premium_newsletter',
         displayName: 'Premium Newsletter',
@@ -247,14 +332,7 @@ export const apiService = {
             placeholder: '1200',
             validation: { min: 800, max: 2500 }
           },
-          {
-            id: 'edition_number',
-            name: 'edition_number',
-            label: 'Edition Number',
-            type: 'number',
-            required: false,
-            placeholder: '1'
-          },
+
           {
             id: 'exclude_topics',
             name: 'exclude_topics',

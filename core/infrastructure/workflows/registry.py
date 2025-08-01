@@ -123,7 +123,43 @@ def get_workflow_handler(workflow_type: str) -> WorkflowHandler:
 
 async def execute_dynamic_workflow(workflow_type: str, context: Dict[str, Any]) -> Dict[str, Any]:
     """Execute a workflow with dynamic context."""
-    return await workflow_registry.execute_workflow(workflow_type, context)
+    # Add agent repository to context if not present
+    if 'agent_repository' not in context:
+        from ..repositories.yaml_agent_repository import YamlAgentRepository
+        context['agent_repository'] = YamlAgentRepository()
+
+    # Add agent executor to context if not present
+    if 'agent_executor' not in context:
+        from ..orchestration.agent_executor import AgentExecutor
+        from ..external_services.openai_adapter import OpenAIAdapter
+        from ...domain.value_objects.provider_config import ProviderConfig, LLMProvider
+        from ..config.settings import Settings
+
+        # Initialize with default settings
+        settings = Settings()
+        provider_config = ProviderConfig(
+            provider=LLMProvider.OPENAI,
+            model="gpt-4o",
+            temperature=0.7
+        )
+        llm_provider = OpenAIAdapter(settings.openai_api_key)
+
+        context['agent_executor'] = AgentExecutor(
+            agent_repository=context['agent_repository'],
+            llm_provider=llm_provider,
+            provider_config=provider_config
+        )
+
+    # Remove agent_repository from context before returning to avoid serialization issues
+    result = await workflow_registry.execute_workflow(workflow_type, context)
+
+    # Clean up non-serializable objects from result
+    if 'agent_repository' in result:
+        del result['agent_repository']
+    if 'agent_executor' in result:
+        del result['agent_executor']
+
+    return result
 
 
 def list_available_workflows() -> Dict[str, str]:
