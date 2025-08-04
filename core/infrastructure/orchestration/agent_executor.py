@@ -250,6 +250,12 @@ class AgentExecutor:
                     tools_reminder += f"- {tool}: Use [web_search] your search query [/web_search] to search the web for current information\n"
                 elif tool == "web_search_financial":
                     tools_reminder += f"- {tool}: Use [web_search_financial] topic, exclude_topics [/web_search_financial] for financial content\n"
+                elif tool == "research_premium_financial":
+                    tools_reminder += f"- {tool}: Use [research_premium_financial] topic, exclude_topics [/research_premium_financial] for premium financial research with Perplexity\n"
+                elif tool == "research_client_sources":
+                    tools_reminder += f"- {tool}: Use [research_client_sources] client_name, topic, days_back [/research_client_sources] for client-specific source research\n"
+                elif tool == "research_general_topic":
+                    tools_reminder += f"- {tool}: Use [research_general_topic] topic [/research_general_topic] for general topic research with Perplexity\n"
                 else:
                     tools_reminder += f"- {tool}: Use [{tool}] your input [/{tool}]\n"
 

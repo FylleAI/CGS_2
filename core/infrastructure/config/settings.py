@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     anthropic_api_key: Optional[str] = Field(default=None, env="ANTHROPIC_API_KEY")
     deepseek_api_key: Optional[str] = Field(default=None, env="DEEPSEEK_API_KEY")
     serper_api_key: Optional[str] = Field(default=None, env="SERPER_API_KEY")
+    perplexity_api_key: Optional[str] = Field(default=None, env="PERPLEXITY_API_KEY")
     
     # Database settings
     database_url: str = Field(default="sqlite:///./cgsref.db", env="DATABASE_URL")
