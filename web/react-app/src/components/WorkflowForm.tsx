@@ -74,12 +74,45 @@ const newsletterPremiumSchema = yup.object({
     .string()
     .required('Target audience is required')
     .min(3, 'Target must be at least 3 characters'),
-  edition_number: yup
-    .number()
-    .required('Edition number is required')
-    .min(1, 'Edition must be at least 1'),
+
   featured_sections: yup.array().of(yup.string()).optional(),
   context: yup.string().optional(),
+});
+
+// Siebert Premium Newsletter Schema
+const siebertPremiumNewsletterSchema = yup.object({
+  topic: yup
+    .string()
+    .required('Newsletter topic is required')
+    .min(5, 'Topic must be at least 5 characters')
+    .max(200, 'Topic must be less than 200 characters'),
+  target_word_count: yup
+    .number()
+    .required('Word count is required')
+    .min(800, 'Minimum 800 words for Siebert newsletter')
+    .max(1200, 'Maximum 1200 words for Siebert newsletter'),
+  target_audience: yup
+    .string()
+    .optional(),
+  cultural_trends: yup
+    .string()
+    .optional()
+    .max(500, 'Cultural trends must be less than 500 characters'),
+  exclude_topics: yup
+    .string()
+    .optional()
+    .max(200, 'Exclude topics must be less than 200 characters'),
+  research_timeframe: yup
+    .string()
+    .optional(),
+  premium_sources: yup
+    .string()
+    .optional()
+    .max(2000, 'Premium sources must be less than 2000 characters'),
+  custom_instructions: yup
+    .string()
+    .optional()
+    .max(1000, 'Instructions must be less than 1000 characters')
 });
 
 // Premium Newsletter Schema
@@ -115,10 +148,7 @@ const premiumNewsletterSchema = yup.object({
     .optional()
     .min(800, 'Minimum 800 words')
     .max(2500, 'Maximum 2500 words'),
-  edition_number: yup
-    .number()
-    .optional()
-    .min(1, 'Edition must be at least 1'),
+
   exclude_topics: yup
     .string()
     .optional(),
@@ -146,9 +176,19 @@ type NewsletterPremiumFormData = {
   newsletter_topic: string;
   target_word_count: number;
   target: string;
-  edition_number: number;
   featured_sections?: string[];
   context?: string;
+};
+
+type SiebertPremiumNewsletterFormData = {
+  topic: string;
+  target_word_count: number;
+  target_audience?: string;
+  cultural_trends?: string;
+  exclude_topics?: string;
+  research_timeframe?: string;
+  premium_sources?: string;
+  custom_instructions?: string;
 };
 
 type PremiumNewsletterFormData = {
@@ -156,13 +196,12 @@ type PremiumNewsletterFormData = {
   premium_sources: string;
   target_audience: string;
   target_word_count?: number;
-  edition_number?: number;
   exclude_topics?: string;
   priority_sections?: string;
   custom_instructions?: string;
 };
 
-type WorkflowFormData = EnhancedArticleFormData | NewsletterPremiumFormData | PremiumNewsletterFormData;
+type WorkflowFormData = EnhancedArticleFormData | NewsletterPremiumFormData | SiebertPremiumNewsletterFormData | PremiumNewsletterFormData;
 
 interface WorkflowFormProps {
   onGenerationStart?: () => void;
@@ -185,6 +224,8 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
       return enhancedArticleSchema;
     } else if (selectedWorkflow?.id === 'newsletter_premium') {
       return newsletterPremiumSchema;
+    } else if (selectedWorkflow?.id === 'siebert_premium_newsletter') {
+      return siebertPremiumNewsletterSchema;
     } else if (selectedWorkflow?.id === 'premium_newsletter') {
       return premiumNewsletterSchema;
     }
@@ -227,9 +268,20 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
         newsletter_topic: '',
         target_word_count: 600,
         target: selectedClient?.targetAudience || '',
-        edition_number: 1,
         featured_sections: [],
         context: '',
+      };
+    } else if (selectedWorkflow?.id === 'siebert_premium_newsletter') {
+      return {
+        ...baseDefaults,
+        topic: '',
+        target_word_count: 1000,
+        target_audience: 'Gen Z investors and young professionals',
+        cultural_trends: '',
+        exclude_topics: 'crypto day trading, get rich quick schemes, penny stocks',
+        research_timeframe: 'last 7 days',
+        premium_sources: '',
+        custom_instructions: '',
       };
     } else if (selectedWorkflow?.id === 'premium_newsletter') {
       return {
@@ -238,7 +290,6 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
         premium_sources: '',
         target_audience: selectedClient?.targetAudience || '',
         target_word_count: 1200,
-        edition_number: 1,
         exclude_topics: '',
         priority_sections: '',
         custom_instructions: '',
@@ -516,23 +567,7 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
           />
         </Grid>
 
-        <Grid item xs={12} sm={4}>
-          <Controller
-            name="edition_number"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                type="number"
-                label="Edition Number *"
-                error={!!errors.edition_number}
-                helperText={errors.edition_number?.message as string}
-                InputProps={{ inputProps: { min: 1 } }}
-              />
-            )}
-          />
-        </Grid>
+
 
         {/* Context */}
         <Grid item xs={12}>
@@ -681,24 +716,7 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
           />
         </Grid>
 
-        <Grid item xs={12} sm={6}>
-          <Controller
-            name="edition_number"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                fullWidth
-                type="number"
-                label="Edition Number"
-                placeholder="1"
-                error={!!errors.edition_number}
-                helperText={errors.edition_number?.message as string}
-                InputProps={{ inputProps: { min: 1 } }}
-              />
-            )}
-          />
-        </Grid>
+
 
         {/* Exclude Topics */}
         <Grid item xs={12} sm={6}>
@@ -759,11 +777,210 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
     </Box>
   );
 
+  const renderSiebertPremiumNewsletterForm = () => (
+    <Box>
+      {/* Workflow Info */}
+      <Paper sx={{ p: 2, mb: 3, backgroundColor: 'primary.50' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <EmailIcon color="primary" />
+          <Typography variant="h6" color="primary.main">
+            Siebert Premium Newsletter
+          </Typography>
+        </Box>
+        <Typography variant="body2" color="text.secondary">
+          Optimized Gen Z newsletter with Perplexity AI research and 8-section format (800-1200 words)
+        </Typography>
+      </Paper>
+
+      <Grid container spacing={3}>
+        {/* Newsletter Topic - Campo principale */}
+        <Grid item xs={12}>
+          <Controller
+            name="topic"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="Newsletter Topic *"
+                placeholder="Enter the main financial theme for this newsletter edition"
+                error={!!errors.topic}
+                helperText={errors.topic?.message as string || "Main theme that will drive the research and content creation"}
+                variant="outlined"
+                multiline
+                rows={2}
+              />
+            )}
+          />
+        </Grid>
+
+        {/* Target Word Count - Slider */}
+        <Grid item xs={12} sm={6}>
+          <Controller
+            name="target_word_count"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                type="number"
+                label="Target Word Count *"
+                placeholder="1000"
+                error={!!errors.target_word_count}
+                helperText={errors.target_word_count?.message as string || "Siebert range: 800-1200 words"}
+                InputProps={{ inputProps: { min: 800, max: 1200, step: 50 } }}
+              />
+            )}
+          />
+        </Grid>
+
+        {/* Target Audience - Dropdown */}
+        <Grid item xs={12} sm={6}>
+          <Controller
+            name="target_audience"
+            control={control}
+            render={({ field }) => (
+              <FormControl fullWidth>
+                <InputLabel>Target Audience</InputLabel>
+                <Select
+                  {...field}
+                  label="Target Audience"
+                  error={!!errors.target_audience}
+                >
+                  <MenuItem value="Gen Z investors and young professionals">
+                    Gen Z Investors (Default)
+                  </MenuItem>
+                  <MenuItem value="Millennial professionals building wealth">
+                    Millennial Professionals
+                  </MenuItem>
+                  <MenuItem value="Mixed Gen Z and Millennial audience">
+                    Mixed Audience
+                  </MenuItem>
+                </Select>
+                {errors.target_audience && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                    {errors.target_audience?.message as string}
+                  </Typography>
+                )}
+              </FormControl>
+            )}
+          />
+        </Grid>
+
+        {/* Cultural Trends - Text Area */}
+        <Grid item xs={12}>
+          <Controller
+            name="cultural_trends"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="Cultural Trends (Optional)"
+                placeholder="TikTok trends, viral topics, current events, gaming references..."
+                error={!!errors.cultural_trends}
+                helperText={errors.cultural_trends?.message as string || "Current cultural references to integrate for Gen Z relevance"}
+                multiline
+                rows={2}
+              />
+            )}
+          />
+        </Grid>
+
+        {/* Research Timeframe */}
+        <Grid item xs={12} sm={6}>
+          <Controller
+            name="research_timeframe"
+            control={control}
+            render={({ field }) => (
+              <FormControl fullWidth>
+                <InputLabel>Research Timeframe</InputLabel>
+                <Select
+                  {...field}
+                  label="Research Timeframe"
+                  error={!!errors.research_timeframe}
+                >
+                  <MenuItem value="last 7 days">Last 7 days (Default)</MenuItem>
+                  <MenuItem value="yesterday">Yesterday</MenuItem>
+                  <MenuItem value="last month">Last month</MenuItem>
+                </Select>
+                {errors.research_timeframe && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                    {errors.research_timeframe?.message as string}
+                  </Typography>
+                )}
+              </FormControl>
+            )}
+          />
+        </Grid>
+
+        {/* Exclude Topics */}
+        <Grid item xs={12} sm={6}>
+          <Controller
+            name="exclude_topics"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="Topics to Exclude (Optional)"
+                placeholder="crypto day trading, get rich quick schemes, penny stocks"
+                error={!!errors.exclude_topics}
+                helperText={errors.exclude_topics?.message as string || "Comma-separated topics to avoid"}
+              />
+            )}
+          />
+        </Grid>
+
+        {/* Premium Sources */}
+        <Grid item xs={12}>
+          <Controller
+            name="premium_sources"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="Premium Research Sources (Optional)"
+                placeholder="Custom premium sources (one per line). Leave empty to use Siebert defaults."
+                error={!!errors.premium_sources}
+                helperText={errors.premium_sources?.message as string || "Override default Siebert premium sources with custom URLs"}
+                multiline
+                rows={3}
+              />
+            )}
+          />
+        </Grid>
+
+        {/* Custom Instructions */}
+        <Grid item xs={12}>
+          <Controller
+            name="custom_instructions"
+            control={control}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                fullWidth
+                label="Custom Instructions (Optional)"
+                placeholder="Additional requirements or focus areas for this edition..."
+                error={!!errors.custom_instructions}
+                helperText={errors.custom_instructions?.message as string || "Specific guidance for this newsletter"}
+                multiline
+                rows={2}
+              />
+            )}
+          />
+        </Grid>
+      </Grid>
+    </Box>
+  );
+
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit)}>
       {/* Workflow-specific form */}
       {selectedWorkflow.id === 'enhanced_article' && renderEnhancedArticleForm()}
       {selectedWorkflow.id === 'newsletter_premium' && renderNewsletterPremiumForm()}
+      {selectedWorkflow.id === 'siebert_premium_newsletter' && renderSiebertPremiumNewsletterForm()}
       {selectedWorkflow.id === 'premium_newsletter' && renderPremiumNewsletterForm()}
 
       {/* Provider Selection */}

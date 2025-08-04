@@ -11,11 +11,13 @@ This module provides a flexible, dynamic workflow system that allows:
 # Import handlers to register them automatically
 from .handlers.enhanced_article_handler import EnhancedArticleHandler
 from .handlers.premium_newsletter_handler import PremiumNewsletterHandler
+from .handlers.siebert_premium_newsletter_handler import SiebertPremiumNewsletterHandler
 from .registry import workflow_registry, execute_dynamic_workflow, list_available_workflows
 
 __all__ = [
     'EnhancedArticleHandler',
     'PremiumNewsletterHandler',
+    'SiebertPremiumNewsletterHandler',
     'workflow_registry',
     'execute_dynamic_workflow',
     'list_available_workflows'

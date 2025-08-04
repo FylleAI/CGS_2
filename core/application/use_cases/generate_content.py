@@ -19,6 +19,7 @@ from ...infrastructure.orchestration.task_orchestrator import TaskOrchestrator
 from ...infrastructure.orchestration.agent_executor import AgentExecutor
 from ...infrastructure.tools.web_search_tool import WebSearchTool
 from ...infrastructure.tools.rag_tool import RAGTool
+from ...infrastructure.tools.perplexity_research_tool import PerplexityResearchTool
 from ...infrastructure.workflows.registry import execute_dynamic_workflow, list_available_workflows
 
 logger = logging.getLogger(__name__)
@@ -40,7 +41,8 @@ class GenerateContentUseCase:
         llm_provider: LLMProviderInterface,
         provider_config: Any,
         rag_service: Optional[RAGInterface] = None,
-        serper_api_key: Optional[str] = None
+        serper_api_key: Optional[str] = None,
+        perplexity_api_key: Optional[str] = None
     ):
         self.content_repository = content_repository
         self.workflow_repository = workflow_repository
@@ -56,6 +58,7 @@ class GenerateContentUseCase:
         # Initialize tools
         self.web_search_tool = WebSearchTool(serper_api_key)
         self.rag_tool = RAGTool()
+        self.perplexity_tool = PerplexityResearchTool(perplexity_api_key)
 
         # Register tools with agent executor
         self._register_tools()
@@ -468,6 +471,18 @@ LENGTH: {context.get('length', 'medium')} length article
             'rag_search_content': {
                 'function': self.rag_tool.search_content,
                 'description': 'Search within client knowledge base'
+            },
+            'research_premium_financial': {
+                'function': self.perplexity_tool.research_premium_financial,
+                'description': 'Research premium financial content using Perplexity AI with domain filtering'
+            },
+            'research_client_sources': {
+                'function': self.perplexity_tool.research_client_sources,
+                'description': 'Research content from client-specific sources using Perplexity AI'
+            },
+            'research_general_topic': {
+                'function': self.perplexity_tool.research_general_topic,
+                'description': 'General topic research using Perplexity AI without domain restrictions'
             }
         })
 
