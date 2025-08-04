@@ -12,7 +12,7 @@ import { frontendLogger, EventType } from './logger';
 
 // Configure axios instance
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8001',
+  baseURL: process.env.REACT_APP_API_URL || '', // Use proxy when no explicit URL is set
   timeout: 120000, // Increased to 2 minutes for content generation
   headers: {
     'Content-Type': 'application/json',
