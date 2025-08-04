@@ -282,7 +282,14 @@ async def get_available_providers():
     try:
         settings = get_settings()
         available_providers = LLMProviderFactory.get_available_providers(settings)
-        default_provider = LLMProviderFactory.get_default_provider(settings)
+
+        # Try to get default provider, but don't fail if none available
+        try:
+            default_provider = LLMProviderFactory.get_default_provider(settings)
+            default_provider_name = default_provider.value
+        except ValueError:
+            # No providers available, use openai as fallback default
+            default_provider_name = "openai"
 
         providers_info = []
 
@@ -307,7 +314,7 @@ async def get_available_providers():
 
         return ProvidersResponse(
             providers=providers_info,
-            default_provider=default_provider.value
+            default_provider=default_provider_name
         )
 
     except Exception as e:
