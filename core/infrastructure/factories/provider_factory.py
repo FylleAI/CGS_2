@@ -9,6 +9,7 @@ from ...infrastructure.config.settings import Settings
 from ...infrastructure.external_services.openai_adapter import OpenAIAdapter
 from ...infrastructure.external_services.anthropic_adapter import AnthropicAdapter
 from ...infrastructure.external_services.deepseek_adapter import DeepSeekAdapter
+from ...infrastructure.external_services.gemini_adapter import GeminiAdapter
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,13 @@ class LLMProviderFactory:
             if not api_key:
                 raise ValueError("DeepSeek API key not configured")
             return DeepSeekAdapter(api_key)
-            
+
+        elif provider_type == LLMProvider.GEMINI:
+            api_key = settings.gemini_api_key
+            if not api_key:
+                raise ValueError("Gemini API key not configured")
+            return GeminiAdapter(api_key)
+
         else:
             raise ValueError(f"Unsupported provider type: {provider_type}")
     
@@ -100,6 +107,8 @@ class LLMProviderFactory:
                 model = "claude-3-7-sonnet-latest"
             elif provider_type == LLMProvider.DEEPSEEK:
                 model = "deepseek-chat"
+            elif provider_type == LLMProvider.GEMINI:
+                model = "gemini-2.5-pro"
         
         return ProviderConfig(
             provider=provider_type,
@@ -124,7 +133,8 @@ class LLMProviderFactory:
         return {
             "openai": bool(settings.openai_api_key),
             "anthropic": bool(settings.anthropic_api_key),
-            "deepseek": bool(settings.deepseek_api_key)
+            "deepseek": bool(settings.deepseek_api_key),
+            "gemini": bool(settings.gemini_api_key)
         }
     
     @staticmethod
@@ -148,8 +158,8 @@ class LLMProviderFactory:
         if default_provider in available and available[default_provider]:
             return LLMProvider(default_provider)
         
-        # Fallback order: OpenAI -> Anthropic -> DeepSeek
-        for provider_name in ["openai", "anthropic", "deepseek"]:
+        # Fallback order: OpenAI -> Anthropic -> DeepSeek -> Gemini
+        for provider_name in ["openai", "anthropic", "deepseek", "gemini"]:
             if available.get(provider_name, False):
                 logger.info(f"🔄 Using fallback provider: {provider_name}")
                 return LLMProvider(provider_name)

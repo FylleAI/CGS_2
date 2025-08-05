@@ -10,6 +10,7 @@ class LLMProvider(Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     DEEPSEEK = "deepseek"
+    GEMINI = "gemini"
 
 
 @dataclass(frozen=True)
@@ -65,7 +66,8 @@ class ProviderConfig:
         defaults = {
             LLMProvider.OPENAI: "gpt-4o",
             LLMProvider.ANTHROPIC: "claude-3-7-sonnet-latest",
-            LLMProvider.DEEPSEEK: "deepseek-chat"
+            LLMProvider.DEEPSEEK: "deepseek-chat",
+            LLMProvider.GEMINI: "gemini-2.5-pro"
         }
         return defaults.get(self.provider, "gpt-4o")
     
@@ -94,6 +96,17 @@ class ProviderConfig:
             LLMProvider.DEEPSEEK: [
                 "deepseek-chat",
                 "deepseek-coder"
+            ],
+            LLMProvider.GEMINI: [
+                "gemini-2.5-pro",
+                "gemini-2.5-flash",
+                "gemini-2.5-flash-lite",
+                "gemini-2.5-flash-live",
+                "gemini-1.5-pro",
+                "gemini-1.5-flash",
+                "gemini-pro",
+                "gemini-1.5-pro-latest",
+                "gemini-1.5-flash-latest"
             ]
         }
         return models.get(self.provider, [])
@@ -201,6 +214,15 @@ class ProviderConfig:
         """Create DeepSeek configuration."""
         return cls(
             provider=LLMProvider.DEEPSEEK,
+            model=model,
+            temperature=temperature
+        )
+
+    @classmethod
+    def create_gemini_config(cls, model: str = "gemini-2.5-pro", temperature: float = 0.7) -> "ProviderConfig":
+        """Create Google Gemini configuration."""
+        return cls(
+            provider=LLMProvider.GEMINI,
             model=model,
             temperature=temperature
         )
