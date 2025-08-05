@@ -131,7 +131,7 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
                 sx={{ mb: 1 }}
               />
               <Typography variant="caption" color="text.secondary">
-                This may take 30-60 seconds depending on content complexity
+                Complex workflows (Siebert Premium Newsletter) may take 3-6 minutes due to multi-agent processing and Perplexity research
               </Typography>
             </Box>
           )}

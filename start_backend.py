@@ -22,9 +22,11 @@ if __name__ == "__main__":
     print("Logs will show detailed information about requests")
     
     uvicorn.run(
-        app, 
-        host="0.0.0.0", 
-        port=8001, 
+        app,
+        host="0.0.0.0",
+        port=8001,
         log_level="debug",
-        reload=False
+        reload=False,
+        timeout_keep_alive=600,  # 10 minutes keep-alive for long workflows
+        timeout_graceful_shutdown=30  # 30 seconds graceful shutdown
     )

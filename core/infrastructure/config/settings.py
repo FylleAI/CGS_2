@@ -75,7 +75,7 @@ class Settings(BaseSettings):
     max_tokens: Optional[int] = Field(default=None, env="MAX_TOKENS")
     
     # Workflow settings
-    workflow_timeout_seconds: int = Field(default=300, env="WORKFLOW_TIMEOUT_SECONDS")
+    workflow_timeout_seconds: int = Field(default=600, env="WORKFLOW_TIMEOUT_SECONDS")  # 10 minutes for complex workflows
     max_retries: int = Field(default=3, env="MAX_RETRIES")
     
     # WebSocket settings
