@@ -64,6 +64,10 @@ class SiebertPremiumNewsletterHandler(WorkflowHandler):
         context.setdefault('custom_instructions', '')
         context.setdefault('client_name', 'siebert')
 
+        # Set Siebert target URLs for premium research (specific URLs instead of domains)
+        context.setdefault('siebert_target_urls',
+            'https://www.thedailyupside.com/finance/|https://www.thedailyupside.com/investments/|https://www.thedailyupside.com/economics/|https://www.thedailyupside.com/newsletter/|https://moneywithkatie.com/blog/category/investing|https://thehustle.co/news|https://www.morningbrew.com/tag/finance|https://www.morningbrew.com/tag/economy|https://blog.siebert.com/tag/daily-market#BlogListing|https://www.axios.com/newsletters/axios-markets|https://www.axios.com/newsletters/axios-macro|https://decrypt.co/|https://www.coindesk.com/')
+
         # Calculate word count distribution for 8 sections (Siebert format)
         total_words = context['target_word_count']
         context['siebert_section_word_counts'] = {

@@ -134,6 +134,9 @@ async def execute_dynamic_workflow(workflow_type: str, context: Dict[str, Any]) 
         from ..external_services.openai_adapter import OpenAIAdapter
         from ...domain.value_objects.provider_config import ProviderConfig, LLMProvider
         from ..config.settings import Settings
+        from ..tools.web_search_tool import WebSearchTool
+        from ..tools.rag_tool import RAGTool
+        from ..tools.perplexity_research_tool import PerplexityResearchTool
 
         # Initialize with default settings
         settings = Settings()
@@ -144,11 +147,49 @@ async def execute_dynamic_workflow(workflow_type: str, context: Dict[str, Any]) 
         )
         llm_provider = OpenAIAdapter(settings.openai_api_key)
 
-        context['agent_executor'] = AgentExecutor(
+        agent_executor = AgentExecutor(
             agent_repository=context['agent_repository'],
             llm_provider=llm_provider,
             provider_config=provider_config
         )
+
+        # Initialize and register tools
+        web_search_tool = WebSearchTool(settings.serper_api_key)
+        rag_tool = RAGTool()
+        perplexity_tool = PerplexityResearchTool(settings.perplexity_api_key)
+
+        agent_executor.register_tools({
+            'web_search': {
+                'function': web_search_tool.search,
+                'description': 'Search the web for current information and trends'
+            },
+            'web_search_financial': {
+                'function': web_search_tool.search_financial_content,
+                'description': 'Search for current financial content and market trends'
+            },
+            'rag_get_client_content': {
+                'function': rag_tool.get_client_content,
+                'description': 'Retrieve content from client knowledge base'
+            },
+            'rag_search_content': {
+                'function': rag_tool.search_content,
+                'description': 'Search within client knowledge base'
+            },
+            'research_premium_financial': {
+                'function': perplexity_tool.research_premium_financial,
+                'description': 'Research premium financial content using Perplexity AI with domain filtering'
+            },
+            'research_client_sources': {
+                'function': perplexity_tool.research_client_sources,
+                'description': 'Research content from client-specific sources using Perplexity AI'
+            },
+            'research_general_topic': {
+                'function': perplexity_tool.research_general_topic,
+                'description': 'General topic research using Perplexity AI without domain restrictions'
+            }
+        })
+
+        context['agent_executor'] = agent_executor
 
     # Remove agent_repository from context before returning to avoid serialization issues
     result = await workflow_registry.execute_workflow(workflow_type, context)
