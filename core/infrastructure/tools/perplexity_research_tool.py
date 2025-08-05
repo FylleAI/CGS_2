@@ -68,20 +68,58 @@ class PerplexityResearchTool:
             })
         
         try:
-            # Parse input if it comes as comma-separated string (from agent calls)
-            if isinstance(topic, str) and ',' in topic:
-                parts = [p.strip() for p in topic.split(',')]
-                if len(parts) >= 1:
-                    topic = parts[0]
-                if len(parts) >= 2:
-                    exclude_topics = parts[1]
-                if len(parts) >= 3:
-                    research_timeframe = parts[2]
-                if len(parts) >= 4:
-                    # Parse premium sources from string
-                    sources_str = parts[3]
+            # Parse input if it comes as named parameters (from agent calls)
+            if isinstance(topic, str) and ('=' in topic or ',' in topic):
+                # Handle named parameters: topic=value, exclude_topics=value, etc.
+                if '=' in topic:
+                    params = {}
+                    # Split by comma first, then by equals
+                    param_pairs = [p.strip() for p in topic.split(',')]
+                    for pair in param_pairs:
+                        if '=' in pair:
+                            key, value = pair.split('=', 1)
+                            params[key.strip()] = value.strip()
+
+                    # Extract parameters
+                    topic = params.get('topic', topic)
+                    exclude_topics = params.get('exclude_topics', exclude_topics)
+                    research_timeframe = params.get('research_timeframe', research_timeframe)
+                    sources_str = params.get('premium_sources', '')
+
+                    logger.info(f"🔧 Parsed parameters: topic='{topic}', exclude_topics='{exclude_topics}', timeframe='{research_timeframe}', sources='{sources_str}'")
+
                     if sources_str and sources_str != "None":
-                        premium_sources = [s.strip() for s in sources_str.split('|') if s.strip()]
+                        # Clean up sources and remove any parameter prefixes
+                        raw_sources = [s.strip() for s in sources_str.split('|') if s.strip()]
+                        premium_sources = []
+                        for source in raw_sources:
+                            # Remove parameter prefix if present (e.g., "premium_sources=domain.com" -> "domain.com")
+                            if '=' in source:
+                                source = source.split('=', 1)[1].strip()
+                            if source:
+                                # Extract domain from URL if it's a full URL
+                                if source.startswith('http'):
+                                    from urllib.parse import urlparse
+                                    parsed = urlparse(source)
+                                    domain = parsed.netloc
+                                    if domain:
+                                        premium_sources.append(domain)
+                                else:
+                                    premium_sources.append(source)
+                else:
+                    # Fallback to old comma-separated parsing
+                    parts = [p.strip() for p in topic.split(',')]
+                    if len(parts) >= 1:
+                        topic = parts[0]
+                    if len(parts) >= 2:
+                        exclude_topics = parts[1]
+                    if len(parts) >= 3:
+                        research_timeframe = parts[2]
+                    if len(parts) >= 4:
+                        # Parse premium sources from string
+                        sources_str = parts[3]
+                        if sources_str and sources_str != "None":
+                            premium_sources = [s.strip() for s in sources_str.split('|') if s.strip()]
             
             # Use premium sources if provided, otherwise use default financial domains
             if premium_sources:
@@ -138,7 +176,7 @@ class PerplexityResearchTool:
     
     async def research_client_sources(self,
                                     client_name: str,
-                                    topic: str,
+                                    topic: str = None,
                                     days_back: int = 7,
                                     premium_sources: Optional[List[str]] = None) -> str:
         """
@@ -168,17 +206,47 @@ class PerplexityResearchTool:
             })
         
         try:
-            # Parse input if it comes as comma-separated string (from agent calls)
-            if isinstance(client_name, str) and ',' in client_name:
-                parts = [p.strip() for p in client_name.split(',')]
-                if len(parts) >= 2:
-                    client_name = parts[0]
-                    topic = parts[1]
-                if len(parts) >= 3:
+            # Parse input if it comes as named parameters (from agent calls)
+            if isinstance(client_name, str) and ('=' in client_name or ',' in client_name):
+                # Handle named parameters: client_name=value, topic=value, etc.
+                if '=' in client_name:
+                    params = {}
+                    # Split by comma first, then by equals
+                    param_pairs = [p.strip() for p in client_name.split(',')]
+                    for pair in param_pairs:
+                        if '=' in pair:
+                            key, value = pair.split('=', 1)
+                            params[key.strip()] = value.strip()
+
+                    # Extract parameters
+                    client_name = params.get('client_name', client_name)
+                    topic = params.get('topic', topic)
+                    days_back_str = params.get('days_back', str(days_back))
                     try:
-                        days_back = int(parts[2])
+                        days_back = int(days_back_str)
                     except ValueError:
                         days_back = 7
+
+                    logger.info(f"🔧 Parsed client research parameters: client='{client_name}', topic='{topic}', days_back={days_back}")
+                else:
+                    # Fallback to old comma-separated parsing
+                    parts = [p.strip() for p in client_name.split(',')]
+                    if len(parts) >= 2:
+                        client_name = parts[0]
+                        topic = parts[1]
+                    if len(parts) >= 3:
+                        try:
+                            days_back = int(parts[2])
+                        except ValueError:
+                            days_back = 7
+
+            # Handle case where topic is still None after parsing
+            if topic is None:
+                return json.dumps({
+                    "error": "Topic parameter is required but was not provided",
+                    "client_name": client_name,
+                    "results": []
+                })
             
             # Get client-specific domains (use premium sources if provided)
             if premium_sources:
@@ -247,6 +315,19 @@ class PerplexityResearchTool:
             })
         
         try:
+            # Parse input if it comes as named parameters (from agent calls)
+            if isinstance(topic, str) and '=' in topic:
+                params = {}
+                # Split by comma first, then by equals
+                param_pairs = [p.strip() for p in topic.split(',')]
+                for pair in param_pairs:
+                    if '=' in pair:
+                        key, value = pair.split('=', 1)
+                        params[key.strip()] = value.strip()
+
+                # Extract topic parameter
+                topic = params.get('topic', topic)
+
             # Build research query
             query = f"Comprehensive research about {topic}. Provide recent developments, key insights, statistics, and expert analysis from the last 7 days."
             

@@ -75,5 +75,6 @@ def get_content_use_case(provider_type: Optional[str] = None) -> GenerateContent
         llm_provider=llm_provider,
         provider_config=provider_config,
         rag_service=None,  # Would be implemented later
-        serper_api_key=settings.serper_api_key
+        serper_api_key=settings.serper_api_key,
+        perplexity_api_key=settings.perplexity_api_key
     )
