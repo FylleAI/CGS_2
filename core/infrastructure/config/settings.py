@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
     anthropic_api_key: Optional[str] = Field(default=None, env="ANTHROPIC_API_KEY")
     deepseek_api_key: Optional[str] = Field(default=None, env="DEEPSEEK_API_KEY")
+    gemini_api_key: Optional[str] = Field(default=None, env="GEMINI_API_KEY")
     serper_api_key: Optional[str] = Field(default=None, env="SERPER_API_KEY")
     perplexity_api_key: Optional[str] = Field(default=None, env="PERPLEXITY_API_KEY")
     
@@ -111,7 +112,8 @@ class Settings(BaseSettings):
         return {
             "openai": bool(self.openai_api_key),
             "anthropic": bool(self.anthropic_api_key),
-            "deepseek": bool(self.deepseek_api_key)
+            "deepseek": bool(self.deepseek_api_key),
+            "gemini": bool(self.gemini_api_key)
         }
     
     def has_any_provider(self) -> bool:
@@ -123,7 +125,8 @@ class Settings(BaseSettings):
         provider_keys = {
             "openai": self.openai_api_key,
             "anthropic": self.anthropic_api_key,
-            "deepseek": self.deepseek_api_key
+            "deepseek": self.deepseek_api_key,
+            "gemini": self.gemini_api_key
         }
         return provider_keys.get(provider.lower())
     

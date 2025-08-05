@@ -23,6 +23,10 @@ class ProviderSettings(BaseModel):
     deepseek_api_key: Optional[str] = None
     deepseek_base_url: Optional[str] = None
     deepseek_default_model: str = "deepseek-chat"
+
+    # Gemini settings
+    gemini_api_key: Optional[str] = None
+    gemini_default_model: str = "gemini-2.5-pro"
     
     def get_provider_config(self, provider: LLMProvider) -> ProviderConfig:
         """Get provider configuration for specific provider."""

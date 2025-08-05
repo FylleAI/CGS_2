@@ -293,7 +293,7 @@ async def get_available_providers():
 
         providers_info = []
 
-        for provider_name in ["openai", "anthropic", "deepseek"]:
+        for provider_name in ["openai", "anthropic", "deepseek", "gemini"]:
             try:
                 provider_enum = LLMProvider(provider_name)
 
