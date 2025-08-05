@@ -13,7 +13,7 @@ import { frontendLogger, EventType } from './logger';
 // Configure axios instance
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || '', // Use proxy when no explicit URL is set
-  timeout: 120000, // Increased to 2 minutes for content generation
+  timeout: 300000, // Increased to 5 minutes for complex workflows (Siebert, multi-agent)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -484,7 +484,7 @@ export const apiService = {
 
     try {
       const response = await api.post<any>('/api/v1/content/generate', payload, {
-        timeout: 180000 // 3 minutes for content generation specifically
+        timeout: 360000 // 6 minutes for complex workflows (Siebert multi-agent, Perplexity research)
       });
 
       // Extract workflow metrics from backend response
