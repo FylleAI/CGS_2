@@ -55,13 +55,13 @@ Processing Pattern:
 Tool Usage:
   - ONLY: research_premium_financial (optimization success!)
   - NEVER: research_client_sources, research_general_topic
-  
+
 Performance Metrics:
   - Execution time: 26.4s → 28.4s (includes 7.5-8s Perplexity API)
   - Token usage: 30 tokens (extremely efficient!)
   - Output size: 5,148 → 4,826 characters
   - Citations found: 5 consistently
-  
+
 Processing Pattern:
   - Single tool call only
   - Minimal token usage
@@ -84,6 +84,12 @@ Processing Pattern:
    - Set "last 7 days" timeframe (proven optimal)
    - Define 3-5 specific exclude topics
    - Include focus keywords for better targeting
+
+4. **🚨 MANDATORY SIEBERT INTEGRATION**
+   - **REQUIRED Source**: blog.siebert.com/tag/daily-market
+   - **Mandatory Query**: "Mark Malek market analysis Siebert CIO commentary"
+   - **Section 5 Requirement**: Market Insights from Malek (80-100 words)
+   - **Attribution**: Must include Siebert blog content for compliance
 
 ---
 
@@ -115,13 +121,19 @@ Processing Pattern:
    - Define quality standards explicitly
    - Specify research integration requirements
 
-2. **Input Structure**
+2. **🚨 MANDATORY SIEBERT INTEGRATION**
+   - **Section 5 Required**: Market Insights from Malek (80-100 words)
+   - **Content Processing**: Must extract and synthesize Siebert blog content
+   - **Voice Integration**: Connect Malek insights to broader newsletter themes
+   - **Attribution**: Ensure proper Siebert source citation
+
+3. **Input Structure**
    - Organize content for easy processing
    - Include clear section markers
    - Provide cultural context guidelines
    - Structure for 48,000+ character input
 
-3. **Quality Framework**
+4. **Quality Framework**
    - Define mandatory research integration
    - Include rejection criteria for generic content
    - Specify source attribution requirements
@@ -157,13 +169,19 @@ Processing Pattern:
    - Define clear section purposes
    - Specify formatting requirements
 
-2. **Assembly Guidelines**
+2. **🚨 MANDATORY SIEBERT INTEGRATION**
+   - **Section 5 Assembly**: Market Insights from Malek (80-100 words)
+   - **Voice Requirements**: Professional but accessible tone for Malek content
+   - **Attribution Format**: Proper Siebert blog source citation
+   - **Integration**: Connect Malek insights to newsletter flow
+
+3. **Assembly Guidelines**
    - Include brand voice examples
    - Provide formatting specifications
    - Define quality standards
    - Include word count validation rules
 
-3. **Content Requirements**
+4. **Content Requirements**
    - Specify research integration requirements
    - Include source attribution guidelines
    - Define brand voice consistency rules
