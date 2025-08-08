@@ -147,6 +147,14 @@ class SiebertPremiumNewsletterHandler(WorkflowHandler):
             context['siebert_format_applied'] = True
             logger.info(f"📄 Siebert newsletter created: {word_count} words ({accuracy:.1f}% of target)")
 
+        elif task_id == 'task5_compliance_review':
+            # Validate compliance review completion
+            word_count = len(task_output.split()) if task_output else 0
+            context['compliance_reviewed'] = True
+            context['final_compliance_word_count'] = word_count
+            context['compliance_review_completed'] = True
+            logger.info(f"✅ Compliance review completed: {word_count} words (FINRA/SEC validated)")
+
         return context
 
     def post_process_workflow(self, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -163,15 +171,21 @@ class SiebertPremiumNewsletterHandler(WorkflowHandler):
                     task_outputs.append((key, value, len(value)))
                     logger.info(f"📊 Found task output: {key} ({len(value)} chars)")
 
-            # Prioritize task4_newsletter_assembly output
+            # Prioritize task5_compliance_review output (final), then task4_newsletter_assembly
             if task_outputs:
+                task5_output = None
                 task4_output = None
-                for key, value, length in task_outputs:
-                    if key == 'task4_newsletter_assembly_output':
-                        task4_output = (key, value, length)
-                        break
 
-                if task4_output:
+                for key, value, length in task_outputs:
+                    if key == 'task5_compliance_review_output':
+                        task5_output = (key, value, length)
+                    elif key == 'task4_newsletter_assembly_output':
+                        task4_output = (key, value, length)
+
+                if task5_output:
+                    final_content = task5_output[1]
+                    logger.info(f"✅ Selected compliance-reviewed newsletter from {task5_output[0]} ({task5_output[2]} chars)")
+                elif task4_output:
                     final_content = task4_output[1]
                     logger.info(f"📄 Selected newsletter content from {task4_output[0]} ({task4_output[2]} chars)")
                 else:

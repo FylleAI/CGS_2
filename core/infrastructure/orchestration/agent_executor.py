@@ -188,7 +188,8 @@ class AgentExecutor:
                 AgentRole.WRITER: "You are an expert writer who creates engaging, well-structured content tailored to specific audiences.",
                 AgentRole.EDITOR: "You are an expert editor who refines content for clarity, coherence, and alignment with style guidelines.",
                 AgentRole.ANALYST: "You are an expert analyst who examines data and information to extract meaningful insights.",
-                AgentRole.PLANNER: "You are an expert planner who organizes complex tasks into clear, actionable steps."
+                AgentRole.PLANNER: "You are an expert planner who organizes complex tasks into clear, actionable steps.",
+                AgentRole.COMPLIANCE_REVIEWER: "You are an expert compliance reviewer who ensures content meets regulatory standards and risk management requirements."
             }
             system_message = role_messages.get(agent.role, "You are an AI assistant helping with content generation.")
         

@@ -76,8 +76,8 @@ class PremiumResearchTool:
             # Load client-specific sources
             sources = self._load_client_sources(client_name)
             if not sources:
-                logger.warning(f"No sources found for client {client_name}, using fallback research")
-                return await self._fallback_research(topic, days_back)
+                logger.error(f"❌ CRITICAL: No sources found for client {client_name}")
+                raise Exception(f"No client sources configured for {client_name} - cannot proceed without real data")
             
             # Calculate date range
             end_date = datetime.now()
@@ -162,10 +162,10 @@ class PremiumResearchTool:
                         logger.warning(f"Perplexity query failed: {e}")
                         continue
             
-            # Fallback to basic research if no API results
+            # CRITICAL: No fallback allowed - system must fail if Perplexity API fails
             if not research_results:
-                logger.info("Using fallback financial research")
-                return await self._fallback_financial_research(topic, exclude_topics)
+                logger.error("❌ CRITICAL: Perplexity API failed and no fallback allowed")
+                raise Exception("Perplexity API research failed - no fallback content allowed to prevent misinformation")
             
             # Process and format results
             processed_results = self._process_financial_results(research_results, topic, exclude_topics)
@@ -243,47 +243,14 @@ class PremiumResearchTool:
         return None
     
     async def _fallback_research(self, topic: str, days_back: int) -> str:
-        """Fallback research when no client sources are available."""
-        logger.info(f"🔄 Using fallback research for topic: {topic}")
-        
-        fallback_result = {
-            "research_type": "fallback",
-            "topic": topic,
-            "days_back": days_back,
-            "results": [
-                {
-                    "title": f"General research about {topic}",
-                    "content": f"Fallback research content for {topic}. This would normally contain web search results.",
-                    "source": "fallback_research",
-                    "relevance_score": 0.5
-                }
-            ],
-            "total_results": 1,
-            "duration_ms": 100
-        }
-        
-        return json.dumps(fallback_result, indent=2)
+        """REMOVED: No fallback allowed - system must fail to prevent misinformation."""
+        logger.error("❌ CRITICAL: Fallback research called - this should never happen")
+        raise Exception("Fallback research is disabled - system must use real Perplexity data only")
     
     async def _fallback_financial_research(self, topic: str, exclude_topics: str) -> str:
-        """Fallback financial research."""
-        logger.info(f"🔄 Using fallback financial research for: {topic}")
-        
-        fallback_result = {
-            "research_type": "fallback_financial",
-            "topic": topic,
-            "exclude_topics": exclude_topics,
-            "results": [
-                {
-                    "title": f"Financial analysis: {topic}",
-                    "content": f"Fallback financial research for {topic}. Excluding: {exclude_topics}",
-                    "source": "fallback_financial",
-                    "relevance_score": 0.6
-                }
-            ],
-            "total_results": 1
-        }
-        
-        return json.dumps(fallback_result, indent=2)
+        """REMOVED: No fallback allowed - system must fail to prevent misinformation."""
+        logger.error("❌ CRITICAL: Fallback financial research called - this should never happen")
+        raise Exception("Fallback financial research is disabled - system must use real Perplexity data only")
     
     def _process_and_rank_results(self, results: List[Dict[str, Any]], topic: str) -> List[Dict[str, Any]]:
         """Process and rank research results by relevance."""
