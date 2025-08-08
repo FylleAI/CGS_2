@@ -19,6 +19,7 @@ class AgentRole(Enum):
     RAG_SPECIALIST = "rag_specialist"
     WEB_SCRAPER = "web_scraper"
     PREMIUM_ANALYZER = "premium_analyzer"
+    COMPLIANCE_REVIEWER = "compliance_reviewer"
 
 
 @dataclass
@@ -58,7 +59,8 @@ class Agent:
             AgentRole.EDITOR: "Review and improve content for clarity and quality",
             AgentRole.RAG_SPECIALIST: "Retrieve and analyze relevant information from knowledge bases",
             AgentRole.WEB_SCRAPER: "Extract and process information from web sources",
-            AgentRole.PREMIUM_ANALYZER: "Analyze premium sources and financial data"
+            AgentRole.PREMIUM_ANALYZER: "Analyze premium sources and financial data",
+            AgentRole.COMPLIANCE_REVIEWER: "Review content for regulatory compliance and risk management"
         }
         return default_goals.get(self.role, "Perform specialized tasks in content generation")
     
