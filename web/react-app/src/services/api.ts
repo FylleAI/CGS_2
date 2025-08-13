@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
 import {
   ClientProfile,
   WorkflowType,
@@ -12,7 +13,7 @@ import { frontendLogger, EventType } from './logger';
 
 // Configure axios instance
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || '', // Use proxy when no explicit URL is set
+  baseURL: API_BASE_URL, // Use direct API URL
   timeout: 300000, // Increased to 5 minutes for complex workflows (Siebert, multi-agent)
   headers: {
     'Content-Type': 'application/json',
