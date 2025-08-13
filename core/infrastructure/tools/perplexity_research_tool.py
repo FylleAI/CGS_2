@@ -7,6 +7,7 @@ specifically designed for premium newsletter content with domain filtering.
 
 import json
 import logging
+import os
 import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
@@ -26,7 +27,8 @@ class PerplexityResearchTool:
     """
     
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key
+        # Load API key from environment if not provided
+        self.api_key = api_key or os.getenv("PERPLEXITY_API_KEY")
         self.base_url = "https://api.perplexity.ai/chat/completions"
         
         # Default model configuration

@@ -11,6 +11,10 @@ import os
 import sys
 import logging
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Add the project root to Python path
 sys.path.insert(0, os.path.abspath('.'))
