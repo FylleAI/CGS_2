@@ -223,8 +223,8 @@ class WorkflowHandler(ABC):
         # Get agent executor from context
         agent_executor = context.get('agent_executor')
         if not agent_executor:
-            logger.error("❌ No agent_executor found in context")
-            return await self._generate_fallback_content(task, context)
+            logger.error("❌ CRITICAL: No agent_executor found in context")
+            raise Exception("No agent executor available - system cannot proceed without proper agent execution")
 
         # Check if agent_repository is available
         agent_repository = context.get('agent_repository')
@@ -236,8 +236,8 @@ class WorkflowHandler(ABC):
             # Get the appropriate agent for this task
             agent = await self._get_agent_for_task(task, context)
             if not agent:
-                logger.warning(f"⚠️ No agent found for task {task.name}, using fallback content")
-                return await self._generate_fallback_content(task, context)
+                logger.error(f"❌ CRITICAL: No agent found for task {task.name}")
+                raise Exception(f"No agent available for task {task.name} - system cannot proceed without proper agent")
 
             # Execute task directly using agent executor
             # This bypasses the complex temporary workflow system completely
@@ -260,107 +260,14 @@ class WorkflowHandler(ABC):
             return result
 
         except Exception as e:
-            logger.error(f"❌ Direct task execution failed: {task.name} - {str(e)}")
-            logger.debug(f"🔄 Falling back to mock content for task: {task.name}")
-            return await self._generate_fallback_content(task, context)
+            logger.error(f"❌ CRITICAL: Direct task execution failed: {task.name} - {str(e)}")
+            logger.error("🚨 No fallback allowed - system must fail to prevent misinformation")
+            raise Exception(f"Task execution failed for {task.name}: {str(e)} - no fallback content allowed")
 
     async def _generate_fallback_content(self, task: Task, context: Dict[str, Any]) -> str:
-        """Generate fallback content when task execution fails."""
-        topic = context.get('topic', 'Unknown Topic')
-        target_audience = context.get('target_audience', 'general audience')
-        word_count = context.get('target_word_count', 300)
-
-        logger.info(f"📝 Generating fallback content for task: {task.name}")
-
-        if task.name == "task1_brief" or "brief" in task.name.lower():
-            return f"""# Project Brief: {topic}
-
-## Overview
-This brief outlines the content creation project for "{topic}" targeting {target_audience}.
-
-## Objectives
-- Create engaging content about {topic}
-- Target word count: {word_count} words
-- Maintain professional tone
-- Include relevant examples and insights
-
-## Key Points to Cover
-- Introduction to {topic}
-- Current trends and developments
-- Practical applications
-- Future outlook
-
-## Success Criteria
-- Clear, engaging writing
-- Accurate information
-- Appropriate length and structure
-- Alignment with target audience needs
-"""
-
-        elif task.name == "task2_research" or "research" in task.name.lower():
-            return f"""# Research Enhancement: {topic}
-
-## Current Market Trends
-Recent developments in {topic} show significant growth and innovation.
-
-## Key Statistics
-- Market growth: 15-20% annually
-- Adoption rate: Increasing across industries
-- Investment levels: High priority for organizations
-
-## Industry Insights
-- Technology advancement driving change
-- Consumer demand for better solutions
-- Regulatory considerations emerging
-
-## Content Opportunities
-- Educational content explaining concepts
-- Case studies and real-world examples
-- Best practices and implementation guides
-- Future predictions and trends analysis
-"""
-
-        else:  # Content creation task
-            return f"""# {topic}: A Comprehensive Guide
-
-## Introduction
-
-{topic} has become increasingly important for {target_audience}. This guide provides essential insights and practical information to help you understand and navigate this evolving landscape.
-
-## Key Concepts
-
-Understanding the fundamentals of {topic} is crucial for making informed decisions and staying competitive in today's market.
-
-### Current State
-
-The field is experiencing rapid growth and transformation, with new developments emerging regularly.
-
-### Important Considerations
-
-- Stay informed about latest trends
-- Understand practical applications
-- Consider long-term implications
-- Evaluate implementation strategies
-
-## Best Practices
-
-1. **Research thoroughly** - Understand all aspects before making decisions
-2. **Start small** - Begin with pilot projects to test approaches
-3. **Monitor progress** - Track results and adjust strategies as needed
-4. **Stay flexible** - Be ready to adapt to changing conditions
-
-## Looking Forward
-
-The future of {topic} promises continued evolution and new opportunities for those who stay informed and prepared.
-
-## Conclusion
-
-{topic} represents both challenges and opportunities. By understanding the key concepts and following best practices, {target_audience} can successfully navigate this dynamic environment.
-
----
-
-*This content provides a foundation for understanding {topic} and its implications for {target_audience}.*
-"""
+        """REMOVED: No fallback content allowed - system must fail to prevent misinformation."""
+        logger.error("❌ CRITICAL: Fallback content generation called - this should never happen")
+        raise Exception("Fallback content generation is disabled - system must use real agent execution only")
 
     async def _get_agent_for_task(self, task: Task, context: Dict[str, Any]) -> Optional['Agent']:
         """

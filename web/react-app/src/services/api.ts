@@ -108,19 +108,8 @@ export const apiService = {
       console.log('✅ Providers fetched successfully:', response.data);
       return response.data;
     } catch (error) {
-      console.error('❌ Error fetching providers:', error);
-      // Fallback to default providers
-      return {
-        providers: [
-          {
-            name: 'openai',
-            available: true,
-            models: ['gpt-4o', 'gpt-4', 'gpt-3.5-turbo'],
-            default_model: 'gpt-4o'
-          }
-        ],
-        default_provider: 'openai'
-      };
+      console.error('❌ CRITICAL: Error fetching providers - no fallback allowed:', error);
+      throw new Error('Failed to fetch LLM providers - system cannot proceed without real provider data');
     }
   },
 
@@ -388,33 +377,8 @@ export const apiService = {
       return ragContents;
 
     } catch (error) {
-      console.error(`❌ Error fetching RAG contents for ${clientProfile}:`, error);
-
-      // Fallback to mock data if API fails
-      console.log('🔄 Falling back to mock data');
-      if (clientProfile === 'siebert') {
-        return [
-          {
-            id: 'rag_1',
-            title: 'Financial Market Trends 2024',
-            content: 'Comprehensive analysis of current market trends...',
-            type: 'market_analysis',
-            clientProfile: 'siebert',
-            tags: ['finance', 'markets', '2024'],
-            createdAt: '2024-01-15T10:00:00Z'
-          },
-          {
-            id: 'rag_2',
-            title: 'Gen Z Investment Preferences',
-            content: 'Research on how Gen Z approaches investing...',
-            type: 'research',
-            clientProfile: 'siebert',
-            tags: ['gen-z', 'investing', 'preferences'],
-            createdAt: '2024-01-10T14:30:00Z'
-          }
-        ];
-      }
-      return [];
+      console.error(`❌ CRITICAL: Error fetching RAG contents for ${clientProfile} - no fallback allowed:`, error);
+      throw new Error(`Failed to fetch RAG contents for ${clientProfile} - system cannot proceed without real knowledge base data`);
     }
   },
 
@@ -447,9 +411,8 @@ export const apiService = {
       return response.data;
 
     } catch (error) {
-      console.error('❌ Error fetching available clients:', error);
-      // Fallback to default clients
-      return ['siebert'];
+      console.error('❌ CRITICAL: Error fetching available clients - no fallback allowed:', error);
+      throw new Error('Failed to fetch available clients - system cannot proceed without real client data');
     }
   },
 

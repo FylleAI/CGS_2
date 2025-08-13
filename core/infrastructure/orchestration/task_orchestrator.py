@@ -260,14 +260,14 @@ class TaskOrchestrator:
         # Get agent executor from context if available
         agent_executor = context.get('agent_executor')
         if not agent_executor:
-            logger.warning(f"No agent executor available for task {task.name}, using mock execution")
-            return await self._mock_task_execution(task, description, context)
+            logger.error(f"❌ CRITICAL: No agent executor available for task {task.name}")
+            raise Exception(f"No agent executor available for task {task.name} - system cannot proceed without real agent execution")
 
         # Find appropriate agent for this task
         agent = await self._get_agent_for_task(task, context)
         if not agent:
-            logger.warning(f"No agent found for task {task.name}, using mock execution")
-            return await self._mock_task_execution(task, description, context)
+            logger.error(f"❌ CRITICAL: No agent found for task {task.name}")
+            raise Exception(f"No agent found for task {task.name} - system cannot proceed without real agent")
 
         try:
             # Add task and workflow context for agent logging
@@ -288,9 +288,9 @@ class TaskOrchestrator:
             return result
 
         except Exception as e:
-            logger.error(f"Agent execution failed for task {task.name}: {str(e)}")
-            # Fallback to mock execution on error
-            return await self._mock_task_execution(task, description, context)
+            logger.error(f"❌ CRITICAL: Agent execution failed for task {task.name}: {str(e)}")
+            logger.error("🚨 No fallback allowed - system must fail to prevent misinformation")
+            raise Exception(f"Agent execution failed for task {task.name}: {str(e)} - no mock execution allowed")
 
     async def _get_agent_for_task(self, task: Task, context: Dict[str, Any]) -> Optional[Any]:
         """Get appropriate agent for task execution."""
@@ -343,164 +343,24 @@ class TaskOrchestrator:
         description: str,
         context: Dict[str, Any]
     ) -> str:
-        """
-        Mock task execution for testing and fallback.
-
-        Args:
-            task: The task to execute
-            description: Resolved task description
-            context: Execution context
-
-        Returns:
-            Mock task output
-        """
-        logger.info(f"Using mock execution for task: {task.name}")
-
-        # Generate realistic mock output based on task type
-        if task.name == "task1_brief":
-            return self._generate_mock_brief(context)
-        elif task.name == "task2_research":
-            return self._generate_mock_research(context)
-        elif task.name == "task3_content":
-            return self._generate_mock_content(context)
-        else:
-            # Generic mock output
-            mock_output = f"""
-# Task Output: {task.name}
-
-**Task Type**: {task.task_type}
-**Agent Role**: {task.agent_role}
-**Description**: {description}
-
-## Generated Content
-
-This is a mock output for task '{task.name}'.
-In the full implementation, this would be replaced with actual AI agent execution.
-
-**Context Used**:
-- Client Profile: {context.get('client_name', 'N/A')}
-- Target Audience: {context.get('target_audience', 'N/A')}
-- Topic: {context.get('topic', 'N/A')}
-
-**Execution Time**: {datetime.utcnow().isoformat()}
-"""
-            return mock_output.strip()
+        """REMOVED: No mock execution allowed - system must fail to prevent misinformation."""
+        logger.error(f"❌ CRITICAL: Mock task execution called for {task.name} - this should never happen")
+        raise Exception(f"Mock task execution is disabled for {task.name} - system must use real agent execution only")
 
     def _generate_mock_brief(self, context: Dict[str, Any]) -> str:
-        """Generate mock brief for task1."""
-        return f"""
-# Project Brief: {context.get('topic', 'Content Creation')}
-
-## Executive Summary
-This project involves creating high-quality content about "{context.get('topic', 'the specified topic')}" for {context.get('client_name', 'the client')}.
-
-## Brand Context & Guidelines
-- Client: {context.get('client_name', 'Default Client')}
-- Brand Voice: Professional yet accessible
-- Target Audience: {context.get('target_audience', 'General audience')}
-
-## Topic Analysis & Objectives
-- Main Topic: {context.get('topic', 'Content topic')}
-- Content Goals: Educate, inform, and engage the target audience
-- Key Messages: To be developed based on research
-
-## Content Requirements
-- Format: Article
-- Tone: Professional and engaging
-- Length: Comprehensive coverage of the topic
-- Include: Current trends, statistics, and actionable insights
-
-## Success Criteria
-- Alignment with brand voice
-- Relevance to target audience
-- Inclusion of current, accurate information
-- Clear, engaging writing style
-"""
+        """REMOVED: No mock content allowed - system must fail to prevent misinformation."""
+        logger.error("❌ CRITICAL: Mock brief generation called - this should never happen")
+        raise Exception("Mock brief generation is disabled - system must use real agent execution only")
 
     def _generate_mock_research(self, context: Dict[str, Any]) -> str:
-        """Generate mock research enhancement for task2."""
-        return f"""
-# Enhanced Research Brief: {context.get('topic', 'Content Creation')}
-
-## Current Market Trends
-Based on recent web research, the following trends are relevant to "{context.get('topic', 'the topic')}":
-
-- Trend 1: Increasing focus on digital transformation
-- Trend 2: Growing importance of data-driven decision making
-- Trend 3: Rising demand for personalized experiences
-
-## Key Statistics
-- 75% of organizations are investing in related technologies
-- Market growth rate: 15% year-over-year
-- Consumer adoption: 60% and growing
-
-## Industry Insights
-Recent developments in the field show significant opportunities for content that addresses:
-- Practical implementation strategies
-- Common challenges and solutions
-- Future outlook and predictions
-
-## Content Opportunities
-- Educational explainers for complex concepts
-- Case studies and real-world examples
-- Actionable tips and best practices
-- Industry expert perspectives
-
-## Recommended Approach
-Create content that combines foundational knowledge with current trends and practical applications.
-"""
+        """REMOVED: No mock content allowed - system must fail to prevent misinformation."""
+        logger.error("❌ CRITICAL: Mock research generation called - this should never happen")
+        raise Exception("Mock research generation is disabled - system must use real agent execution only")
 
     def _generate_mock_content(self, context: Dict[str, Any]) -> str:
-        """Generate mock final content for task3."""
-        topic = context.get('topic', 'Technology Trends')
-        target_audience = context.get('target_audience', 'professionals')
-
-        return f"""
-# {topic}: A Comprehensive Guide for {target_audience.title()}
-
-## Introduction
-
-In today's rapidly evolving landscape, understanding {topic.lower()} has become essential for {target_audience}. This comprehensive guide explores the key aspects, current trends, and practical implications you need to know.
-
-## Current State of {topic}
-
-The field of {topic.lower()} is experiencing unprecedented growth and transformation. Recent research indicates significant developments that are reshaping how we approach this domain.
-
-### Key Developments
-
-1. **Innovation Acceleration**: The pace of change has increased dramatically
-2. **Market Expansion**: New opportunities are emerging across sectors
-3. **Technology Integration**: Advanced tools are becoming more accessible
-
-## Practical Implications
-
-For {target_audience}, these developments mean:
-
-- **Enhanced Opportunities**: New avenues for growth and development
-- **Skill Requirements**: Evolving competencies needed for success
-- **Strategic Considerations**: Important factors for decision-making
-
-## Best Practices
-
-Based on current research and industry insights, here are recommended approaches:
-
-1. **Stay Informed**: Keep up with latest developments
-2. **Continuous Learning**: Invest in skill development
-3. **Strategic Planning**: Align efforts with market trends
-4. **Network Building**: Connect with industry professionals
-
-## Looking Forward
-
-The future of {topic.lower()} promises continued evolution and opportunity. By understanding current trends and preparing for upcoming changes, {target_audience} can position themselves for success.
-
-## Conclusion
-
-{topic} represents both challenges and opportunities for {target_audience}. By staying informed, adapting to change, and implementing best practices, you can navigate this dynamic landscape effectively.
-
----
-
-*This content was generated as part of a comprehensive research and analysis process, incorporating current market trends and industry insights.*
-"""
+        """REMOVED: No mock content allowed - system must fail to prevent misinformation."""
+        logger.error("❌ CRITICAL: Mock content generation called - this should never happen")
+        raise Exception("Mock content generation is disabled - system must use real agent execution only")
     
     def get_execution_summary(self) -> Dict[str, Any]:
         """Get a summary of the current execution state."""

@@ -60,12 +60,8 @@ class PerplexityResearchTool:
         logger.info(f"💰 Starting Perplexity financial research: '{topic}'")
         
         if not self.api_key:
-            logger.error("❌ Perplexity API key not configured")
-            return json.dumps({
-                "error": "Perplexity API key not configured",
-                "topic": topic,
-                "results": []
-            })
+            logger.error("❌ CRITICAL: Perplexity API key not configured")
+            raise Exception("Perplexity API key not configured - system cannot proceed without real research data")
         
         try:
             # Parse input if it comes as named parameters (from agent calls)
@@ -197,13 +193,8 @@ class PerplexityResearchTool:
         logger.info(f"🎯 Starting client-specific research for {client_name}: '{topic}'")
         
         if not self.api_key:
-            logger.error("❌ Perplexity API key not configured")
-            return json.dumps({
-                "error": "Perplexity API key not configured",
-                "client": client_name,
-                "topic": topic,
-                "results": []
-            })
+            logger.error("❌ CRITICAL: Perplexity API key not configured for client research")
+            raise Exception("Perplexity API key not configured - system cannot proceed without real research data")
         
         try:
             # Parse input if it comes as named parameters (from agent calls)
@@ -307,12 +298,8 @@ class PerplexityResearchTool:
         logger.info(f"🌐 Starting general research: '{topic}'")
         
         if not self.api_key:
-            logger.error("❌ Perplexity API key not configured")
-            return json.dumps({
-                "error": "Perplexity API key not configured",
-                "topic": topic,
-                "results": []
-            })
+            logger.error("❌ CRITICAL: Perplexity API key not configured for general research")
+            raise Exception("Perplexity API key not configured - system cannot proceed without real research data")
         
         try:
             # Parse input if it comes as named parameters (from agent calls)
