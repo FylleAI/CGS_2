@@ -59,7 +59,22 @@ class WorkflowRegistry:
             logger.debug(f"🔧 Created new handler instance: {workflow_type}")
         
         return self._instances[workflow_type]
-    
+
+    def invalidate_cache(self, workflow_type: str = None) -> None:
+        """
+        Invalidate cached handler instances to force reload.
+
+        Args:
+            workflow_type: Specific workflow type to invalidate, or None for all
+        """
+        if workflow_type:
+            if workflow_type in self._instances:
+                del self._instances[workflow_type]
+                logger.info(f"🔄 Invalidated cache for workflow: {workflow_type}")
+        else:
+            self._instances.clear()
+            logger.info("🔄 Invalidated all workflow handler caches")
+
     def list_workflows(self) -> Dict[str, str]:
         """
         List all registered workflow types.
@@ -99,6 +114,11 @@ class WorkflowRegistry:
 
 # Global registry instance
 workflow_registry = WorkflowRegistry()
+
+
+def invalidate_workflow_cache(workflow_type: str = None) -> None:
+    """Global function to invalidate workflow cache."""
+    workflow_registry.invalidate_cache(workflow_type)
 
 
 def register_workflow(workflow_type: str):

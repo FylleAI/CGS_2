@@ -212,7 +212,21 @@ class EnhancedArticleHandler(WorkflowHandler):
                 context['word_count_accuracy'] = 'needs_adjustment'
             
             logger.info(f"📝 Content created: {content_length} words (target: {target_count})")
-        
+
+        elif task_id == 'task4_compliance_review':
+            # Post-process compliance review task
+            context['compliance_reviewed'] = True
+            context['compliance_timestamp'] = context.get('workflow_id', 'unknown')
+
+            # Analyze compliance review output
+            task_output = context.get(f'{task_id}_output', '')
+            if task_output:
+                context['compliance_review_length'] = len(task_output)
+                context['compliance_completed'] = True
+                logger.info("🛡️ Compliance review completed successfully")
+            else:
+                logger.warning("⚠️ Compliance review output is empty")
+
         return context
     
     def post_process_workflow(self, context: Dict[str, Any]) -> Dict[str, Any]:
@@ -252,18 +266,25 @@ class EnhancedArticleHandler(WorkflowHandler):
                     preview = value[:100] + "..." if len(value) > 100 else value
                     logger.info(f"📄 Content preview: {preview}")
 
-            # Prioritize task3_content_output (final article) over other outputs
+            # Prioritize task4_compliance_review_output (final compliance-reviewed article) over other outputs
             if task_outputs:
-                # First, look for task3_content_output specifically
+                # First, look for task4_compliance_review_output (final compliance-reviewed article)
+                task4_output = None
                 task3_output = None
-                for key, value, length in task_outputs:
-                    if key == 'task3_content_output':
-                        task3_output = (key, value, length)
-                        break
 
-                if task3_output:
+                for key, value, length in task_outputs:
+                    if key == 'task4_compliance_review_output':
+                        task4_output = (key, value, length)
+                        break
+                    elif key == 'task3_content_output':
+                        task3_output = (key, value, length)
+
+                if task4_output:
+                    final_content = task4_output[1]
+                    logger.info(f"📄 Selected final content from {task4_output[0]} ({task4_output[2]} chars) - compliance reviewed")
+                elif task3_output:
                     final_content = task3_output[1]
-                    logger.info(f"📄 Selected final content from {task3_output[0]} ({task3_output[2]} chars)")
+                    logger.info(f"📄 Selected final content from {task3_output[0]} ({task3_output[2]} chars) - pre-compliance")
                 else:
                     # Fallback: sort by length and take the longest output
                     task_outputs.sort(key=lambda x: x[2], reverse=True)
@@ -284,7 +305,9 @@ class EnhancedArticleHandler(WorkflowHandler):
                 'word_count': context.get('actual_word_count'),
                 'research_depth': context.get('research_depth'),
                 'includes_data': context.get('includes_data', False),
-                'includes_trends': context.get('includes_trends', False)
+                'includes_trends': context.get('includes_trends', False),
+                'compliance_reviewed': context.get('compliance_reviewed', False),
+                'compliance_completed': context.get('compliance_completed', False)
             }
 
             context['workflow_summary'] = summary

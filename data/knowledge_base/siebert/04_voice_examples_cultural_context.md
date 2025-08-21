@@ -47,21 +47,13 @@ Let's get real about what's happening out there:
 
 ---
 
-**🪙 Crypto Corner**
+**💡 Financial Education Corner**
 
 Congress just passed the GENIUS Act—America's first major crypto legislation—and the market's feeling it. Bitcoin's holding strong near record highs while JPMorgan announced they'll let customers buy crypto with credit cards starting this fall. No cap, traditional finance is finally joining the party.
 
 But here's the tea: 84% of Gen Z sees crypto as risky, yet 65% plan to invest anyway. It's giving "I'll sleep when I'm dead" energy, but with money. The new stablecoin regulations mean less "rug pull" potential and more legitimacy.
 
 **What this means for beginners:** Think of stablecoins as crypto's training wheels—they're backed by real dollars, making them way less volatile than your mood during Mercury retrograde.
-
----
-
-**📊 Market Insights from the Expert**
-
-Mark Malek, Siebert's Chief Investment Officer, on this week's chaos: "The Fed may be finding itself having less and less relevance in the markets by simply finding new ways to repeat its same message: 'we don't know what to do.'"
-
-**Translation for us:** When even the Fed's confused, focus on companies with real growth (hello, AI stocks) instead of waiting for interest rate fairy tales. The adults in charge are just as lost as we are.
 
 ---
 

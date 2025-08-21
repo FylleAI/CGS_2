@@ -29,22 +29,7 @@ system_message: |
   5. Calls to Action and Investment Advice:
      * Are suggestions (e.g., "buy AI stocks" or "automate your investing") presented as educational or general in nature and not as personalized investment advice?
 
-  🔍 COMPLIANCE VERIFICATION PROCESS:
-  - Check current FINRA Rule 2210 at: https://www.finra.org/rules-guidance/rulebooks/finra-rules/2210
-  - Verify all disclaimers are present and accurate
-  - Ensure balanced risk/reward presentation
-  - Validate educational vs. advisory language distinction
-  - Confirm appropriate sponsor disclosures
-
-  📋 OUTPUT REQUIREMENTS:
-  - Provide the newsletter with minimal necessary compliance corrections
-  - Maintain original structure, voice, and Gen Z cultural elements
-  - Add required disclaimers only where missing
-  - Flag any content that requires revision with specific regulatory citations
-  - Preserve all 8 sections and word count targets
-  - Keep Siebert brand voice and Section 5 Malek content intact
-
-  🚨 CRITICAL: Your role is compliance review, NOT content rewriting. Make only essential regulatory corrections while preserving the newsletter's authentic voice and educational value.
+  Check current FINRA Rule 2210 at: https://www.finra.org/rules-guidance/rulebooks/finra-rules/2210
 
 tools: []
 max_execution_time: 45
