@@ -13,6 +13,7 @@ from core.domain.value_objects.provider_config import ProviderConfig, LLMProvide
 from core.domain.value_objects.generation_params import GenerationParams
 from core.infrastructure.factories.provider_factory import LLMProviderFactory
 from core.infrastructure.config.settings import get_settings
+from core.infrastructure.workflows.registry import invalidate_workflow_cache
 from ..dependencies import get_content_use_case
 
 logger = logging.getLogger(__name__)
@@ -377,4 +378,22 @@ async def export_content(
         raise
     except Exception as e:
         logger.error(f"Error exporting content {content_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/invalidate-cache")
+async def invalidate_workflow_cache_endpoint(workflow_type: Optional[str] = None):
+    """
+    Invalidate workflow handler cache to force template reload.
+
+    Args:
+        workflow_type: Specific workflow type to invalidate, or None for all
+    """
+    try:
+        invalidate_workflow_cache(workflow_type)
+        message = f"Cache invalidated for workflow: {workflow_type}" if workflow_type else "All workflow caches invalidated"
+        logger.info(f"🔄 {message}")
+        return {"message": message, "workflow_type": workflow_type}
+    except Exception as e:
+        logger.error(f"Error invalidating cache: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")

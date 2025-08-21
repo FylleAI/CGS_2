@@ -24,7 +24,7 @@ if __name__ == "__main__":
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8001,
+        port=8000,
         log_level="debug",
         reload=False,
         timeout_keep_alive=600,  # 10 minutes keep-alive for long workflows

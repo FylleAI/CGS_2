@@ -20,6 +20,8 @@ class AgentRole(Enum):
     WEB_SCRAPER = "web_scraper"
     PREMIUM_ANALYZER = "premium_analyzer"
     COMPLIANCE_REVIEWER = "compliance_reviewer"
+    ENHANCED_ARTICLE_WRITER = "enhanced_article_writer"
+    ENHANCED_ARTICLE_COMPLIANCE_SPECIALIST = "enhanced_article_compliance_specialist"
 
 
 @dataclass
@@ -60,7 +62,9 @@ class Agent:
             AgentRole.RAG_SPECIALIST: "Retrieve and analyze relevant information from knowledge bases",
             AgentRole.WEB_SCRAPER: "Extract and process information from web sources",
             AgentRole.PREMIUM_ANALYZER: "Analyze premium sources and financial data",
-            AgentRole.COMPLIANCE_REVIEWER: "Review content for regulatory compliance and risk management"
+            AgentRole.COMPLIANCE_REVIEWER: "Review content for regulatory compliance and risk management",
+            AgentRole.ENHANCED_ARTICLE_WRITER: "Create comprehensive educational articles with Gen Z voice and research integration",
+            AgentRole.ENHANCED_ARTICLE_COMPLIANCE_SPECIALIST: "Review Enhanced Articles for FINRA/SEC compliance while preserving Gen Z voice and blog structure"
         }
         return default_goals.get(self.role, "Perform specialized tasks in content generation")
     
