@@ -197,6 +197,63 @@ class CostCalculator:
                     "completion_cost_per_1k": 0.00028,
                     "supports_caching": False
                 }
+            },
+            "gemini": {
+                # Gemini 2.5 Pro - Prompt <= 128k tokens
+                "gemini-2.5-pro": {
+                    "tier": ModelTier.PREMIUM,
+                    "prompt_cost_per_1k": 0.00125,  # $1.25 per 1M tokens
+                    "completion_cost_per_1k": 0.005,  # $5 per 1M tokens
+                    "supports_caching": True,
+                    "cache_write_cost_per_1k": 0.0003125,  # $0.3125 per 1M tokens
+                    "cache_read_cost_per_1k": 0.0003125,
+                    "cache_storage_cost_per_hour": 4.50  # $4.50/hour
+                },
+                # Gemini 2.5 Pro - Prompt > 128k tokens (higher pricing tier)
+                "gemini-2.5-pro-large": {
+                    "tier": ModelTier.PREMIUM,
+                    "prompt_cost_per_1k": 0.0025,  # $2.50 per 1M tokens
+                    "completion_cost_per_1k": 0.01,  # $10 per 1M tokens
+                    "supports_caching": True,
+                    "cache_write_cost_per_1k": 0.000625,  # $0.625 per 1M tokens
+                    "cache_read_cost_per_1k": 0.000625,
+                    "cache_storage_cost_per_hour": 4.50  # $4.50/hour
+                },
+                # Gemini 2.5 Flash - Prompt <= 128k tokens
+                "gemini-2.5-flash": {
+                    "tier": ModelTier.STANDARD,
+                    "prompt_cost_per_1k": 0.000125,  # ~$0.125 per 1M tokens (mid-range estimate)
+                    "completion_cost_per_1k": 0.0005,  # ~$0.50 per 1M tokens (mid-range estimate)
+                    "supports_caching": True,
+                    "cache_write_cost_per_1k": 0.00003125,  # Estimated proportional to Pro
+                    "cache_read_cost_per_1k": 0.00003125
+                },
+                # Gemini 2.0 Flash (similar pricing to 2.5 Flash)
+                "gemini-2.0-flash": {
+                    "tier": ModelTier.STANDARD,
+                    "prompt_cost_per_1k": 0.000125,
+                    "completion_cost_per_1k": 0.0005,
+                    "supports_caching": True,
+                    "cache_write_cost_per_1k": 0.00003125,
+                    "cache_read_cost_per_1k": 0.00003125
+                },
+                # Legacy models (keeping for backward compatibility)
+                "gemini-1.5-pro": {
+                    "tier": ModelTier.PREMIUM,
+                    "prompt_cost_per_1k": 0.00125,
+                    "completion_cost_per_1k": 0.005,
+                    "supports_caching": True,
+                    "cache_write_cost_per_1k": 0.0003125,
+                    "cache_read_cost_per_1k": 0.0003125
+                },
+                "gemini-1.5-flash": {
+                    "tier": ModelTier.STANDARD,
+                    "prompt_cost_per_1k": 0.000125,
+                    "completion_cost_per_1k": 0.0005,
+                    "supports_caching": True,
+                    "cache_write_cost_per_1k": 0.00003125,
+                    "cache_read_cost_per_1k": 0.00003125
+                }
             }
         }
     
