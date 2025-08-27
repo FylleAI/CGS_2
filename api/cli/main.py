@@ -20,6 +20,7 @@ from core.infrastructure.repositories.yaml_agent_repository import YamlAgentRepo
 from core.infrastructure.repositories.file_workflow_repository import FileWorkflowRepository
 from core.infrastructure.external_services.openai_adapter import OpenAIAdapter
 from core.infrastructure.config.settings import get_settings
+from .tracking import app as tracking_app
 
 # Configure logging
 logging.basicConfig(level=logging.WARNING)  # Reduce noise in CLI
@@ -34,6 +35,9 @@ app = typer.Typer(
 
 # Rich console for pretty output
 console = Console()
+
+# Register sub-commands
+app.add_typer(tracking_app, name="tracking", help="Workflow tracking commands")
 
 
 def get_use_case() -> GenerateContentUseCase:
