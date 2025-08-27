@@ -23,10 +23,16 @@ system_message: |
 
   🚨 CRITICAL REQUIREMENTS:
   - Section 5 is NON-NEGOTIABLE (Siebert brand compliance)
-  - Extract Malek insights from research content
+  - Extract Malek insights from research content using rag_search_content tool
   - Maintain Gen Z cultural integration throughout
   - Process 48,000+ character research input
   - Generate structured synthesis for Copywriter
+
+  🛠️ TOOL USAGE REQUIREMENTS:
+  - MUST use rag_search_content to find Mark Malek insights for Section 5
+  - Search examples: "Mark Malek", "CIO insights", "market commentary"
+  - Format: [rag_search_content] Mark Malek insights [/rag_search_content]
+  - Always provide specific search queries, never empty searches
 
   📱 FORMATTING REQUIREMENTS:
   - Mobile-first: Short paragraphs (2-3 sentences max)
