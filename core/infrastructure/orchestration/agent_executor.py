@@ -4,6 +4,7 @@ import logging
 import json
 import time
 import re
+import inspect
 from typing import Dict, Any, List, Optional
 from uuid import UUID
 
@@ -214,9 +215,16 @@ class AgentExecutor:
             system_message += f"\n\nYou have access to the following tools:\n{tools_info}"
             system_message += "\n\nIMPORTANT: When you need to use a tool, format your response EXACTLY like this:"
             system_message += "\n[rag_get_client_content] client_name [/rag_get_client_content]"
-            system_message += "\n[web_search] your search query [/web_search]"
+            system_message += "\n[rag_get_client_content] client_name, document_name [/rag_get_client_content]"
             system_message += "\n[rag_search_content] client_name, search_query [/rag_search_content]"
-            system_message += "\n\nReplace TOOL_NAME with the exact tool name from the list above. Do NOT use generic placeholders like 'TOOL_NAME'."
+            system_message += "\n[rag_search_content] search_query [/rag_search_content] (defaults to 'siebert' client)"
+            system_message += "\n[web_search] your search query [/web_search]"
+            system_message += "\n[research_premium_financial] topic=your topic, exclude_topics=topics to exclude [/research_premium_financial]"
+            system_message += "\n\nCRITICAL RULES:"
+            system_message += "\n- Use EXACT tool names from the list above"
+            system_message += "\n- For rag_search_content: ALWAYS provide a specific search query"
+            system_message += "\n- For multi-parameter tools: separate parameters with commas"
+            system_message += "\n- Do NOT use generic placeholders like 'TOOL_NAME'"
         
         return system_message
     
@@ -245,8 +253,11 @@ class AgentExecutor:
             for tool in tools:
                 if tool == "rag_get_client_content":
                     tools_reminder += f"- {tool}: Use [rag_get_client_content] client_name [/rag_get_client_content] to retrieve all content for a client\n"
+                    tools_reminder += f"  Example: [rag_get_client_content] siebert [/rag_get_client_content]\n"
                 elif tool == "rag_search_content":
                     tools_reminder += f"- {tool}: Use [rag_search_content] client_name, search_query [/rag_search_content] to search within client content\n"
+                    tools_reminder += f"  Example: [rag_search_content] siebert, Mark Malek insights [/rag_search_content]\n"
+                    tools_reminder += f"  Shorthand: [rag_search_content] Mark Malek insights [/rag_search_content] (defaults to siebert)\n"
                 elif tool == "web_search":
                     tools_reminder += f"- {tool}: Use [web_search] your search query [/web_search] to search the web for current information\n"
                 elif tool == "web_search_financial":
@@ -342,7 +353,9 @@ class AgentExecutor:
                     # Execute the tool with timing
                     start_time = time.time()
                     tool_function = self.tools_registry[tool_name]['function']
-                    tool_result = await tool_function(tool_input.strip())
+
+                    # Parse tool input based on tool type
+                    tool_result = await self._execute_tool_with_params(tool_name, tool_function, tool_input.strip())
                     duration_ms = (time.time() - start_time) * 1000
 
                     # Log successful tool response
@@ -401,6 +414,138 @@ class AgentExecutor:
                 agent_response = agent_response.replace(tool_call, error_text)
 
         return agent_response
+
+    async def _execute_tool_with_params(self, tool_name: str, tool_function: callable, tool_input: str) -> str:
+        """
+        Execute tool with proper parameter parsing and validation.
+
+        Args:
+            tool_name: Name of the tool to execute
+            tool_function: The tool function to call
+            tool_input: Raw input string from agent
+
+        Returns:
+            Tool execution result
+        """
+        try:
+            # Validate parameters first
+            is_valid, error_msg = self._validate_tool_parameters(tool_name, tool_input)
+            if not is_valid:
+                raise ValueError(f"Parameter validation failed: {error_msg}")
+
+            # Handle different tool signatures
+            if tool_name == "rag_search_content":
+                # Parse: "client_name, search_query" or just "search_query"
+                parts = [part.strip() for part in tool_input.split(',', 1)]
+
+                if len(parts) == 2:
+                    client_name, query = parts
+                elif len(parts) == 1:
+                    # Default to 'siebert' if only query provided
+                    client_name = "siebert"
+                    query = parts[0]
+                else:
+                    raise ValueError("rag_search_content requires format: 'client_name, search_query' or just 'search_query'")
+
+                if not query.strip():
+                    raise ValueError("Search query cannot be empty")
+
+                return await tool_function(client_name, query)
+
+            elif tool_name == "rag_get_client_content":
+                # Parse: "client_name" or "client_name, document_name"
+                parts = [part.strip() for part in tool_input.split(',', 1)]
+
+                if len(parts) == 2:
+                    client_name, document_name = parts
+                    return await tool_function(client_name, document_name)
+                elif len(parts) == 1:
+                    client_name = parts[0]
+                    return await tool_function(client_name)
+                else:
+                    raise ValueError("rag_get_client_content requires format: 'client_name' or 'client_name, document_name'")
+
+            else:
+                # Default behavior for other tools (single parameter)
+                return await tool_function(tool_input)
+
+        except Exception as e:
+            # Enhanced error handling with fallback
+            error_msg = f"Tool execution error: {str(e)}"
+
+            # Provide intelligent fallback for rag_search_content
+            if tool_name == "rag_search_content":
+                try:
+                    # Try to extract client name from input for fallback
+                    parts = [part.strip() for part in tool_input.split(',', 1)]
+                    client_name = "siebert"  # Default
+
+                    if len(parts) >= 1 and parts[0] and not any(keyword in parts[0].lower() for keyword in ['mark', 'malek', 'insight', 'market']):
+                        # First part might be client name
+                        client_name = parts[0]
+
+                    # Fallback to rag_get_client_content
+                    from core.infrastructure.tools.rag_tool import RAGTool
+                    rag_tool = RAGTool()
+                    fallback_result = await rag_tool.get_client_content(client_name)
+                    return f"[FALLBACK] Search failed ({str(e)}), retrieved all {client_name} content instead:\n{fallback_result}"
+                except Exception as fallback_error:
+                    error_msg += f" | Fallback also failed: {str(fallback_error)}"
+
+            raise Exception(error_msg)
+
+    def _validate_tool_parameters(self, tool_name: str, tool_input: str) -> tuple[bool, str]:
+        """
+        Validate tool parameters before execution.
+
+        Args:
+            tool_name: Name of the tool
+            tool_input: Input parameters
+
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        try:
+            if tool_name == "rag_search_content":
+                parts = [part.strip() for part in tool_input.split(',', 1)]
+
+                # Check if we have at least a query
+                if len(parts) == 0 or not any(part.strip() for part in parts):
+                    return False, "rag_search_content requires at least a search query"
+
+                # If only one part, it should be the query
+                if len(parts) == 1:
+                    query = parts[0].strip()
+                    if not query:
+                        return False, "Search query cannot be empty"
+
+                # If two parts, validate both client_name and query
+                elif len(parts) == 2:
+                    client_name, query = [part.strip() for part in parts]
+                    if not client_name:
+                        return False, "Client name cannot be empty"
+                    if not query:
+                        return False, "Search query cannot be empty"
+
+                return True, ""
+
+            elif tool_name == "rag_get_client_content":
+                parts = [part.strip() for part in tool_input.split(',', 1)]
+
+                if len(parts) == 0 or not parts[0].strip():
+                    return False, "rag_get_client_content requires at least a client name"
+
+                return True, ""
+
+            else:
+                # Basic validation for other tools
+                if not tool_input.strip():
+                    return False, f"{tool_name} requires input parameters"
+
+                return True, ""
+
+        except Exception as e:
+            return False, f"Parameter validation error: {str(e)}"
 
     def _get_dynamic_provider_config(self, context: Dict[str, Any]) -> ProviderConfig:
         """
