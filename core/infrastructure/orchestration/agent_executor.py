@@ -611,9 +611,10 @@ class AgentExecutor:
     def _extract_token_usage(self, llm_response) -> TokenUsage:
         """Extract real token usage from LLM API response."""
         try:
-            # Check if response has usage information
-            if hasattr(llm_response, 'usage') and llm_response.usage:
-                usage = llm_response.usage
+            # Check if response has usage information (handle both object and dataclass)
+            usage_data = getattr(llm_response, 'usage', None)
+            if usage_data:
+                usage = usage_data
 
                 # Handle different response formats
                 if isinstance(usage, dict):

@@ -82,12 +82,17 @@ class Settings(BaseSettings):
     # WebSocket settings
     websocket_enabled: bool = Field(default=True, env="WEBSOCKET_ENABLED")
     websocket_path: str = Field(default="/ws", env="WEBSOCKET_PATH")
-    
+
+    # Supabase settings
+    supabase_url: Optional[str] = Field(default=None, env="SUPABASE_URL")
+    supabase_anon_key: Optional[str] = Field(default=None, env="SUPABASE_ANON_KEY")
+    use_supabase: bool = Field(default=False, env="USE_SUPABASE")
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
-    
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._ensure_directories()

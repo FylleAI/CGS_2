@@ -21,6 +21,7 @@ from ...infrastructure.tools.web_search_tool import WebSearchTool
 from ...infrastructure.tools.rag_tool import RAGTool
 from ...infrastructure.tools.perplexity_research_tool import PerplexityResearchTool
 from ...infrastructure.workflows.registry import execute_dynamic_workflow, list_available_workflows
+from ...infrastructure.database.supabase_tracker import get_tracker, SupabaseTracker
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,10 @@ class GenerateContentUseCase:
 
         # Register tools with agent executor
         self._register_tools()
-    
+
+        # Optional tracking
+        self.tracker: Optional[SupabaseTracker] = get_tracker()
+
     async def execute(self, request: ContentGenerationRequest) -> ContentGenerationResponse:
         """
         Execute content generation using dynamic workflow system.
@@ -77,6 +81,24 @@ class GenerateContentUseCase:
             logger.info(f"Starting content generation for topic: {request.topic}")
             start_time = datetime.utcnow()
 
+            # Initialize tracking (start run)
+            run_id: Optional[str] = None
+            if self.tracker is not None:
+                try:
+                    run_id = self.tracker.start_workflow_run(
+                        client_name=request.client_profile or "default",
+                        workflow_name=request.workflow_type or "content_generation",
+                        topic=request.topic,
+                    )
+                    self.tracker.add_log(run_id, "INFO", f"Started content generation for topic: {request.topic}")
+                    if request.provider_config:
+                        self.tracker.add_log(run_id, "INFO", f"Provider: {request.provider_config.provider.value}")
+                        if request.provider_config.model:
+                            self.tracker.add_log(run_id, "INFO", f"Model: {request.provider_config.model}")
+                except Exception as track_err:
+                    logger.warning(f"Tracking initialization failed: {track_err}")
+                    run_id = None
+
             # 1. Build dynamic context from request
             context = await self._build_dynamic_context(request)
 
@@ -88,6 +110,10 @@ class GenerateContentUseCase:
                 logger.info(f"🔧 No workflow_type specified, defaulting to: {workflow_type}")
 
             workflow_result = await self._execute_dynamic_workflow(workflow_type, context)
+
+            # Minimal log of completion before saving content
+            if self.tracker is not None and run_id:
+                self.tracker.add_log(run_id, "INFO", f"Dynamic workflow '{workflow_type}' completed")
 
             # 3. Create content entity from workflow result
             content = await self._create_content_from_dynamic_result(
@@ -141,10 +167,42 @@ class GenerateContentUseCase:
                 }
             )
 
+            # Complete tracking (success)
+            if self.tracker is not None and run_id:
+                try:
+                    total_cost = 0.0
+                    total_tokens = 0
+                    if workflow_metrics:
+                        total_cost = workflow_metrics.total_cost
+                        total_tokens = workflow_metrics.total_tokens
+                    self.tracker.complete_workflow_run(
+                        run_id=run_id,
+                        status="completed",
+                        cost=total_cost,
+                        tokens=total_tokens,
+                    )
+                    self.tracker.add_log(
+                        run_id, "INFO", f"Content generation completed successfully in {execution_time:.2f}s"
+                    )
+                except Exception as track_err:
+                    logger.warning(f"Tracking completion failed: {track_err}")
+
             logger.info(f"Content generation completed successfully in {execution_time:.2f}s")
             return response
-            
+
         except Exception as e:
+            # Complete tracking (failure)
+            try:
+                if self.tracker is not None and 'run_id' in locals() and run_id:
+                    self.tracker.complete_workflow_run(
+                        run_id=run_id,
+                        status="failed",
+                        error=str(e),
+                    )
+                    self.tracker.add_log(run_id, "ERROR", f"Content generation failed: {str(e)}")
+            except Exception as track_err:  # pragma: no cover
+                logger.warning(f"Tracking failure logging failed: {track_err}")
+
             logger.error(f"Content generation failed: {str(e)}")
             return ContentGenerationResponse(
                 content_id=uuid4(),
