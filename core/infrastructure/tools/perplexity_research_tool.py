@@ -26,17 +26,18 @@ class PerplexityResearchTool:
     4. Automatic citation and source validation
     """
     
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         # Load API key from environment if not provided
         self.api_key = api_key or os.getenv("PERPLEXITY_API_KEY")
         self.base_url = "https://api.perplexity.ai/chat/completions"
-        
-        # Default model configuration
-        self.default_model = "sonar"
+
+        # Default model configuration (do NOT source from .env as per requirements)
+        # Many accounts require an online-capable model to return citations.
+        self.default_model = model or "sonar-pro"
         self.max_tokens = 1000
         self.temperature = 0.2
-        
-        logger.info("🔍 Perplexity Research Tool initialized")
+
+        logger.info(f"🔍 Perplexity Research Tool initialized (model={self.default_model})")
     
     async def research_premium_financial(self,
                                        topic: str,

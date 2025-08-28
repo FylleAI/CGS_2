@@ -263,11 +263,21 @@ class TaskOrchestrator:
             logger.error(f"❌ CRITICAL: No agent executor available for task {task.name}")
             raise Exception(f"No agent executor available for task {task.name} - system cannot proceed without real agent execution")
 
-        # Find appropriate agent for this task
-        agent = await self._get_agent_for_task(task, context)
+        # Validate task has agent configuration
+        if not getattr(task, 'agent_name', None) and not getattr(task, 'agent_role', None):
+            logger.warning(f"⚠️ Task {task.name} has no agent_name or agent_role - using fallback")
+
+        # Find appropriate agent for this task using AgentFactory
+        from ..factories.agent_factory import AgentFactory
+        agent_factory = AgentFactory(context.get('agent_repository'))
+        agent = await agent_factory.get(
+            name=getattr(task, 'agent_name', None),
+            role=getattr(task, 'agent_role', None),
+            ctx=context
+        )
         if not agent:
             logger.error(f"❌ CRITICAL: No agent found for task {task.name}")
-            raise Exception(f"No agent found for task {task.name} - system cannot proceed without real agent")
+            raise Exception(f"No agent found for task {task.name} - check agent_name/agent_role configuration")
 
         try:
             # Add task and workflow context for agent logging
@@ -293,48 +303,8 @@ class TaskOrchestrator:
             raise Exception(f"Agent execution failed for task {task.name}: {str(e)} - no mock execution allowed")
 
     async def _get_agent_for_task(self, task: Task, context: Dict[str, Any]) -> Optional[Any]:
-        """Get appropriate agent for task execution."""
-        from ...domain.entities.agent import Agent, AgentRole
-        from uuid import uuid4
-
-        # Create agents based on task name/role
-        if task.name == "task1_brief" or task.agent_role == AgentRole.RESEARCHER:
-            # RAG Specialist Agent
-            return Agent(
-                id=uuid4(),
-                name="rag_specialist",
-                role=AgentRole.RESEARCHER,
-                goal="Retrieve and analyze client knowledge base content to create comprehensive project briefs",
-                backstory="You are an expert at analyzing client documentation and creating detailed project briefs that guide content creation.",
-                system_message="You specialize in retrieving relevant information from knowledge bases and creating structured briefs.",
-                tools=["rag_get_client_content", "rag_search_content"]
-            )
-
-        elif task.name == "task2_research":
-            # Web Searcher Agent
-            return Agent(
-                id=uuid4(),
-                name="web_searcher",
-                role=AgentRole.RESEARCHER,
-                goal="Find current web information and trends to enhance content with up-to-date insights",
-                backstory="You are an expert web researcher who finds the most current and relevant information to enhance content.",
-                system_message="You specialize in web research and finding current trends and information. Always use web search tools to find the most recent and relevant information.",
-                tools=["web_search", "web_search_financial"]
-            )
-
-        elif task.name == "task3_content" or task.agent_role == AgentRole.WRITER:
-            # Copywriter Agent
-            return Agent(
-                id=uuid4(),
-                name="copywriter",
-                role=AgentRole.WRITER,
-                goal="Create engaging, well-structured content that aligns with brand guidelines and speaks to the target audience",
-                backstory="You are an expert copywriter who creates compelling content tailored to specific audiences and brand voices.",
-                system_message="You specialize in creating high-quality, engaging content that meets specific requirements and brand guidelines.",
-                tools=[]
-            )
-
-        # Default: return None for mock execution
+        """Deprecated: selection now happens via AgentFactory in _execute_task_logic."""
+        # Keeping method for backward compatibility, but prefer AgentFactory path
         return None
 
     async def _mock_task_execution(

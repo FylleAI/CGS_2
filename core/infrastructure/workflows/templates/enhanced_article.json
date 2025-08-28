@@ -76,7 +76,7 @@
     {
       "id": "task2_research",
       "name": "Web Research & Brief Enhancement", 
-      "agent": "rag_specialist",
+      "agent": "web_searcher",
       "description_template": "TASK 2 - WEB RESEARCH & BRIEF ENHANCEMENT:\nRicevi il brief creato nel Task precedente e arricchiscilo con ricerche web aggiornate e pertinenti.\n\nCONTEXT FROM PREVIOUS TASK:\nIl task precedente ha creato un brief completo. Utilizza questo brief come base e arricchiscilo.\n\nINPUT:\n{{task1_brief_output}}\n\nSTEP 1: ANALYZE BRIEF\nAnalizza il brief ricevuto per identificare gap informativi e aree che necessitano di ricerca web.\n\nSTEP 2: CONDUCT WEB RESEARCH\nConduci ricerche web mirate utilizzando questi tool calls:\n\nPer informazioni generali:\n[web_search] {{topic}} trends 2025 latest developments [/web_search]\n\nPer contenuti finanziari (se applicabile):\n[web_search_financial] {{topic}}, crypto,day_trading [/web_search_financial]\n\nPer statistiche e dati:\n[web_search] {{topic}} statistics data recent studies [/web_search]\n\nSTEP 3: INTEGRATE FINDINGS\nIntegra le informazioni trovate nel brief esistente e crea un brief arricchito.\n\nOBIETTIVI:\n1. Analizza il brief ricevuto per identificare gap informativi\n2. Conduci ricerche web mirate su:\n   - Trend attuali relativi a {{topic}}\n   - Statistiche e dati recenti\n   - Best practices del settore\n   - Casi studio rilevanti\n3. Integra le informazioni trovate nel brief esistente\n4. Affina e migliora le sezioni del brief con dati aggiornati\n\nFOCUS AREAS:\n- Cerca informazioni che supportino gli obiettivi definiti nel brief\n- Identifica opportunità per differenziare il contenuto\n- Trova dati e statistiche che rafforzino i messaggi chiave",
       "dependencies": ["task1_brief"]
     },

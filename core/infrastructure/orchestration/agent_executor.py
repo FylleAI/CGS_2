@@ -213,19 +213,20 @@ class AgentExecutor:
         tools_info = self._get_agent_tools_descriptions(agent)
         if tools_info:
             system_message += f"\n\nYou have access to the following tools:\n{tools_info}"
+            from ..tools.tool_names import ToolNames
             system_message += "\n\nIMPORTANT: When you need to use a tool, format your response EXACTLY like this:"
-            system_message += "\n[rag_get_client_content] client_name [/rag_get_client_content]"
-            system_message += "\n[rag_get_client_content] client_name, document_name [/rag_get_client_content]"
-            system_message += "\n[rag_search_content] client_name, search_query [/rag_search_content]"
-            system_message += "\n[rag_search_content] search_query [/rag_search_content] (defaults to 'siebert' client)"
-            system_message += "\n[web_search] your search query [/web_search]"
-            system_message += "\n[research_premium_financial] topic=your topic, exclude_topics=topics to exclude [/research_premium_financial]"
+            system_message += f"\n[{ToolNames.RAG_GET_CLIENT_CONTENT}] client_name [/{ToolNames.RAG_GET_CLIENT_CONTENT}]"
+            system_message += f"\n[{ToolNames.RAG_GET_CLIENT_CONTENT}] client_name, document_name [/{ToolNames.RAG_GET_CLIENT_CONTENT}]"
+            system_message += f"\n[{ToolNames.RAG_SEARCH_CONTENT}] client_name, search_query [/{ToolNames.RAG_SEARCH_CONTENT}]"
+            system_message += f"\n[{ToolNames.RAG_SEARCH_CONTENT}] search_query [/{ToolNames.RAG_SEARCH_CONTENT}] (defaults to 'siebert' client)"
+            system_message += f"\n[{ToolNames.WEB_SEARCH}] your search query [/{ToolNames.WEB_SEARCH}]"
+            system_message += f"\n[{ToolNames.RESEARCH_PREMIUM_FINANCIAL}] topic=your topic, exclude_topics=topics to exclude [/{ToolNames.RESEARCH_PREMIUM_FINANCIAL}]"
             system_message += "\n\nCRITICAL RULES:"
             system_message += "\n- Use EXACT tool names from the list above"
             system_message += "\n- For rag_search_content: ALWAYS provide a specific search query"
             system_message += "\n- For multi-parameter tools: separate parameters with commas"
             system_message += "\n- Do NOT use generic placeholders like 'TOOL_NAME'"
-        
+
         return system_message
     
     def _prepare_prompt(
@@ -250,30 +251,31 @@ class AgentExecutor:
         if tools:
             tools_reminder = "\n\n## Available Tools\n"
             tools_reminder += "You can use these tools to enhance your response:\n"
+            from ..tools.tool_names import ToolNames
             for tool in tools:
-                if tool == "rag_get_client_content":
-                    tools_reminder += f"- {tool}: Use [rag_get_client_content] client_name [/rag_get_client_content] to retrieve all content for a client\n"
-                    tools_reminder += f"  Example: [rag_get_client_content] siebert [/rag_get_client_content]\n"
-                elif tool == "rag_search_content":
-                    tools_reminder += f"- {tool}: Use [rag_search_content] client_name, search_query [/rag_search_content] to search within client content\n"
-                    tools_reminder += f"  Example: [rag_search_content] siebert, Mark Malek insights [/rag_search_content]\n"
-                    tools_reminder += f"  Shorthand: [rag_search_content] Mark Malek insights [/rag_search_content] (defaults to siebert)\n"
-                elif tool == "web_search":
-                    tools_reminder += f"- {tool}: Use [web_search] your search query [/web_search] to search the web for current information\n"
-                elif tool == "web_search_financial":
-                    tools_reminder += f"- {tool}: Use [web_search_financial] topic, exclude_topics [/web_search_financial] for financial content\n"
-                elif tool == "research_premium_financial":
-                    tools_reminder += f"- {tool}: Use [research_premium_financial] topic, exclude_topics [/research_premium_financial] for premium financial research with Perplexity\n"
-                elif tool == "research_client_sources":
-                    tools_reminder += f"- {tool}: Use [research_client_sources] client_name, topic, days_back [/research_client_sources] for client-specific source research\n"
-                elif tool == "research_general_topic":
-                    tools_reminder += f"- {tool}: Use [research_general_topic] topic [/research_general_topic] for general topic research with Perplexity\n"
+                if tool == ToolNames.RAG_GET_CLIENT_CONTENT:
+                    tools_reminder += f"- {tool}: Use [{ToolNames.RAG_GET_CLIENT_CONTENT}] client_name [/{ToolNames.RAG_GET_CLIENT_CONTENT}] to retrieve all content for a client\n"
+                    tools_reminder += f"  Example: [{ToolNames.RAG_GET_CLIENT_CONTENT}] siebert [/{ToolNames.RAG_GET_CLIENT_CONTENT}]\n"
+                elif tool == ToolNames.RAG_SEARCH_CONTENT:
+                    tools_reminder += f"- {tool}: Use [{ToolNames.RAG_SEARCH_CONTENT}] client_name, search_query [/{ToolNames.RAG_SEARCH_CONTENT}] to search within client content\n"
+                    tools_reminder += f"  Example: [{ToolNames.RAG_SEARCH_CONTENT}] siebert, Mark Malek insights [/{ToolNames.RAG_SEARCH_CONTENT}]\n"
+                    tools_reminder += f"  Shorthand: [{ToolNames.RAG_SEARCH_CONTENT}] Mark Malek insights [/{ToolNames.RAG_SEARCH_CONTENT}] (defaults to siebert)\n"
+                elif tool == ToolNames.WEB_SEARCH:
+                    tools_reminder += f"- {tool}: Use [{ToolNames.WEB_SEARCH}] your search query [/{ToolNames.WEB_SEARCH}] to search the web for current information\n"
+                elif tool == ToolNames.WEB_SEARCH_FINANCIAL:
+                    tools_reminder += f"- {tool}: Use [{ToolNames.WEB_SEARCH_FINANCIAL}] topic, exclude_topics [/{ToolNames.WEB_SEARCH_FINANCIAL}] for financial content\n"
+                elif tool == ToolNames.RESEARCH_PREMIUM_FINANCIAL:
+                    tools_reminder += f"- {tool}: Use [{ToolNames.RESEARCH_PREMIUM_FINANCIAL}] topic, exclude_topics [/{ToolNames.RESEARCH_PREMIUM_FINANCIAL}] for premium financial research with Perplexity\n"
+                elif tool == ToolNames.RESEARCH_CLIENT_SOURCES:
+                    tools_reminder += f"- {tool}: Use [{ToolNames.RESEARCH_CLIENT_SOURCES}] client_name, topic, days_back [/{ToolNames.RESEARCH_CLIENT_SOURCES}] for client-specific source research\n"
+                elif tool == ToolNames.RESEARCH_GENERAL_TOPIC:
+                    tools_reminder += f"- {tool}: Use [{ToolNames.RESEARCH_GENERAL_TOPIC}] topic [/{ToolNames.RESEARCH_GENERAL_TOPIC}] for general topic research with Perplexity\n"
                 else:
                     tools_reminder += f"- {tool}: Use [{tool}] your input [/{tool}]\n"
 
             tools_reminder += "\n⚠️ CRITICAL: Use the EXACT tool names shown above. Do NOT use placeholders like 'TOOL_NAME'."
             prompt_parts.append(tools_reminder)
-        
+
         # Add final instructions
         prompt_parts.append("\n\nPlease provide a comprehensive response to the task.")
         
@@ -283,23 +285,27 @@ class AgentExecutor:
         """Get the list of tools available to this agent."""
         available_tools = []
         
+        from ..tools.tool_names import ALIASES
         for tool_name in agent.tools:
-            if tool_name in self.tools_registry:
-                available_tools.append(tool_name)
-        
+            canonical = ALIASES.get(tool_name, tool_name)
+            if canonical in self.tools_registry:
+                available_tools.append(canonical)
+
         return available_tools
-    
+
     def _get_agent_tools_descriptions(self, agent: Agent) -> str:
         """Get descriptions of tools available to this agent."""
         tool_descriptions = []
         
+        from ..tools.tool_names import ALIASES
         for tool_name in agent.tools:
-            if tool_name in self.tools_registry:
-                description = self.tools_registry[tool_name]['description']
-                tool_descriptions.append(f"- {tool_name}: {description}")
-        
+            canonical = ALIASES.get(tool_name, tool_name)
+            if canonical in self.tools_registry:
+                description = self.tools_registry[canonical]['description']
+                tool_descriptions.append(f"- {canonical}: {description}")
+
         return "\n".join(tool_descriptions)
-    
+
     async def process_tool_calls(self, agent_response: str, session_id: str = None) -> str:
         """
         Process tool calls in the agent's response.
@@ -338,24 +344,28 @@ class AgentExecutor:
 
         # Process each tool call
         for tool_name, tool_input in tool_calls:
-            if tool_name in self.tools_registry:
+            from ..tools.tool_names import ALIASES
+            original_tool_name = tool_name
+            canonical_tool_name = ALIASES.get(original_tool_name, original_tool_name)
+
+            if canonical_tool_name in self.tools_registry:
                 # Log tool call start
                 call_id = None
                 if session_id:
                     call_id = agent_logger.log_tool_call(
                         session_id=session_id,
-                        tool_name=tool_name,
+                        tool_name=original_tool_name,
                         tool_input=tool_input.strip(),
-                        tool_description=self.tools_registry[tool_name]['description']
+                        tool_description=self.tools_registry[canonical_tool_name]['description']
                     )
 
                 try:
                     # Execute the tool with timing
                     start_time = time.time()
-                    tool_function = self.tools_registry[tool_name]['function']
+                    tool_function = self.tools_registry[canonical_tool_name]['function']
 
                     # Parse tool input based on tool type
-                    tool_result = await self._execute_tool_with_params(tool_name, tool_function, tool_input.strip())
+                    tool_result = await self._execute_tool_with_params(canonical_tool_name, tool_function, tool_input.strip())
                     duration_ms = (time.time() - start_time) * 1000
 
                     # Log successful tool response
@@ -363,15 +373,15 @@ class AgentExecutor:
                         agent_logger.log_tool_response(
                             session_id=session_id,
                             call_id=call_id,
-                            tool_name=tool_name,
+                            tool_name=original_tool_name,
                             tool_output=tool_result,
                             duration_ms=duration_ms,
                             success=True
                         )
 
                     # Replace the tool call with the result
-                    tool_call = f"[{tool_name}]{tool_input}[/{tool_name}]"
-                    tool_result_text = f"[{tool_name} RESULT]\n{tool_result}\n[/{tool_name} RESULT]"
+                    tool_call = f"[{original_tool_name}]{tool_input}[/{original_tool_name}]"
+                    tool_result_text = f"[{original_tool_name} RESULT]\n{tool_result}\n[/{original_tool_name} RESULT]"
                     agent_response = agent_response.replace(tool_call, tool_result_text)
 
                 except Exception as e:
