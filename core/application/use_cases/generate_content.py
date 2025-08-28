@@ -59,6 +59,7 @@ class GenerateContentUseCase:
         # Initialize tools
         self.web_search_tool = WebSearchTool(serper_api_key)
         self.rag_tool = RAGTool()
+        # Do not pull provider model from env; pass explicitly if needed
         self.perplexity_tool = PerplexityResearchTool(perplexity_api_key)
 
         # Register tools with agent executor
@@ -513,32 +514,33 @@ LENGTH: {context.get('length', 'medium')} length article
 
     def _register_tools(self) -> None:
         """Register tools with the agent executor."""
+        from ...infrastructure.tools.tool_names import ToolNames
         self.agent_executor.register_tools({
-            'web_search': {
+            ToolNames.WEB_SEARCH: {
                 'function': self.web_search_tool.search,
                 'description': 'Search the web for current information and trends'
             },
-            'web_search_financial': {
+            ToolNames.WEB_SEARCH_FINANCIAL: {
                 'function': self.web_search_tool.search_financial_content,
                 'description': 'Search for current financial content and market trends'
             },
-            'rag_get_client_content': {
+            ToolNames.RAG_GET_CLIENT_CONTENT: {
                 'function': self.rag_tool.get_client_content,
                 'description': 'Retrieve content from client knowledge base'
             },
-            'rag_search_content': {
+            ToolNames.RAG_SEARCH_CONTENT: {
                 'function': self.rag_tool.search_content,
                 'description': 'Search within client knowledge base'
             },
-            'research_premium_financial': {
+            ToolNames.RESEARCH_PREMIUM_FINANCIAL: {
                 'function': self.perplexity_tool.research_premium_financial,
                 'description': 'Research premium financial content using Perplexity AI with domain filtering'
             },
-            'research_client_sources': {
+            ToolNames.RESEARCH_CLIENT_SOURCES: {
                 'function': self.perplexity_tool.research_client_sources,
                 'description': 'Research content from client-specific sources using Perplexity AI'
             },
-            'research_general_topic': {
+            ToolNames.RESEARCH_GENERAL_TOPIC: {
                 'function': self.perplexity_tool.research_general_topic,
                 'description': 'General topic research using Perplexity AI without domain restrictions'
             }

@@ -62,6 +62,7 @@ class Task:
     expected_output: str = ""
     task_type: TaskType = TaskType.RESEARCH
     agent_id: Optional[UUID] = None
+    agent_name: Optional[str] = None  # Preferred explicit agent identifier from templates
     agent_role: Optional[Any] = None  # Will be AgentRole enum
     dependencies: List[UUID] = field(default_factory=list)
     tools_required: List[str] = field(default_factory=list)
@@ -151,6 +152,7 @@ class Task:
             "description": self.description,
             "expected_output": self.expected_output,
             "agent_id": str(self.agent_id) if self.agent_id else None,
+            "agent_name": self.agent_name,
             "dependencies": [str(dep) for dep in self.dependencies],
             "tools_required": self.tools_required,
             "context": self.context,
@@ -177,6 +179,7 @@ class Task:
             description=data.get("description", ""),
             expected_output=data.get("expected_output", ""),
             agent_id=UUID(data["agent_id"]) if data.get("agent_id") else None,
+            agent_name=data.get("agent_name"),
             dependencies=[UUID(dep) for dep in data.get("dependencies", [])],
             tools_required=data.get("tools_required", []),
             context=data.get("context", {}),

@@ -4,6 +4,8 @@ Optimized workflow with Perplexity integration and 8-section Gen Z format.
 """
 
 import logging
+import json
+
 from typing import Dict, Any, List
 
 from ..base.workflow_base import WorkflowHandler
@@ -46,8 +48,9 @@ class SiebertPremiumNewsletterHandler(WorkflowHandler):
             word_count = max(800, min(1200, word_count))
             context['target_word_count'] = word_count
 
-        # Set client_name for RAG operations
+        # Set client identifiers for RAG operations and agent resolution
         context['client_name'] = 'siebert'
+        context['client_profile'] = 'siebert'  # Ensure AgentFactory can resolve Siebert agents
 
         logger.info(f"✅ Siebert newsletter inputs validated: {word_count} words target for {audience}")
 
@@ -63,6 +66,7 @@ class SiebertPremiumNewsletterHandler(WorkflowHandler):
         context.setdefault('premium_sources', '')
         context.setdefault('custom_instructions', '')
         context.setdefault('client_name', 'siebert')
+        context.setdefault('client_profile', 'siebert')  # Ensure consistent client identification
 
         # Set Siebert target URLs for premium research (specific URLs instead of domains)
         context.setdefault('siebert_target_urls',
@@ -126,18 +130,12 @@ class SiebertPremiumNewsletterHandler(WorkflowHandler):
             logger.info(f"📋 Siebert brand guidelines and 8-section template extracted")
 
         elif task_id == 'task2_perplexity_research':
-            # Validate Perplexity research execution
+            # Keep it simple: mark as completed and pass raw output forward
             context['perplexity_research_completed'] = True
-            context['research_sources_count'] = 3  # premium_financial, client_sources, general_topic
-            logger.info(f"🔍 Perplexity research completed with 3 source types")
+            logger.info("📚 Perplexity research completed; passing raw output forward without parsing")
 
-        elif task_id == 'task3_content_synthesis':
-            # Validate content synthesis and cultural integration
-            context['content_synthesis_completed'] = True
-            context['cultural_integration_applied'] = True
-            logger.info(f"🎨 Content synthesis and cultural integration completed")
 
-        elif task_id == 'task4_newsletter_assembly':
+        elif task_id == 'task3_newsletter_assembly':
             # Verify 8-section newsletter structure and word counts
             word_count = len(task_output.split()) if task_output else 0
             context['final_word_count'] = word_count
@@ -147,7 +145,7 @@ class SiebertPremiumNewsletterHandler(WorkflowHandler):
             context['siebert_format_applied'] = True
             logger.info(f"📄 Siebert newsletter created: {word_count} words ({accuracy:.1f}% of target)")
 
-        elif task_id == 'task5_compliance_review':
+        elif task_id == 'task4_compliance_review':
             # Validate compliance review completion
             word_count = len(task_output.split()) if task_output else 0
             context['compliance_reviewed'] = True
@@ -171,23 +169,23 @@ class SiebertPremiumNewsletterHandler(WorkflowHandler):
                     task_outputs.append((key, value, len(value)))
                     logger.info(f"📊 Found task output: {key} ({len(value)} chars)")
 
-            # Prioritize task5_compliance_review output (final), then task4_newsletter_assembly
+            # Prioritize task4_compliance_review output (final), then task3_newsletter_assembly
             if task_outputs:
-                task5_output = None
                 task4_output = None
+                task3_output = None
 
                 for key, value, length in task_outputs:
-                    if key == 'task5_compliance_review_output':
-                        task5_output = (key, value, length)
-                    elif key == 'task4_newsletter_assembly_output':
+                    if key == 'task4_compliance_review_output':
                         task4_output = (key, value, length)
+                    elif key == 'task3_newsletter_assembly_output':
+                        task3_output = (key, value, length)
 
-                if task5_output:
-                    final_content = task5_output[1]
-                    logger.info(f"✅ Selected compliance-reviewed newsletter from {task5_output[0]} ({task5_output[2]} chars)")
-                elif task4_output:
+                if task4_output:
                     final_content = task4_output[1]
-                    logger.info(f"📄 Selected newsletter content from {task4_output[0]} ({task4_output[2]} chars)")
+                    logger.info(f"✅ Selected compliance-reviewed newsletter from {task4_output[0]} ({task4_output[2]} chars)")
+                elif task3_output:
+                    final_content = task3_output[1]
+                    logger.info(f"📄 Selected newsletter content from {task3_output[0]} ({task3_output[2]} chars)")
                 else:
                     # Fallback to longest output
                     task_outputs.sort(key=lambda x: x[2], reverse=True)

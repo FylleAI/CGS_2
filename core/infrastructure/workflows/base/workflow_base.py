@@ -20,20 +20,20 @@ logger = logging.getLogger(__name__)
 class WorkflowHandler(ABC):
     """
     Base class for all workflow handlers.
-    
+
     Each workflow type should inherit from this class and implement
     the specific business logic methods.
     """
-    
+
     def __init__(self, workflow_type: str):
         self.workflow_type = workflow_type
         self.template = self.load_template()
         logger.info(f"🏗️ Initialized workflow handler: {workflow_type}")
-    
+
     def load_template(self) -> Dict[str, Any]:
         """Load workflow template from JSON file."""
         template_path = Path(__file__).parent.parent / "templates" / f"{self.workflow_type}.json"
-        
+
         try:
             with open(template_path, 'r', encoding='utf-8') as f:
                 template = json.load(f)
@@ -45,7 +45,7 @@ class WorkflowHandler(ABC):
         except json.JSONDecodeError as e:
             logger.error(f"❌ Invalid JSON in template: {template_path} - {e}")
             raise ValueError(f"Invalid template format for: {self.workflow_type}")
-    
+
     async def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute the complete workflow with dynamic context.
@@ -124,7 +124,7 @@ class WorkflowHandler(ABC):
             )
 
             raise
-    
+
     def create_workflow(self, context: Dict[str, Any]) -> Workflow:
         """Create workflow with dynamic tasks based on template and context."""
         workflow = Workflow(
@@ -143,67 +143,67 @@ class WorkflowHandler(ABC):
         logger.debug(f"✅ Workflow marked as ready: {workflow.name}")
 
         return workflow
-    
+
     def create_task(self, task_template: Dict[str, Any], context: Dict[str, Any]) -> Optional[Task]:
         """
         Create a single task from template with dynamic substitution.
-        
+
         Args:
             task_template: Task template from JSON
             context: Dynamic context for substitution
-            
+
         Returns:
             Task instance or None if task should be skipped
         """
         task_id = task_template.get('id')
-        
+
         # Check if task should be skipped (conditional logic)
         if self.should_skip_task(task_id, context):
             logger.info(f"⏭️ Skipping task: {task_id}")
             return None
-        
-        # Substitute template variables in description
+
+        # Keep raw description template; we'll substitute at execution time with full context
         description_template = task_template.get('description_template', '')
-        description = substitute_template(description_template, context)
-        
-        # Create task
+
+        # Create task (store template as description)
         task = Task(
             id=task_id,
             name=task_template.get('name', task_id),
-            description=description,
-            agent_role=task_template.get('agent', 'default'),
+            description=description_template,
+            agent_name=task_template.get('agent'),
+            agent_role=task_template.get('agent_role'),
             dependencies=task_template.get('dependencies', [])
         )
-        
+
         logger.debug(f"📝 Created task: {task_id}")
         return task
-    
+
     async def execute_tasks(self, workflow: Workflow, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute all tasks in the workflow with dependency management."""
         execution_results = {}
         task_outputs = {}
-        
+
         for task in workflow.tasks:
             logger.info(f"🔄 Executing task: {task.name}")
-            
+
             # Add previous task outputs to context
             enhanced_context = {**context, **task_outputs}
-            
+
             # Execute task (this will be handled by the task orchestrator)
             task_output = await self.execute_single_task(task, enhanced_context)
-            
+
             # Store task output
             task_outputs[task.id] = task_output
             execution_results[f"{task.id}_output"] = task_output
-            
+
             # Post-process task (can be overridden)
             enhanced_context = self.post_process_task(task.id, task_output, enhanced_context)
             context.update(enhanced_context)
-            
+
             logger.info(f"✅ Task completed: {task.name}")
-        
+
         return execution_results
-    
+
     async def execute_single_task(self, task: Task, context: Dict[str, Any]) -> str:
         """
         Execute a single task directly using the agent executor from context.
@@ -219,6 +219,12 @@ class WorkflowHandler(ABC):
             Task execution result
         """
         logger.info(f"🚀 Executing task directly: {task.name}")
+        # Ensure workflow_tasks is in context for dependency resolution
+        if 'workflow_tasks' not in context:
+            import logging
+            logging.getLogger(__name__).warning("⚠️ workflow_tasks not in context - dependency resolution may fail")
+            context['workflow_tasks'] = []
+
 
         # Get agent executor from context
         agent_executor = context.get('agent_executor')
@@ -231,13 +237,21 @@ class WorkflowHandler(ABC):
         logger.debug(f"🔍 Agent repository available: {agent_repository is not None}")
 
         try:
-            logger.debug(f"🔧 Direct execution for task: {task.name} with agent: {task.agent_role}")
+            logger.debug(f"🔧 Direct execution for task: {task.name} with agent_name: {getattr(task, 'agent_name', None)} role: {getattr(task, 'agent_role', None)}")
 
-            # Get the appropriate agent for this task
-            agent = await self._get_agent_for_task(task, context)
+            # Resolve the agent via AgentFactory (template-driven)
+            from ...factories.agent_factory import AgentFactory
+            agent_factory = AgentFactory(context.get('agent_repository'))
+            agent = await agent_factory.get(
+                name=getattr(task, 'agent_name', None),
+                role=getattr(task, 'agent_role', None),
+                ctx=context
+            )
             if not agent:
                 logger.error(f"❌ CRITICAL: No agent found for task {task.name}")
                 raise Exception(f"No agent available for task {task.name} - system cannot proceed without proper agent")
+
+            logger.info(f"🧪 Executing task with agent: {agent.name} (role={getattr(agent.role, 'value', None)}) for client_profile={context.get('client_profile') or context.get('client_name')}")
 
             # Execute task directly using agent executor
             # This bypasses the complex temporary workflow system completely
@@ -298,7 +312,8 @@ class WorkflowHandler(ABC):
                 )
 
             # Find agent by role, preferring client-specific agents
-            client_profile = context.get('client_name', context.get('client_profile', 'default'))
+            # Prefer client_profile, fallback to client_name for consistency with AgentFactory
+            client_profile = context.get('client_profile') or context.get('client_name', 'default')
 
             # First try to get client-specific agents
             if client_profile and client_profile != 'default':
@@ -326,14 +341,14 @@ class WorkflowHandler(ABC):
             return None
 
     # Methods that can be overridden by specific workflow handlers
-    
+
     def validate_inputs(self, context: Dict[str, Any]) -> None:
         """
         Validate input context. Override in specific handlers.
-        
+
         Args:
             context: Input context to validate
-            
+
         Raises:
             ValueError: If validation fails
         """
@@ -342,57 +357,66 @@ class WorkflowHandler(ABC):
         for var in self.template.get('variables', []):
             if var.get('required', False):
                 required_vars.append(var['name'])
-        
+
         missing_vars = [var for var in required_vars if not context.get(var)]
         if missing_vars:
             raise ValueError(f"Missing required variables: {missing_vars}")
-        
+
         logger.debug(f"✅ Default validation passed for {len(required_vars)} required variables")
-    
+
     def prepare_context(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Prepare and enhance context before execution. Override in specific handlers.
-        
+
         Args:
             context: Input context
-            
+
         Returns:
             Enhanced context
         """
         # Default: add template metadata to context
         context['workflow_template'] = self.template.get('name', self.workflow_type)
         context['workflow_version'] = self.template.get('version', '1.0')
-        
+
+        # Ensure client identification consistency for agent resolution
+        # If client_name is set but client_profile is not, sync them
+        if context.get('client_name') and not context.get('client_profile'):
+            context['client_profile'] = context['client_name']
+            logger.debug(f"🔧 Synced client_profile from client_name: {context['client_name']}")
+        elif context.get('client_profile') and not context.get('client_name'):
+            context['client_name'] = context['client_profile']
+            logger.debug(f"🔧 Synced client_name from client_profile: {context['client_profile']}")
+
         logger.debug("✅ Default context preparation completed")
         return context
-    
+
     def should_skip_task(self, task_id: str, context: Dict[str, Any]) -> bool:
         """
         Determine if a task should be skipped. Override in specific handlers.
-        
+
         Args:
             task_id: ID of the task to check
             context: Current context
-            
+
         Returns:
             True if task should be skipped
         """
         return False
-    
+
     def post_process_task(self, task_id: str, task_output: str, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Post-process task output. Override in specific handlers.
-        
+
         Args:
             task_id: ID of the completed task
             task_output: Output from the task
             context: Current context
-            
+
         Returns:
             Updated context
         """
         return context
-    
+
     def post_process_workflow(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Post-process entire workflow. Override in specific handlers.
