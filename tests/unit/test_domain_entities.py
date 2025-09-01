@@ -150,10 +150,32 @@ class TestContent:
         """Test content excerpt generation."""
         long_content = "This is a very long piece of content. " * 20
         content = Content(title="Test", body=long_content)
-        
+
         excerpt = content.get_excerpt(100)
         assert len(excerpt) <= 103  # 100 + "..."
         assert excerpt.endswith("...")
+
+    def test_content_excerpt_edge_cases(self):
+        """Test content excerpt edge cases."""
+        # Test short content (should not add ...)
+        short_content = "Short content."
+        content = Content(title="Test", body=short_content)
+        excerpt = content.get_excerpt(100)
+        assert excerpt == short_content
+        assert not excerpt.endswith("...")
+
+        # Test content that ends exactly at sentence boundary
+        sentence_content = "First sentence. Second sentence. Third sentence."
+        content = Content(title="Test", body=sentence_content)
+        excerpt = content.get_excerpt(30)  # Should break at first sentence
+        assert excerpt.endswith("...")
+
+        # Test content without sentence boundaries
+        no_sentence_content = "This is content without proper sentence boundaries and spaces"
+        content = Content(title="Test", body=no_sentence_content)
+        excerpt = content.get_excerpt(20)
+        assert excerpt.endswith("...")
+        assert len(excerpt) <= 23  # 20 + "..."
 
 
 class TestTask:
