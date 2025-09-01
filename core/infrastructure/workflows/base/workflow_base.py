@@ -85,9 +85,9 @@ class WorkflowHandler(ABC):
             context.update(execution_results)
 
             # 5. Post-process results (can be overridden)
-            print(f"🔧 CALLING POST-PROCESSING: {type(self).__name__}")
+            logger.debug(f"🔧 CALLING POST-PROCESSING: {type(self).__name__}")
             context = self.post_process_workflow(context)
-            print(f"🔧 POST-PROCESSING RETURNED: {type(context)}")
+            logger.debug(f"🔧 POST-PROCESSING RETURNED: {type(context)}")
             logger.debug("✅ Post-processing completed")
 
             # Get final output for reporting
@@ -283,63 +283,6 @@ class WorkflowHandler(ABC):
         logger.error("❌ CRITICAL: Fallback content generation called - this should never happen")
         raise Exception("Fallback content generation is disabled - system must use real agent execution only")
 
-    async def _get_agent_for_task(self, task: Task, context: Dict[str, Any]) -> Optional['Agent']:
-        """
-        Get the appropriate agent for a task based on its role.
-
-        Args:
-            task: Task to find agent for
-            context: Execution context
-
-        Returns:
-            Agent instance or None if not found
-        """
-        try:
-            # Import here to avoid circular imports
-            from ....domain.entities.agent import Agent, AgentRole
-            from ....domain.repositories.agent_repository import AgentRepository
-
-            # Get agent repository from context or create a mock one
-            agent_repository = context.get('agent_repository')
-            if not agent_repository:
-                logger.warning("No agent repository in context, using mock agent")
-                # Create a mock agent for the task
-                return Agent(
-                    name=f"mock_{task.agent_role}",
-                    role=AgentRole(task.agent_role) if hasattr(AgentRole, task.agent_role) else AgentRole.WRITER,
-                    description=f"Mock agent for {task.agent_role} tasks",
-                    tools=[]
-                )
-
-            # Find agent by role, preferring client-specific agents
-            # Prefer client_profile, fallback to client_name for consistency with AgentFactory
-            client_profile = context.get('client_profile') or context.get('client_name', 'default')
-
-            # First try to get client-specific agents
-            if client_profile and client_profile != 'default':
-                client_agents = await agent_repository.get_by_client_profile(client_profile)
-                for agent in client_agents:
-                    if agent.role.value.lower() == task.agent_role.lower():
-                        logger.info(f"✅ Found client-specific agent: {agent.name} for role {task.agent_role}")
-                        return agent
-
-            # Fallback to general agents by role
-            try:
-                agent_role_enum = AgentRole(task.agent_role.upper())
-                agents = await agent_repository.get_by_role(agent_role_enum)
-                if agents:
-                    logger.info(f"✅ Found general agent: {agents[0].name} for role {task.agent_role}")
-                    return agents[0]  # Return first matching agent
-            except ValueError:
-                logger.warning(f"Invalid agent role: {task.agent_role}")
-
-            logger.warning(f"No agent found for role: {task.agent_role}")
-            return None
-
-        except Exception as e:
-            logger.error(f"Error getting agent for task: {str(e)}")
-            return None
-
     # Methods that can be overridden by specific workflow handlers
 
     def validate_inputs(self, context: Dict[str, Any]) -> None:
@@ -427,5 +370,5 @@ class WorkflowHandler(ABC):
         Returns:
             Final processed context
         """
-        print("🔧 BASE POST-PROCESSING: Called workflow base post-processing")
+        logger.debug("🔧 BASE POST-PROCESSING: Called workflow base post-processing")
         return context

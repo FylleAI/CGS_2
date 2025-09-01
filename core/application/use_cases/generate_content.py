@@ -8,7 +8,7 @@ from datetime import datetime
 from ...domain.entities.content import Content
 from ...domain.entities.workflow import Workflow, WorkflowType
 from ...domain.entities.task import Task, TaskType, TaskPriority
-from ...domain.entities.agent import Agent, AgentRole
+from ...domain.entities.agent import AgentRole
 from ...domain.repositories.content_repository import ContentRepository
 from ...domain.repositories.workflow_repository import WorkflowRepository
 from ...domain.repositories.agent_repository import AgentRepository
@@ -550,7 +550,7 @@ LENGTH: {context.get('length', 'medium')} length article
         """Configure agents for the workflow."""
         # Load or create agents based on workflow type
         if request.workflow_type == "enhanced_article":
-            await self._setup_enhanced_article_agents(workflow, request)
+            await self._create_enhanced_article_tasks(workflow, request)
         elif request.workflow_type == "newsletter_premium":
             await self._setup_newsletter_premium_agents(workflow, request)
         else:
@@ -679,45 +679,7 @@ LENGTH: {context.get('length', 'medium')} length article
         
         return content
 
-    async def _setup_enhanced_article_agents(self, workflow: Workflow, request: ContentGenerationRequest) -> None:
-        """Setup agents for Enhanced Article workflow."""
-        # Create RAG Specialist Agent
-        rag_specialist = Agent(
-            name="rag_specialist",
-            role=AgentRole.RESEARCHER,
-            goal="Retrieve and analyze client knowledge base content to create comprehensive project briefs",
-            backstory="You are an expert at analyzing client documentation and creating detailed project briefs that guide content creation.",
-            system_message="You specialize in retrieving relevant information from knowledge bases and creating structured briefs.",
-            tools=["rag_get_client_content", "rag_search_content"]
-        )
-
-        # Create Web Searcher Agent
-        web_searcher = Agent(
-            name="web_searcher",
-            role=AgentRole.RESEARCHER,
-            goal="Find current web information and trends to enhance content with up-to-date insights",
-            backstory="You are an expert web researcher who finds the most current and relevant information to enhance content.",
-            system_message="You specialize in web research and finding current trends and information.",
-            tools=["web_search", "web_search_financial"]
-        )
-
-        # Create Copywriter Agent
-        copywriter = Agent(
-            name="copywriter",
-            role=AgentRole.WRITER,
-            goal="Create engaging, well-structured content that aligns with brand guidelines and speaks to the target audience",
-            backstory="You are an expert copywriter who creates compelling content tailored to specific audiences and brand voices.",
-            system_message="You specialize in creating high-quality, engaging content that meets specific requirements and brand guidelines.",
-            tools=[]
-        )
-
-        # Save agents
-        await self.agent_repository.save(rag_specialist)
-        await self.agent_repository.save(web_searcher)
-        await self.agent_repository.save(copywriter)
-
-        # Create Enhanced Article tasks
-        await self._create_enhanced_article_tasks(workflow, request)
+    # Removed manual agent setup; agents are defined in YAML and resolved via AgentFactory
 
     async def _create_enhanced_article_tasks(self, workflow: Workflow, request: ContentGenerationRequest) -> None:
         """Create tasks for Enhanced Article workflow."""
@@ -760,6 +722,7 @@ STRUTTURA DEL BRIEF:
             expected_output="A comprehensive project brief in markdown format containing all specified sections",
             task_type=TaskType.RESEARCH,
             agent_role=AgentRole.RESEARCHER,
+            agent_name="rag_specialist",
             priority=TaskPriority.HIGH
         )
 
@@ -812,6 +775,7 @@ FOCUS AREAS:
             expected_output="Enhanced brief with web research integration in markdown format",
             task_type=TaskType.RESEARCH,
             agent_role=AgentRole.RESEARCHER,
+            agent_name="web_searcher",
             dependencies=[task1.id],
             priority=TaskPriority.HIGH
         )
@@ -853,6 +817,7 @@ QUALITY ASSURANCE:
             expected_output="A polished, publication-ready article in markdown format",
             task_type=TaskType.WRITING,
             agent_role=AgentRole.WRITER,
+            agent_name="copywriter",
             dependencies=[task2.id],
             priority=TaskPriority.HIGH
         )

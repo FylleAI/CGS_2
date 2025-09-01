@@ -2,6 +2,7 @@
 
 import yaml
 import logging
+import asyncio
 from typing import List, Optional
 from uuid import UUID
 from pathlib import Path
@@ -28,16 +29,18 @@ class YamlAgentRepository(AgentRepository):
         """Get file path for agent configuration."""
         return self.base_path / client_profile / "agents" / f"{agent_name}.yaml"
     
-    def _load_agent_from_file(self, file_path: Path) -> Optional[Agent]:
-        """Load agent from YAML file."""
+    async def _load_agent_from_file(self, file_path: Path) -> Optional[Agent]:
+        """Load agent from YAML file without blocking the event loop."""
         try:
             if not file_path.exists():
                 return None
-            
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = yaml.safe_load(f)
-            
-            # Convert YAML data to Agent entity
+
+            def read_file() -> dict:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    return yaml.safe_load(f)
+
+            data = await asyncio.to_thread(read_file)
+
             return Agent(
                 name=data.get('name', file_path.stem),
                 role=AgentRole(data.get('role', 'researcher')),
@@ -48,18 +51,16 @@ class YamlAgentRepository(AgentRepository):
                 examples=data.get('examples', []),
                 metadata=data.get('metadata', {})
             )
-            
+
         except Exception as e:
             logger.error(f"Failed to load agent from {file_path}: {str(e)}")
             return None
-    
-    def _save_agent_to_file(self, agent: Agent, file_path: Path) -> bool:
-        """Save agent to YAML file."""
+
+    async def _save_agent_to_file(self, agent: Agent, file_path: Path) -> bool:
+        """Save agent to YAML file without blocking the event loop."""
         try:
-            # Ensure directory exists
             file_path.parent.mkdir(parents=True, exist_ok=True)
-            
-            # Convert agent to YAML-friendly format
+
             data = {
                 'name': agent.name,
                 'role': agent.role.value,
@@ -71,12 +72,14 @@ class YamlAgentRepository(AgentRepository):
                 'metadata': agent.metadata,
                 'is_active': agent.is_active
             }
-            
-            with open(file_path, 'w', encoding='utf-8') as f:
-                yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
-            
+
+            def write_file() -> None:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    yaml.dump(data, f, default_flow_style=False, allow_unicode=True)
+
+            await asyncio.to_thread(write_file)
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to save agent to {file_path}: {str(e)}")
             return False
@@ -88,7 +91,7 @@ class YamlAgentRepository(AgentRepository):
         client_profile = agent.metadata.get('client_profile', 'default')
         file_path = self._get_agent_file_path(client_profile, agent.name)
         
-        if self._save_agent_to_file(agent, file_path):
+        if await self._save_agent_to_file(agent, file_path):
             return agent
         else:
             raise Exception(f"Failed to save agent {agent.name}")
@@ -110,7 +113,7 @@ class YamlAgentRepository(AgentRepository):
                 agents_dir = profile_dir / "agents"
                 if agents_dir.exists():
                     agent_file = agents_dir / f"{name}.yaml"
-                    agent = self._load_agent_from_file(agent_file)
+                    agent = await self._load_agent_from_file(agent_file)
                     if agent:
                         return agent
         return None
@@ -129,9 +132,8 @@ class YamlAgentRepository(AgentRepository):
                 agents_dir = profile_dir / "agents"
                 if agents_dir.exists():
                     for agent_file in agents_dir.glob("*.yaml"):
-                        agent = self._load_agent_from_file(agent_file)
+                        agent = await self._load_agent_from_file(agent_file)
                         if agent:
-                            # Add client profile to metadata
                             agent.metadata['client_profile'] = profile_dir.name
                             agents.append(agent)
         
@@ -179,7 +181,7 @@ class YamlAgentRepository(AgentRepository):
             agents_dir = profile_dir / "agents"
             if agents_dir.exists():
                 for agent_file in agents_dir.glob("*.yaml"):
-                    agent = self._load_agent_from_file(agent_file)
+                    agent = await self._load_agent_from_file(agent_file)
                     if agent:
                         agent.metadata['client_profile'] = profile_name
                         agents.append(agent)
