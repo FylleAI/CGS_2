@@ -1,7 +1,7 @@
 """Canonical tool names and alias mappings.
 
 Centralize tool name constants to ensure consistent references across:
-- Agent definitions (DEFAULT_AGENTS and YAML)
+- Agent YAML definitions
 - Tool registration (AgentExecutor)
 - Prompts and runtime parsing
 
