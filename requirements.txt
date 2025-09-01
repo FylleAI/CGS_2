@@ -22,6 +22,7 @@ websockets>=11.0.0
 sqlalchemy>=2.0.0
 alembic>=1.10.0
 chromadb>=0.4.0
+supabase>=2.0.0
 
 # Utilities
 typer>=0.9.0
