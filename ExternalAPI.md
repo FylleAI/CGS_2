@@ -225,7 +225,7 @@ execute_job(job_id, use_case) → async execution
 **Sicurezza:**
 ```python
 # .env
-EXTERNAL_API_KEY=cgs-api-key-12345-test-local
+EXTERNAL_API_KEY=
 
 # Headers richiesti
 Authorization: Bearer cgs-api-key-12345-test-local
