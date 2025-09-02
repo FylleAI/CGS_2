@@ -6,6 +6,7 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 
 from ..logging.agent_logger import agent_logger
+from ..database.supabase_tracker import SupabaseTracker
 
 logger = logging.getLogger(__name__)
 
@@ -18,9 +19,15 @@ class RAGTool:
     and content retrieval capabilities.
     """
     
-    def __init__(self, rag_base_dir: str = "data/knowledge_base"):
+    def __init__(self, rag_base_dir: str = "data/knowledge_base", tracker: Optional[SupabaseTracker] = None, run_id: Optional[str] = None):
         self.rag_base_dir = Path(rag_base_dir)
         self.rag_base_dir.mkdir(parents=True, exist_ok=True)
+        self.tracker = tracker
+        self.run_id = run_id
+
+    def set_run(self, run_id: str, tracker: SupabaseTracker) -> None:
+        self.run_id = run_id
+        self.tracker = tracker
     
     async def get_client_content(
         self,
@@ -63,6 +70,9 @@ class RAGTool:
                 available_docs = [f.name for f in client_dir.glob('*.md') if f.is_file()]
                 logger.info(f"📚 RAG: Found {len(available_docs)} documents: {available_docs}")
                 result = await self._get_all_client_content(client_dir, client_name)
+                if self.tracker and self.run_id:
+                    for doc in available_docs:
+                        self.tracker.log_rag_document(self.run_id, client_name, doc)
 
             duration_ms = (time.time() - start_time) * 1000
             content_length = len(result)
@@ -103,7 +113,10 @@ class RAGTool:
         
         try:
             with open(str(doc_path), "r", encoding="utf-8") as f:
-                return f.read()
+                content = f.read()
+            if self.tracker and self.run_id:
+                self.tracker.log_rag_document(self.run_id, client_dir.name, doc_path.name)
+            return content
         except Exception as e:
             logger.error(f"Error reading document {doc_path}: {str(e)}")
             return f"Error reading document: {str(e)}"
@@ -274,7 +287,9 @@ The following documents contain additional information that may be relevant to c
             formatted_results.append(f"## {result['document']}\n")
             for snippet in result['snippets']:
                 formatted_results.append(f"```\n{snippet}\n```\n")
-        
+            if self.tracker and self.run_id:
+                self.tracker.log_rag_document(self.run_id, client_name, result['document'])
+
         return '\n'.join(formatted_results)
     
     async def add_content(

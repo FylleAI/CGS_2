@@ -22,6 +22,7 @@ console = Console()
 @app.command("history")
 def show_history(
     client: str = typer.Option(None, "--client", "-c", help="Filter by client"),
+    workflow: str = typer.Option(None, "--workflow", "-w", help="Filter by workflow"),
     limit: int = typer.Option(20, "--limit", "-l", help="Number of runs to show"),
 ):
     tracker = get_tracker()
@@ -29,7 +30,7 @@ def show_history(
         console.print("[red]❌ Tracking not available[/red]")
         raise typer.Exit(code=1)
 
-    runs = tracker.get_run_history(client_name=client, limit=limit)
+    runs = tracker.get_run_history(client_name=client, workflow_name=workflow, limit=limit)
     if not runs:
         console.print("[yellow]No runs found[/yellow]")
         return
@@ -99,6 +100,8 @@ def show_details(run_id: str):
     run = details["run"]
     agents = details["agents"]
     logs = details["logs"]
+    documents = details.get("documents", [])
+    content = details.get("content")
 
     run_info = f"""
 [bold]Client:[/bold] {run.get('client_name','-')}
@@ -137,6 +140,21 @@ def show_details(run_id: str):
             )
         console.print(table)
 
+    if documents:
+        table = Table(title="RAG Documents")
+        table.add_column("Client")
+        table.add_column("Path")
+        table.add_column("Source")
+        for d in documents:
+            table.add_row(d.get("client_name", "-"), d.get("document_path", "-"), d.get("source_url") or "-")
+        console.print(table)
+
+    if content:
+        preview = content.get("content", "")
+        if len(preview) > 200:
+            preview = preview[:197] + "..."
+        console.print(Panel(preview, title=f"Content - {content.get('title','')}", border_style="green"))
+
     if logs:
         console.print(f"\n[bold]Recent Logs ({len(logs)} total):[/bold]")
         for log in logs[-10:]:
@@ -160,6 +178,7 @@ def show_details(run_id: str):
 @app.command("stats")
 def show_stats(
     client: str = typer.Option(None, "--client", "-c", help="Filter by client"),
+    workflow: str = typer.Option(None, "--workflow", "-w", help="Filter by workflow"),
     days: int = typer.Option(7, "--days", "-d", help="Days window (not enforced here, filtered client-side)"),
 ):
     tracker = get_tracker()
@@ -167,7 +186,7 @@ def show_stats(
         console.print("[red]❌ Tracking not available[/red]")
         raise typer.Exit(code=1)
 
-    runs = tracker.get_run_history(client_name=client, limit=1000)
+    runs = tracker.get_run_history(client_name=client, workflow_name=workflow, limit=1000)
     if not runs:
         console.print("[yellow]No runs found[/yellow]")
         return

@@ -75,11 +75,13 @@ class LogEntry:
 class AgentLogger:
     """Advanced logger for AI agents and tools interactions."""
     
-    def __init__(self, name: str = "agent_logger"):
+    def __init__(self, name: str = "agent_logger", tracker=None, run_id: Optional[str] = None):
         self.name = name
         self.logger = logging.getLogger(name)
         self.entries: List[LogEntry] = []
         self.active_sessions: Dict[str, Dict[str, Any]] = {}
+        self.tracker = tracker
+        self.run_id = run_id
         
         # Configure detailed formatting
         if not self.logger.handlers:
@@ -90,6 +92,11 @@ class AgentLogger:
             handler.setFormatter(formatter)
             self.logger.addHandler(handler)
             self.logger.setLevel(logging.DEBUG)
+
+    def set_tracker(self, tracker, run_id: str) -> None:
+        """Attach Supabase tracker and run identifier."""
+        self.tracker = tracker
+        self.run_id = run_id
     
     def start_agent_session(
         self, 
@@ -198,8 +205,10 @@ class AgentLogger:
                 'next_action': next_action
             }
         )
-        
+
         self._log_entry(entry)
+        if self.tracker and self.run_id:
+            self.tracker.add_log(self.run_id, "THINK", thought, session.get('agent_name'))
     
     def log_tool_call(
         self, 

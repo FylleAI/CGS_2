@@ -102,6 +102,12 @@ class GenerateContentUseCase:
 
             # 1. Build dynamic context from request
             context = await self._build_dynamic_context(request)
+            if run_id:
+                context['run_id'] = run_id
+                context['tracker'] = self.tracker
+                if self.tracker:
+                    agent_logger.set_tracker(self.tracker, run_id)
+                    self.rag_tool.set_run(run_id, self.tracker)
 
             # 2. Execute dynamic workflow
             # Default to enhanced_article if workflow_type is None or not specified
@@ -123,6 +129,18 @@ class GenerateContentUseCase:
 
             # 4. Save content
             saved_content = await self.content_repository.save(content)
+            if self.tracker is not None and run_id:
+                try:
+                    self.tracker.save_run_content(
+                        run_id=run_id,
+                        client_name=request.client_profile or "default",
+                        workflow_name=workflow_type,
+                        title=saved_content.title,
+                        content=saved_content.body,
+                        metadata=saved_content.metadata,
+                    )
+                except Exception as track_err:
+                    logger.warning(f"Saving run content failed: {track_err}")
 
             # 5. Calculate execution time
             execution_time = (datetime.utcnow() - start_time).total_seconds()
@@ -332,7 +350,11 @@ class GenerateContentUseCase:
 
         # Execute using task orchestrator
         result = await self.task_orchestrator.execute_workflow(
-            saved_workflow, context, verbose=True
+            saved_workflow,
+            context,
+            verbose=True,
+            run_id=context.get('run_id'),
+            tracker=context.get('tracker'),
         )
 
         return {

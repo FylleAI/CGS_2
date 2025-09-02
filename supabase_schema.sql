@@ -68,6 +68,7 @@ CREATE TABLE content_generations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     client_id UUID REFERENCES clients(id),
     workflow_id UUID REFERENCES workflows(id),
+    run_id UUID,
     title VARCHAR(500),
     content TEXT,
     content_type VARCHAR(50),
@@ -132,6 +133,7 @@ CREATE INDEX idx_content_generations_client_id ON content_generations(client_id)
 CREATE INDEX idx_content_generations_status ON content_generations(status);
 CREATE INDEX idx_content_generations_created_at ON content_generations(created_at DESC);
 CREATE INDEX idx_content_generations_created_by ON content_generations(created_by);
+CREATE INDEX idx_content_generations_run_id ON content_generations(run_id);
 
 -- Clients indexes
 CREATE INDEX idx_clients_name ON clients(name);

@@ -127,8 +127,54 @@ class SupabaseTracker:
         except Exception as e:  # pragma: no cover
             logger.warning(f"Error adding log for run {run_id}: {e}")
 
+    # ------------- RAG document tracking -------------
+    def log_rag_document(
+        self,
+        run_id: str,
+        client_name: str,
+        document_path: str,
+        source_url: Optional[str] = None,
+    ) -> None:
+        data: Dict[str, Any] = {
+            "run_id": run_id,
+            "client_name": client_name,
+            "document_path": document_path,
+        }
+        if source_url:
+            data["source_url"] = source_url
+        try:
+            self.client.table("run_documents").insert(data).execute()
+        except Exception as e:  # pragma: no cover
+            logger.warning(f"Error logging RAG document for run {run_id}: {e}")
+
+    def save_run_content(
+        self,
+        run_id: str,
+        client_name: str,
+        workflow_name: str,
+        title: str,
+        content: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        data: Dict[str, Any] = {
+            "run_id": run_id,
+            "title": title,
+            "content": content,
+            "topic": title,
+            "metadata": (metadata or {}) | {"client_name": client_name, "workflow_name": workflow_name},
+        }
+        try:
+            self.client.table("content_generations").insert(data).execute()
+        except Exception as e:  # pragma: no cover
+            logger.warning(f"Error saving run content for run {run_id}: {e}")
+
     # ------------- Queries -------------
-    def get_run_history(self, client_name: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    def get_run_history(
+        self,
+        client_name: Optional[str] = None,
+        workflow_name: Optional[str] = None,
+        limit: int = 50,
+    ) -> List[Dict[str, Any]]:
         try:
             query = (
                 self.client.table("workflow_runs")
@@ -138,6 +184,8 @@ class SupabaseTracker:
             )
             if client_name:
                 query = query.eq("client_name", client_name)
+            if workflow_name:
+                query = query.eq("workflow_name", workflow_name)
             return query.execute().data
         except Exception as e:  # pragma: no cover
             logger.warning(f"Error getting run history: {e}")
@@ -164,7 +212,22 @@ class SupabaseTracker:
                 .execute()
                 .data
             )
-            return {"run": run[0], "agents": agents, "logs": logs}
+            documents = (
+                self.client.table("run_documents")
+                .select("*")
+                .eq("run_id", run_id)
+                .execute()
+                .data
+            )
+            content = (
+                self.client.table("content_generations")
+                .select("title, content, metadata")
+                .eq("run_id", run_id)
+                .execute()
+                .data
+            )
+            content_item = content[0] if content else None
+            return {"run": run[0], "agents": agents, "logs": logs, "documents": documents, "content": content_item}
         except Exception as e:  # pragma: no cover
             logger.warning(f"Error getting run details: {e}")
             return None

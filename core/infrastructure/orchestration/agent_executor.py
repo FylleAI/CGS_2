@@ -164,6 +164,24 @@ class AgentExecutor:
                 final_output=final_response
             )
 
+            tracker = context.get('tracker')
+            run_id = context.get('run_id')
+            step_number = context.get('step_number')
+            if tracker and run_id:
+                try:
+                    tracker.log_agent_execution(
+                        run_id=run_id,
+                        agent_name=agent.name,
+                        step=step_number or 0,
+                        input_data={"task_description": task_description},
+                        output_data={"response": final_response},
+                        tokens=token_usage.total_tokens,
+                        cost=cost_breakdown.total_cost,
+                        duration_seconds=duration_ms / 1000,
+                    )
+                except Exception as e:  # pragma: no cover
+                    logger.warning(f"Tracker log_agent_execution failed: {e}")
+
             return final_response
 
         except Exception as e:
