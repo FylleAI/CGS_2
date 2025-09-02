@@ -55,3 +55,17 @@ CREATE INDEX IF NOT EXISTS idx_workflow_runs_started_at ON workflow_runs(started
 CREATE INDEX IF NOT EXISTS idx_agent_executions_run_id ON agent_executions(run_id);
 CREATE INDEX IF NOT EXISTS idx_run_logs_run_id ON run_logs(run_id);
 
+-- =====================================================
+-- RUN DOCUMENTS (RAG usage)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS run_documents (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    run_id UUID REFERENCES workflow_runs(id) ON DELETE CASCADE,
+    client_name VARCHAR(100),
+    document_path TEXT,
+    source_url TEXT,
+    retrieved_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_run_documents_run_id ON run_documents(run_id);
+

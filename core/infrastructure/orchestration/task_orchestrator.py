@@ -28,10 +28,12 @@ class TaskOrchestrator:
         self.executed_tasks: set = set()
     
     async def execute_workflow(
-        self, 
-        workflow: Workflow, 
+        self,
+        workflow: Workflow,
         context: Dict[str, Any] = None,
-        verbose: bool = True
+        verbose: bool = True,
+        run_id: Optional[str] = None,
+        tracker: Any = None,
     ) -> Dict[str, Any]:
         """
         Execute a workflow with all its tasks.
@@ -58,11 +60,16 @@ class TaskOrchestrator:
                 'workflow_name': workflow.name,
                 'client_profile': workflow.client_profile,
                 'target_audience': workflow.target_audience,
-                'context': workflow.context
+                'context': workflow.context,
+                'run_id': run_id,
+                'tracker': tracker,
             })
             
             # Execute tasks in dependency order
+            step_number = 0
             for task in workflow.tasks:
+                step_number += 1
+                execution_context['step_number'] = step_number
                 await self._execute_task(task, execution_context, verbose)
             
             # Mark workflow as completed
@@ -102,9 +109,9 @@ class TaskOrchestrator:
             }
     
     async def _execute_task(
-        self, 
-        task: Task, 
-        context: Dict[str, Any], 
+        self,
+        task: Task,
+        context: Dict[str, Any],
         verbose: bool = True
     ) -> str:
         """
