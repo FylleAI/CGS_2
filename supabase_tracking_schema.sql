@@ -62,10 +62,26 @@ CREATE TABLE IF NOT EXISTS run_documents (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     run_id UUID REFERENCES workflow_runs(id) ON DELETE CASCADE,
     client_name VARCHAR(100),
+    agent_name VARCHAR(200),
     document_path TEXT,
     source_url TEXT,
     retrieved_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_run_documents_run_id ON run_documents(run_id);
+
+-- =====================================================
+-- RUN DOCUMENT CHUNKS (detailed RAG usage)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS run_document_chunks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    run_id UUID REFERENCES workflow_runs(id) ON DELETE CASCADE,
+    agent_name VARCHAR(200),
+    document_id UUID,
+    chunk_text TEXT,
+    similarity_score NUMERIC,
+    retrieved_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_run_document_chunks_run_id ON run_document_chunks(run_id);
 

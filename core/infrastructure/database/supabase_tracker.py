@@ -134,6 +134,7 @@ class SupabaseTracker:
         client_name: str,
         document_path: str,
         source_url: Optional[str] = None,
+        agent_name: Optional[str] = None,
     ) -> None:
         data: Dict[str, Any] = {
             "run_id": run_id,
@@ -142,10 +143,33 @@ class SupabaseTracker:
         }
         if source_url:
             data["source_url"] = source_url
+        if agent_name:
+            data["agent_name"] = agent_name
         try:
             self.client.table("run_documents").insert(data).execute()
         except Exception as e:  # pragma: no cover
             logger.warning(f"Error logging RAG document for run {run_id}: {e}")
+
+    def log_rag_chunk(
+        self,
+        run_id: str,
+        agent_name: str,
+        document_id: str,
+        chunk_text: str,
+        score: Optional[float] = None,
+    ) -> None:
+        data: Dict[str, Any] = {
+            "run_id": run_id,
+            "agent_name": agent_name,
+            "document_id": document_id,
+            "chunk_text": chunk_text,
+        }
+        if score is not None:
+            data["similarity_score"] = score
+        try:
+            self.client.table("run_document_chunks").insert(data).execute()
+        except Exception as e:  # pragma: no cover
+            logger.warning(f"Error logging RAG chunk for run {run_id}: {e}")
 
     def save_run_content(
         self,
@@ -219,6 +243,13 @@ class SupabaseTracker:
                 .execute()
                 .data
             )
+            chunks = (
+                self.client.table("run_document_chunks")
+                .select("*")
+                .eq("run_id", run_id)
+                .execute()
+                .data
+            )
             content = (
                 self.client.table("content_generations")
                 .select("title, content, metadata")
@@ -227,7 +258,14 @@ class SupabaseTracker:
                 .data
             )
             content_item = content[0] if content else None
-            return {"run": run[0], "agents": agents, "logs": logs, "documents": documents, "content": content_item}
+            return {
+                "run": run[0],
+                "agents": agents,
+                "logs": logs,
+                "documents": documents,
+                "chunks": chunks,
+                "content": content_item,
+            }
         except Exception as e:  # pragma: no cover
             logger.warning(f"Error getting run details: {e}")
             return None

@@ -155,7 +155,7 @@ class AgentExecutor:
             )
 
             # Process tool calls if any
-            final_response = await self.process_tool_calls(response, session_id)
+            final_response = await self.process_tool_calls(response, session_id, agent.name)
 
             # End agent session successfully
             agent_logger.end_agent_session(
@@ -324,7 +324,7 @@ class AgentExecutor:
 
         return "\n".join(tool_descriptions)
 
-    async def process_tool_calls(self, agent_response: str, session_id: str = None) -> str:
+    async def process_tool_calls(self, agent_response: str, session_id: str = None, agent_name: Optional[str] = None) -> str:
         """
         Process tool calls in the agent's response.
 
@@ -383,7 +383,7 @@ class AgentExecutor:
                     tool_function = self.tools_registry[canonical_tool_name]['function']
 
                     # Parse tool input based on tool type
-                    tool_result = await self._execute_tool_with_params(canonical_tool_name, tool_function, tool_input.strip())
+                    tool_result = await self._execute_tool_with_params(canonical_tool_name, tool_function, tool_input.strip(), agent_name)
                     duration_ms = (time.time() - start_time) * 1000
 
                     # Log successful tool response
@@ -443,7 +443,7 @@ class AgentExecutor:
 
         return agent_response
 
-    async def _execute_tool_with_params(self, tool_name: str, tool_function: callable, tool_input: str) -> str:
+    async def _execute_tool_with_params(self, tool_name: str, tool_function: callable, tool_input: str, agent_name: Optional[str] = None) -> str:
         """
         Execute tool with proper parameter parsing and validation.
 
@@ -478,7 +478,7 @@ class AgentExecutor:
                 if not query.strip():
                     raise ValueError("Search query cannot be empty")
 
-                return await tool_function(client_name, query)
+                return await tool_function(client_name, query, agent_name=agent_name)
 
             elif tool_name == "rag_get_client_content":
                 # Parse: "client_name" or "client_name, document_name"
@@ -486,10 +486,10 @@ class AgentExecutor:
 
                 if len(parts) == 2:
                     client_name, document_name = parts
-                    return await tool_function(client_name, document_name)
+                    return await tool_function(client_name, document_name, agent_name=agent_name)
                 elif len(parts) == 1:
                     client_name = parts[0]
-                    return await tool_function(client_name)
+                    return await tool_function(client_name, agent_name=agent_name)
                 else:
                     raise ValueError("rag_get_client_content requires format: 'client_name' or 'client_name, document_name'")
 
