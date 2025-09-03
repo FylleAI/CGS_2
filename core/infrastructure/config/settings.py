@@ -3,7 +3,7 @@
 import os
 from typing import Optional, Dict, Any, List
 from pathlib import Path
-from pydantic import Field
+from pydantic import Field, validator
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -141,8 +141,6 @@ class Settings(BaseSettings):
 
         for directory in directories:
             Path(directory).mkdir(parents=True, exist_ok=True)
-
-
 
     def get_available_providers(self) -> Dict[str, bool]:
         """Get available AI providers based on API keys."""
