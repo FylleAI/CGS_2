@@ -1,5 +1,8 @@
 // API Configuration
-export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+if (!process.env.REACT_APP_API_URL) {
+  throw new Error('REACT_APP_API_URL is not defined');
+}
+export const API_BASE_URL = process.env.REACT_APP_API_URL as string;
 
 export const API_ENDPOINTS = {
   BASE: API_BASE_URL,
