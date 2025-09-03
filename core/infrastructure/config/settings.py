@@ -3,7 +3,7 @@
 import os
 from typing import Optional, Dict, Any, List
 from pathlib import Path
-from pydantic import Field, validator
+from pydantic import Field
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
 
     # CORS settings
-    cors_allowed_origins: List[str] = Field(default=["*"], env="CORS_ALLOWED_ORIGINS")
+    cors_allowed_origins: List[str] = Field(default=["http://localhost:3000", "http://localhost:3001"])
 
     # AI Provider API Keys
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
@@ -112,6 +112,19 @@ class Settings(BaseSettings):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        # Handle CORS origins from environment
+        cors_env = os.getenv("CORS_ALLOWED_ORIGINS")
+        if cors_env:
+            if isinstance(cors_env, str):
+                self.cors_allowed_origins = [item.strip() for item in cors_env.split(",") if item.strip()]
+
+        # Handle premium sources from environment
+        premium_env = os.getenv("PREMIUM_DEFAULT_SOURCES")
+        if premium_env:
+            if isinstance(premium_env, str):
+                self.premium_default_sources = [item.strip() for item in premium_env.split(",") if item.strip()]
+
         self._ensure_directories()
 
     def _ensure_directories(self) -> None:
@@ -129,11 +142,7 @@ class Settings(BaseSettings):
         for directory in directories:
             Path(directory).mkdir(parents=True, exist_ok=True)
 
-    @validator("cors_allowed_origins", "premium_default_sources", pre=True)
-    def _split_csv(cls, v):
-        if isinstance(v, str):
-            return [item.strip() for item in v.split(",") if item.strip()]
-        return v
+
 
     def get_available_providers(self) -> Dict[str, bool]:
         """Get available AI providers based on API keys."""
