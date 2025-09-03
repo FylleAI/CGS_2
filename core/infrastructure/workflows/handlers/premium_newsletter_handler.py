@@ -7,6 +7,7 @@ from typing import Dict, Any, List
 
 from ..base.workflow_base import WorkflowHandler
 from ..registry import register_workflow
+from core.infrastructure.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -39,14 +40,14 @@ class PremiumNewsletterHandler(WorkflowHandler):
 
         # Premium sources are optional - provide defaults if none specified
         if not sources or len(sources) < 1:
-            # Use default premium sources for testing/demo purposes
-            sources = [
-                'https://www.bloomberg.com',
-                'https://www.reuters.com',
-                'https://www.wsj.com'
-            ]
-            context['premium_sources'] = sources
-            logger.info(f"🔧 Using default premium sources: {len(sources)} sources")
+            settings = get_settings()
+            default_sources = settings.premium_default_sources
+            if default_sources:
+                sources = default_sources
+                context['premium_sources'] = sources
+                logger.info(
+                    f"🔧 Using default premium sources: {len(sources)} sources"
+                )
 
         if len(sources) > 10:
             raise ValueError("Maximum 10 premium sources allowed")
