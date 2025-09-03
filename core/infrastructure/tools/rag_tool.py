@@ -3,6 +3,7 @@
 import logging
 import time
 from typing import Dict, Any, List, Optional
+from pathlib import Path
 
 from ..database.supabase_tracker import SupabaseTracker
 from core.infrastructure.config.settings import get_settings
@@ -26,13 +27,25 @@ class RAGTool:
         else:
             self.supabase = self._init_supabase_client()
 
+        # Fallback to filesystem if Supabase not available
+        settings = get_settings()
+        self.rag_base_dir = Path(settings.knowledge_base_dir)
+        self.use_filesystem_fallback = self.supabase is None
+
     def _init_supabase_client(self):
         """Create a Supabase client if configuration is available."""
         try:
             settings = get_settings()
             if settings.supabase_url and settings.supabase_anon_key:
                 tracker = SupabaseTracker()
-                return tracker.client
+                # Test if required tables exist
+                try:
+                    tracker.client.table("clients").select("id").limit(1).execute()
+                    tracker.client.table("documents").select("id").limit(1).execute()
+                    return tracker.client
+                except Exception as table_error:
+                    logger.warning(f"Required tables (clients/documents) not found in Supabase: {table_error}")
+                    return None
         except Exception as e:  # pragma: no cover
             logger.warning(f"Supabase client not initialized: {e}")
         return None
@@ -67,10 +80,9 @@ class RAGTool:
             logger.warning(f"⚠️ RAG WARNING: {error_msg}")
             return error_msg
 
-        if self.supabase is None:
-            error_msg = "Supabase client not configured"
-            logger.warning(f"⚠️ RAG WARNING: {error_msg}")
-            return error_msg
+        if self.use_filesystem_fallback:
+            logger.info("🔄 RAG: Using filesystem fallback (Supabase not available)")
+            return await self._get_content_from_filesystem(client_name, document_name, agent_name)
 
         try:
             client_res = (
@@ -418,3 +430,146 @@ The following documents contain additional information that may be relevant to c
         except Exception as e:
             logger.error(f"Error adding content to Supabase: {e}")
             return f"Error adding content: {e}"
+
+    # ============= FILESYSTEM FALLBACK METHODS =============
+
+    async def _get_content_from_filesystem(self, client_name: str, document_name: Optional[str] = None, agent_name: Optional[str] = None) -> str:
+        """Fallback method to get content from filesystem when Supabase is not available."""
+        client_dir = self.rag_base_dir / client_name
+
+        if not client_dir.exists():
+            error_msg = f"Knowledge base not found for client '{client_name}'"
+            logger.warning(f"⚠️ RAG WARNING: {error_msg}")
+            return error_msg
+
+        try:
+            if document_name:
+                logger.info(f"📄 RAG FILESYSTEM: Retrieving specific document '{document_name}' for {client_name}")
+                return await self._get_specific_document_filesystem(client_dir, document_name, agent_name)
+            else:
+                logger.info(f"📚 RAG FILESYSTEM: Retrieving all content for {client_name}")
+                available_docs = [f.name for f in client_dir.glob('*.md') if f.is_file()]
+                logger.info(f"📚 RAG FILESYSTEM: Found {len(available_docs)} documents: {available_docs}")
+                result = await self._get_all_client_content_filesystem(client_dir, client_name, agent_name)
+                if self.tracker and self.run_id:
+                    for doc in available_docs:
+                        self.tracker.log_rag_document(self.run_id, client_name, doc, agent_name=agent_name)
+                return result
+
+        except Exception as e:
+            logger.error(f"❌ RAG FILESYSTEM ERROR: Failed to retrieve content for {client_name}: {str(e)}")
+            return f"Error retrieving content: {str(e)}"
+
+    async def _get_specific_document_filesystem(self, client_dir: Path, document_name: str, agent_name: Optional[str] = None) -> str:
+        """Retrieve a specific document from filesystem."""
+        # Add .md extension if not present
+        if not Path(document_name).suffix:
+            document_name = f"{document_name}.md"
+
+        doc_path = client_dir / document_name
+
+        if not doc_path.exists() or not doc_path.is_file():
+            # Try fuzzy matching
+            available_docs = [f.name for f in client_dir.glob('*.md') if f.is_file()]
+
+            import difflib
+            best_match = difflib.get_close_matches(
+                document_name, available_docs, n=1, cutoff=0.6
+            )
+
+            if best_match:
+                doc_path = client_dir / best_match[0]
+                with open(str(doc_path), "r", encoding="utf-8") as f:
+                    content = f.read()
+                return f"[FUZZY MATCH] Document '{document_name}' not found. Showing closest match: '{best_match[0]}'\\n\\n{content}"
+            else:
+                return f"Document '{document_name}' not found. Available documents: {available_docs}"
+
+        try:
+            with open(str(doc_path), "r", encoding="utf-8") as f:
+                content = f.read()
+            if self.tracker and self.run_id:
+                self.tracker.log_rag_document(self.run_id, client_dir.name, doc_path.name, agent_name=agent_name)
+            return content
+        except Exception as e:
+            logger.error(f"Error reading document {doc_path}: {str(e)}")
+            return f"Error reading document: {str(e)}"
+
+    async def _get_all_client_content_filesystem(self, client_dir: Path, client_name: str, agent_name: Optional[str] = None) -> str:
+        """Retrieve and categorize all content for a client from filesystem."""
+        # Categorize documents by type
+        company_info = []
+        guidelines = []
+        knowledge_base = []
+        other_docs = []
+
+        for doc_path in client_dir.glob("*.md"):
+            doc_name = doc_path.name.lower()
+
+            try:
+                with open(str(doc_path), "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                # Categorize based on filename patterns
+                if any(term in doc_name for term in [
+                    "company", "about", "profile", "overview", "brand"
+                ]):
+                    company_info.append((doc_name, content))
+                elif any(term in doc_name for term in [
+                    "guideline", "guide", "best_practice", "best-practice",
+                    "rule", "instruction", "style"
+                ]):
+                    guidelines.append((doc_name, content))
+                elif any(term in doc_name for term in [
+                    "knowledge", "kb", "reference", "detail", "info"
+                ]):
+                    knowledge_base.append((doc_name, content))
+                else:
+                    other_docs.append((doc_name, content))
+
+            except Exception as e:
+                logger.warning(f"Error reading {doc_path}: {str(e)}")
+                continue
+
+        # Format output
+        formatted_output = []
+
+        if company_info:
+            formatted_output.append("""## COMPANY INFORMATION
+
+The following documents contain essential information about the company, its brand, and positioning.
+This information should be reflected in all content creation.
+""")
+            for doc_name, content in company_info:
+                formatted_output.append(f"### {doc_name}\\n\\n{content}\\n\\n")
+
+        if guidelines:
+            formatted_output.append("""\\n## CONTENT GUIDELINES
+
+The following documents contain guidelines and best practices for content creation.
+These should be strictly followed when generating content.
+""")
+            for doc_name, content in guidelines:
+                formatted_output.append(f"### {doc_name}\\n\\n{content}\\n\\n")
+
+        if knowledge_base:
+            formatted_output.append("""\\n## KNOWLEDGE BASE
+
+The following documents contain detailed knowledge that can be referenced and incorporated into content.
+Use this information as needed to enhance content accuracy and depth.
+""")
+            for doc_name, content in knowledge_base:
+                formatted_output.append(f"### {doc_name}\\n\\n{content}\\n\\n")
+
+        if other_docs:
+            formatted_output.append("""\\n## OTHER DOCUMENTS
+
+The following documents contain additional information that may be relevant to content creation.
+""")
+            for doc_name, content in other_docs:
+                formatted_output.append(f"### {doc_name}\\n\\n{content}\\n\\n")
+
+        if not formatted_output:
+            return f"No markdown documents found for client '{client_name}'"
+
+        return "\\n\\n".join(formatted_output)
