@@ -18,6 +18,7 @@ from ..interfaces.rag_interface import RAGInterface
 from ...infrastructure.orchestration.task_orchestrator import TaskOrchestrator
 from ...infrastructure.orchestration.agent_executor import AgentExecutor
 from ...infrastructure.tools.web_search_tool import WebSearchTool
+from ...infrastructure.logging.agent_logger import agent_logger
 from ...infrastructure.tools.rag_tool import RAGTool
 from ...infrastructure.tools.perplexity_research_tool import PerplexityResearchTool
 from ...infrastructure.workflows.registry import execute_dynamic_workflow, list_available_workflows
@@ -86,10 +87,14 @@ class GenerateContentUseCase:
             run_id: Optional[str] = None
             if self.tracker is not None:
                 try:
+                    # Get agent executor info for tracking
+                    agent_executor_info = f"{self.agent_executor.__class__.__name__}({self.provider_config.provider.value})"
+
                     run_id = self.tracker.start_workflow_run(
                         client_name=request.client_profile or "default",
                         workflow_name=request.workflow_type or "content_generation",
                         topic=request.topic,
+                        agent_executor=agent_executor_info
                     )
                     self.tracker.add_log(run_id, "INFO", f"Started content generation for topic: {request.topic}")
                     if request.provider_config:
@@ -488,6 +493,14 @@ LENGTH: {context.get('length', 'medium')} length article
             # Get the last task output as final content
             if task_outputs:
                 final_output = list(task_outputs.values())[-1]
+
+        # Debug logging to see what we're getting
+        logger.info(f"🔍 Workflow result keys: {list(workflow_result.keys())}")
+        logger.info(f"🔍 Final output length: {len(final_output) if final_output else 0}")
+        if final_output:
+            logger.info(f"🔍 Final output preview: {final_output[:200]}...")
+        else:
+            logger.warning("⚠️ No final output found in workflow result")
 
         # Create content entity
         content = Content(

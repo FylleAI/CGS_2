@@ -34,16 +34,20 @@ class SupabaseTracker:
         )
 
     # ------------- Workflow run lifecycle -------------
-    def start_workflow_run(self, client_name: str, workflow_name: str, topic: str) -> str:
+    def start_workflow_run(self, client_name: str, workflow_name: str, topic: str, agent_executor: str = None) -> str:
         """Start tracking a new workflow run, returns run_id (UUID string)."""
-        result = self.client.table("workflow_runs").insert(
-            {
-                "client_name": client_name,
-                "workflow_name": workflow_name,
-                "topic": topic,
-                "status": "running",
-            }
-        ).execute()
+        run_data = {
+            "client_name": client_name,
+            "workflow_name": workflow_name,
+            "topic": topic,
+            "status": "running",
+        }
+
+        # Add agent_executor if provided
+        if agent_executor:
+            run_data["agent_executor"] = agent_executor
+
+        result = self.client.table("workflow_runs").insert(run_data).execute()
         run_id = result.data[0]["id"]
         logger.info(f"Started tracking run: {run_id}")
         return run_id
