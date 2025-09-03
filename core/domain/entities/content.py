@@ -136,7 +136,7 @@ class Content:
         """Get a short excerpt of the content."""
         if len(self.body) <= max_length:
             return self.body
-        
+
         # Try to break at a sentence boundary
         excerpt = self.body[:max_length]
         last_sentence_end = max(
@@ -144,9 +144,14 @@ class Content:
             excerpt.rfind('!'),
             excerpt.rfind('?')
         )
-        
+
         if last_sentence_end > max_length * 0.7:  # If we found a good break point
-            return excerpt[:last_sentence_end + 1]
+            # Check if there's more content after this sentence
+            sentence_end_pos = last_sentence_end + 1
+            if sentence_end_pos < len(self.body):
+                return excerpt[:sentence_end_pos] + "..."
+            else:
+                return excerpt[:sentence_end_pos]
         else:
             # Break at word boundary
             last_space = excerpt.rfind(' ')
