@@ -18,7 +18,7 @@ from core.domain.value_objects.generation_params import GenerationParams
 from core.infrastructure.repositories.file_content_repository import FileContentRepository
 from core.infrastructure.repositories.yaml_agent_repository import YamlAgentRepository
 from core.infrastructure.repositories.file_workflow_repository import FileWorkflowRepository
-from core.infrastructure.external_services.openai_adapter import OpenAIAdapter
+from core.infrastructure.factories.provider_factory import LLMProviderFactory
 from core.infrastructure.config.settings import get_settings
 from .tracking import app as tracking_app
 
@@ -40,21 +40,19 @@ console = Console()
 app.add_typer(tracking_app, name="tracking", help="Workflow tracking commands")
 
 
-def get_use_case() -> GenerateContentUseCase:
+def get_use_case(provider: LLMProvider, model: str) -> GenerateContentUseCase:
     """Get configured use case instance."""
     settings = get_settings()
 
     content_repo = FileContentRepository(settings.output_dir)
     agent_repo = YamlAgentRepository(settings.profiles_dir)
     workflow_repo = FileWorkflowRepository(settings.workflows_dir)
-    llm_provider = OpenAIAdapter(settings.openai_api_key)
 
-    # Create provider config
-    from core.domain.value_objects.provider_config import ProviderConfig, LLMProvider
+    llm_provider = LLMProviderFactory.create_provider(provider, settings)
     provider_config = ProviderConfig(
-        provider=LLMProvider.OPENAI,
-        model="gpt-4o",
-        api_key=settings.openai_api_key
+        provider=provider,
+        model=model,
+        api_key=settings.get_provider_api_key(provider.value),
     )
 
     return GenerateContentUseCase(
@@ -139,7 +137,7 @@ def generate(
         ) as progress:
             task = progress.add_task("Generating content...", total=None)
             
-            use_case = get_use_case()
+            use_case = get_use_case(provider_enum, model)
             response = asyncio.run(use_case.execute(request))
         
         if response.success:
@@ -179,7 +177,9 @@ def list_content(
 ):
     """List generated content."""
     try:
-        use_case = get_use_case()
+        settings = get_settings()
+        default_provider = LLMProvider(settings.default_provider)
+        use_case = get_use_case(default_provider, settings.default_model)
         # This would need to be implemented in the use case
         console.print("[yellow]Content listing not yet implemented[/yellow]")
         

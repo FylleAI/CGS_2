@@ -1,9 +1,9 @@
 """Application settings configuration."""
 
 import os
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pathlib import Path
-from pydantic import Field
+from pydantic import Field, validator
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -28,8 +28,11 @@ class Settings(BaseSettings):
     api_reload: bool = Field(default=True, env="API_RELOAD")
 
     # Security settings
-    secret_key: str = Field(default="dev-secret-key", env="SECRET_KEY")
+    secret_key: str = Field(..., env="SECRET_KEY")
     access_token_expire_minutes: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
+
+    # CORS settings
+    cors_allowed_origins: List[str] = Field(default=["*"], env="CORS_ALLOWED_ORIGINS")
 
     # AI Provider API Keys
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
@@ -54,6 +57,16 @@ class Settings(BaseSettings):
     workflows_dir: str = Field(default="data/workflows", env="WORKFLOWS_DIR")
     knowledge_base_dir: str = Field(default="data/knowledge_base", env="KNOWLEDGE_BASE_DIR")
     cache_dir: str = Field(default="data/cache", env="CACHE_DIR")
+
+    # Workflow handler defaults
+    premium_default_sources: List[str] = Field(
+        default=[
+            "https://www.bloomberg.com",
+            "https://www.reuters.com",
+            "https://www.wsj.com",
+        ],
+        env="PREMIUM_DEFAULT_SOURCES",
+    )
 
     # RAG settings
     rag_enabled: bool = Field(default=True, env="RAG_ENABLED")
@@ -115,6 +128,12 @@ class Settings(BaseSettings):
 
         for directory in directories:
             Path(directory).mkdir(parents=True, exist_ok=True)
+
+    @validator("cors_allowed_origins", "premium_default_sources", pre=True)
+    def _split_csv(cls, v):
+        if isinstance(v, str):
+            return [item.strip() for item in v.split(",") if item.strip()]
+        return v
 
     def get_available_providers(self) -> Dict[str, bool]:
         """Get available AI providers based on API keys."""
