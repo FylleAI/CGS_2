@@ -180,17 +180,38 @@ class SiebertPremiumNewsletterHandler(WorkflowHandler):
                     elif key == 'task3_newsletter_assembly_output':
                         task3_output = (key, value, length)
 
-                if task4_output:
+                if task4_output and task3_output:
+                    final_word_count = context.get('final_word_count', 0)
+                    compliance_word_count = context.get('final_compliance_word_count')
+                    min_ratio = context.get('compliance_min_ratio', 0.7)
+
+                    if not compliance_word_count or final_word_count == 0 or compliance_word_count < final_word_count * min_ratio:
+                        final_content = task3_output[1]
+                        logger.info(
+                            f"⚠️ Compliance review output missing or insufficient ({compliance_word_count}/{final_word_count}); falling back to {task3_output[0]} ({task3_output[2]} chars)"
+                        )
+                    else:
+                        final_content = task4_output[1]
+                        logger.info(
+                            f"✅ Selected compliance-reviewed newsletter from {task4_output[0]} ({task4_output[2]} chars)"
+                        )
+                elif task4_output:
                     final_content = task4_output[1]
-                    logger.info(f"✅ Selected compliance-reviewed newsletter from {task4_output[0]} ({task4_output[2]} chars)")
+                    logger.info(
+                        f"✅ Selected compliance-reviewed newsletter from {task4_output[0]} ({task4_output[2]} chars)"
+                    )
                 elif task3_output:
                     final_content = task3_output[1]
-                    logger.info(f"📄 Selected newsletter content from {task3_output[0]} ({task3_output[2]} chars)")
+                    logger.info(
+                        f"📄 Selected newsletter content from {task3_output[0]} ({task3_output[2]} chars)"
+                    )
                 else:
                     # Fallback to longest output
                     task_outputs.sort(key=lambda x: x[2], reverse=True)
                     final_content = task_outputs[0][1]
-                    logger.info(f"📄 Selected content from {task_outputs[0][0]} ({task_outputs[0][2]} chars) - fallback")
+                    logger.info(
+                        f"📄 Selected content from {task_outputs[0][0]} ({task_outputs[0][2]} chars) - fallback"
+                    )
 
             if final_content:
                 context['final_output'] = final_content
