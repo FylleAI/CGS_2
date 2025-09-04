@@ -38,14 +38,7 @@ class RAGTool:
             settings = get_settings()
             if settings.supabase_url and settings.supabase_anon_key:
                 tracker = SupabaseTracker()
-                # Test if required tables exist
-                try:
-                    tracker.client.table("clients").select("id").limit(1).execute()
-                    tracker.client.table("documents").select("id").limit(1).execute()
-                    return tracker.client
-                except Exception as table_error:
-                    logger.warning(f"Required tables (clients/documents) not found in Supabase: {table_error}")
-                    return None
+                return tracker.client
         except Exception as e:  # pragma: no cover
             logger.warning(f"Supabase client not initialized: {e}")
         return None

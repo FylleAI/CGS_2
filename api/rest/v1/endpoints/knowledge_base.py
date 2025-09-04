@@ -12,17 +12,10 @@ from core.infrastructure.tools.rag_tool import RAGTool
 def get_supabase_client():
     try:
         tracker = SupabaseTracker()
-        # Test if required tables exist
-        try:
-            tracker.client.table("clients").select("id").limit(1).execute()
-            tracker.client.table("documents").select("id").limit(1).execute()
-            return tracker.client
-        except Exception as table_error:
-            logger.warning(f"Required tables (clients/documents) not found in Supabase: {table_error}")
-            return None
+        return tracker.client
     except Exception as e:  # pragma: no cover
-        logger.warning(f"Supabase not configured: {e}")
-        return None
+        logger.error(f"Supabase not configured: {e}")
+        raise HTTPException(status_code=500, detail="Supabase not configured")
 
 logger = logging.getLogger(__name__)
 
@@ -84,81 +77,49 @@ async def get_client_documents(
     logger.info(f"📚 Getting documents for client: {client_name}")
 
     try:
-        # Use RAGTool with fallback support
-        if rag_tool.use_filesystem_fallback:
-            # Filesystem fallback
-            logger.info("🔄 Using filesystem fallback for documents")
-            from pathlib import Path
-            from datetime import datetime
+        # Get client from Supabase
+        client_res = (
+            rag_tool.supabase.table("clients").select("id").eq("name", client_name).single().execute()
+        )
+        client_data = client_res.data
+        if not client_data:
+            logger.warning(f"Client not found: {client_name}")
+            return ClientDocumentsResponse(client_name=client_name, total_documents=0, documents=[])
 
-            client_dir = rag_tool.rag_base_dir / client_name
-            if not client_dir.exists():
-                logger.warning(f"Knowledge base not found for client: {client_name}")
-                return ClientDocumentsResponse(client_name=client_name, total_documents=0, documents=[])
+        # Get documents from Supabase
+        docs_res = (
+            rag_tool.supabase.table("documents")
+            .select("id,title,description,content,tags,updated_at,file_path,file_size,file_type")
+            .eq("client_id", client_data["id"])
+            .execute()
+        )
+        docs = docs_res.data or []
 
-            documents = []
-            for doc_path in client_dir.glob("*.md"):
-                try:
-                    with open(str(doc_path), 'r', encoding='utf-8') as f:
-                        content = f.read()
+        documents: List[DocumentInfo] = []
+        for doc in docs:
+            content = doc.get("content", "")
+            if search and search.lower() not in doc.get("title", "").lower() and search.lower() not in content.lower():
+                continue
+            if tags and not any(tag in (doc.get("tags") or []) for tag in tags):
+                continue
+            preview = content[:300] + ("..." if len(content) > 300 else "")
+            documents.append(
+                DocumentInfo(
+                    id=str(doc.get("id")),
+                    title=doc.get("title", ""),
+                    filename=doc.get("file_path") or doc.get("title", ""),
+                    description=doc.get("description") or preview,
+                    content_preview=preview,
+                    tags=doc.get("tags") or [],
+                    last_modified=doc.get("updated_at") or "",
+                    size_bytes=doc.get("file_size") or len(content),
+                    content_type=doc.get("file_type") or "markdown",
+                )
+            )
 
-                    # Extract title from first heading or filename
-                    title = doc_path.name.replace('.md', '').replace('_', ' ').title()
-                    lines = content.split('\\n')
-                    for line in lines:
-                        if line.startswith('# '):
-                            title = line[2:].strip()
-                            break
-
-                    # Apply filters
-                    if search and search.lower() not in title.lower() and search.lower() not in content.lower():
-                        continue
-
-                    # Extract tags from filename
-                    tags_list = []
-                    filename_lower = doc_path.name.lower()
-                    if 'company' in filename_lower or 'profile' in filename_lower:
-                        tags_list.extend(['company', 'profile'])
-                    if 'guideline' in filename_lower or 'guide' in filename_lower:
-                        tags_list.extend(['guidelines', 'style'])
-                    if 'content' in filename_lower:
-                        tags_list.append('content')
-
-                    if tags and not any(tag in tags_list for tag in tags):
-                        continue
-
-                    # Get file stats
-                    stat = doc_path.stat()
-                    last_modified = datetime.fromtimestamp(stat.st_mtime).isoformat()
-                    size_bytes = stat.st_size
-
-                    # Create preview
-                    preview = content[:300] + ("..." if len(content) > 300 else "")
-
-                    documents.append(DocumentInfo(
-                        id=doc_path.stem,
-                        title=title,
-                        filename=doc_path.name,
-                        description=preview,
-                        content_preview=preview,
-                        tags=tags_list,
-                        last_modified=last_modified,
-                        size_bytes=size_bytes,
-                        content_type="markdown",
-                    ))
-
-                except Exception as e:
-                    logger.error(f"Error processing document {doc_path}: {str(e)}")
-                    continue
-
-            documents.sort(key=lambda x: x.last_modified, reverse=True)
-            logger.info(f"✅ Found {len(documents)} documents for {client_name} (filesystem)")
-            return ClientDocumentsResponse(client_name=client_name, total_documents=len(documents), documents=documents)
-
-        else:
-            # Supabase implementation (original code would go here)
-            logger.error("Supabase implementation not available")
-            raise HTTPException(status_code=500, detail="Supabase implementation not available")
+        documents.sort(key=lambda x: x.last_modified, reverse=True)
+        logger.info(f"✅ Found {len(documents)} documents for {client_name} from Supabase")
+        return ClientDocumentsResponse(client_name=client_name, total_documents=len(documents), documents=documents)
 
     except HTTPException:
         raise
@@ -233,40 +194,15 @@ async def get_available_clients(
     supabase=Depends(get_supabase_client)
 ) -> List[str]:
     """Get list of available clients with knowledge bases."""
-    logger.info("📋 Getting available clients")
+    logger.info("📋 Getting available clients from Supabase")
 
-    # If Supabase is available, use it
-    if supabase:
-        try:
-            res = supabase.table("clients").select("name").execute()
-            clients = sorted([c["name"] for c in (res.data or [])])
-            logger.info(f"✅ Found {len(clients)} clients from Supabase: {clients}")
-            return clients
-        except Exception as e:
-            logger.error(f"Error getting available clients from Supabase: {e}")
-            # Fall through to filesystem fallback
-
-    # Fallback to filesystem
-    logger.info("🔄 Using filesystem fallback for clients")
     try:
-        from core.infrastructure.config.settings import get_settings
-        from pathlib import Path
-
-        settings = get_settings()
-        rag_base_dir = Path(settings.knowledge_base_dir)
-        clients = []
-
-        if rag_base_dir.exists():
-            for client_dir in rag_base_dir.iterdir():
-                if client_dir.is_dir() and any(client_dir.glob("*.md")):
-                    clients.append(client_dir.name)
-
-        clients.sort()
-        logger.info(f"✅ Found {len(clients)} clients from filesystem: {clients}")
+        res = supabase.table("clients").select("name").execute()
+        clients = sorted([c["name"] for c in (res.data or [])])
+        logger.info(f"✅ Found {len(clients)} clients from Supabase: {clients}")
         return clients
-
     except Exception as e:
-        logger.error(f"Error getting available clients from filesystem: {e}")
+        logger.error(f"Error getting available clients from Supabase: {e}")
         raise HTTPException(status_code=500, detail=f"Error retrieving clients: {e}")
 
 
