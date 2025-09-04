@@ -635,24 +635,29 @@ LENGTH: {context.get('length', 'medium')} length article
             context['agent_executor'] = self.agent_executor
             context['agent_repository'] = self.agent_repository
 
-            # Execute workflow through orchestrator
-            result = await self.task_orchestrator.execute_workflow(
-                workflow=workflow,
-                context=context,
-                verbose=True
-            )
+            # Execute workflow through handler (which uses orchestrator internally)
+            handler = self.workflow_registry.get_handler(workflow_type)
+            execution_result = await handler.execute(context)
 
-            if result['success']:
-                # Get final output from task outputs
-                task_outputs = result.get('task_outputs', {})
-                if task_outputs:
-                    # Return the last task's output as final result
-                    final_output = list(task_outputs.values())[-1]
-                    return final_output
-                else:
-                    return "No content generated from workflow execution"
+            # Check if handler set a final_output in context (intelligent selection)
+            if 'final_output' in execution_result and execution_result['final_output']:
+                final_output = execution_result['final_output']
+                logger.info(f"✅ Using handler-selected final output ({len(final_output)} chars)")
+                return final_output
+
+            # Fallback to task outputs if no handler final_output
+            task_outputs = {}
+            for key, value in execution_result.items():
+                if key.endswith('_output') and isinstance(value, str):
+                    task_outputs[key] = value
+
+            if task_outputs:
+                # Return the last task's output as fallback
+                final_output = list(task_outputs.values())[-1]
+                logger.info(f"⚠️ Using fallback final output ({len(final_output)} chars)")
+                return final_output
             else:
-                raise Exception(result.get('error', 'Workflow execution failed'))
+                return "No content generated from workflow execution"
 
         except Exception as e:
             logger.error(f"Workflow execution failed: {str(e)}")
