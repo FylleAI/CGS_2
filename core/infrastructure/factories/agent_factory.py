@@ -30,6 +30,10 @@ class AgentFactory:
         context_keys = list((ctx or {}).keys())
         logger.debug(f"📋 Available context keys: {context_keys}")
 
+        # Normalise legacy names
+        if name == "research_specialist":
+            name = "research_agent"
+
         # 1) Prefer client-specific YAML override by name
         if name and self.agent_repository:
             try:

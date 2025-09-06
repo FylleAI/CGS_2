@@ -567,19 +567,20 @@ LENGTH: {context.get('length', 'medium')} length article
                 'function': self.rag_tool.search_content,
                 'description': 'Search within client knowledge base'
             },
-            ToolNames.RESEARCH_PREMIUM_FINANCIAL: {
-                'function': self.perplexity_tool.research_premium_financial,
-                'description': 'Research premium financial content using Perplexity AI with domain filtering'
+            ToolNames.PERPLEXITY_SEARCH: {
+                'function': self.perplexity_tool.search,
+                'description': 'Call Perplexity API with a free-form query'
             },
-            ToolNames.RESEARCH_CLIENT_SOURCES: {
-                'function': self.perplexity_tool.research_client_sources,
-                'description': 'Research content from client-specific sources using Perplexity AI'
-            },
-            ToolNames.RESEARCH_GENERAL_TOPIC: {
-                'function': self.perplexity_tool.research_general_topic,
-                'description': 'General topic research using Perplexity AI without domain restrictions'
+            ToolNames.RESEARCH_AGENT: {
+                'function': self._delegate_to_research_agent,
+                'description': 'Invoke the autonomous research agent'
             }
         })
+
+    async def _delegate_to_research_agent(self, query: str) -> str:
+        """Allow agents to delegate complex research to the ResearchAgent."""
+        agent = await self.agent_repository.get_by_name("research_agent")
+        return await self.agent_executor.execute_agent(agent, query, context={})
 
     async def _configure_workflow_agents(self, workflow: Workflow, request: ContentGenerationRequest) -> None:
         """Configure agents for the workflow."""

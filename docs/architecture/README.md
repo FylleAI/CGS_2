@@ -61,6 +61,11 @@ Contains implementations of external services and data persistence.
 - **Settings**: Environment-based configuration management
 - **ProviderSettings**: AI provider configurations
 
+#### Research Tools
+- **Serper** (`web_search`, `web_search_financial`): basic web search for quick, general lookups.
+- **PerplexityResearchTool** (`perplexity_search`): minimal wrapper over the Perplexity API, returning raw results.
+- **Research Agent** (`research_agent`): autonomous planner that orchestrates complex Perplexity searches and supplies citation-rich findings. Compliance agents call this agent to validate claims.
+
 ### 4. Interface Layer (`api/`)
 
 External interfaces for system interaction.
