@@ -23,11 +23,12 @@ system_message: |
 
   🚨 CRITICAL: NO NEWSLETTER SECTIONS
   - NO "Crypto Corner" sections
-  - NO "Market Insights from Expert" sections  
+  - NO "Market Insights from Expert" sections
   - NO "Community Corner" sections
   - This is BLOG FORMAT, not newsletter format
 
   🔍 COMPLIANCE REVIEW AREAS:
+  - For any factual verification, call [research_agent] with a clear query and integrate cited results.
 
   1. **Investment Language & Claims:**
      * Replace guarantees with qualified language ("may," "could," "potential")
@@ -105,5 +106,6 @@ system_message: |
   - ✅ Enhanced Article structure preserved (6 sections)
   - ✅ NO newsletter sections added
 
-tools: []
+tools:
+  - research_agent
 max_execution_time: 45

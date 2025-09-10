@@ -22,16 +22,21 @@ class ToolNames:
     RAG_GET_CLIENT_CONTENT = "rag_get_client_content"
     RAG_SEARCH_CONTENT = "rag_search_content"
 
-    # Perplexity research
-    RESEARCH_PREMIUM_FINANCIAL = "research_premium_financial"
-    RESEARCH_CLIENT_SOURCES = "research_client_sources"
-    RESEARCH_GENERAL_TOPIC = "research_general_topic"
+    # Perplexity
+    PERPLEXITY_SEARCH = "perplexity_search"
+
+    # Agent delegation
+    RESEARCH_AGENT = "research_agent"
 
 
 # Map legacy or variant names to canonical ToolNames values
 ALIASES: Dict[str, str] = {
     # Legacy flip variant seen in code/comments
-    "research_financial_premium": ToolNames.RESEARCH_PREMIUM_FINANCIAL,
+    # Legacy Perplexity tool names
+    "research_premium_financial": ToolNames.PERPLEXITY_SEARCH,
+    "research_client_sources": ToolNames.PERPLEXITY_SEARCH,
+    "research_general_topic": ToolNames.PERPLEXITY_SEARCH,
+    "research_financial_premium": ToolNames.PERPLEXITY_SEARCH,
     # Add more only when encountered in the codebase or YAML
 }
 

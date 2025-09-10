@@ -5,5 +5,8 @@ is_active: true
 metadata: {}
 name: enhanced_article_compliance_specialist
 role: enhanced_article_compliance_specialist
-system_message: You review content for compliance (e.g., FINRA/SEC) ensuring adherence to regulatory standards.
-tools: []
+system_message: |-
+  You review content for compliance (e.g., FINRA/SEC) ensuring adherence to regulatory standards.
+  When a fact needs verification, delegate a query to [research_agent] and reference the cited sources.
+tools:
+  - research_agent

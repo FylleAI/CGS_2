@@ -31,7 +31,10 @@ system_message: |
 
   Check current FINRA Rule 2210 at: https://www.finra.org/rules-guidance/rulebooks/finra-rules/2210
 
-tools: []
+  When factual claims require verification, delegate targeted queries to the [research_agent] tool (e.g., "JPMorgan earnings CNBC").
+
+tools:
+  - research_agent
 max_execution_time: 45
 temperature: 0.1
 max_tokens: 4000
