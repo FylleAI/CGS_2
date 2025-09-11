@@ -31,22 +31,22 @@ async def test_gemini_25_models():
     print("\n2. Testing available models...")
     try:
         config = ProviderConfig.create_gemini_config()
-        models = config.get_available_models()
+        models = [m["name"] for m in config.get_available_models()]
         print(f"   ✅ Total models available: {len(models)}")
-        
+
         gemini_25_models = [
             "gemini-2.5-pro",
-            "gemini-2.5-flash", 
+            "gemini-2.5-flash",
             "gemini-2.5-flash-lite",
             "gemini-2.5-flash-live"
         ]
-        
+
         for model in gemini_25_models:
             if model in models:
                 print(f"   ✅ {model}: Available")
             else:
                 print(f"   ❌ {model}: Missing")
-                
+
         print(f"   ✅ All models: {models}")
         
     except Exception as e:

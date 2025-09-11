@@ -128,7 +128,7 @@ async def test_gemini_integration():
     print("\n10. Testing available models...")
     try:
         models = await provider.get_available_models(config)
-        print(f"   ✅ Available models: {models[:3]}...")  # Show first 3
+        print(f"   ✅ Available models: {[m['name'] for m in models][:3]}...")  # Show first 3 names
 
     except Exception as e:
         print(f"   ❌ Models fetch failed: {e}")

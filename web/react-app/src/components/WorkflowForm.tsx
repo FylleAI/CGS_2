@@ -217,6 +217,7 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
   const [selectedRAGContents, setSelectedRAGContents] = useState<string[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<string>('openai');
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4o');
+  const [selectedTokens, setSelectedTokens] = useState<number>(4096);
 
   // Determine schema based on workflow
   const getValidationSchema = () => {
@@ -238,6 +239,7 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
     formState: { errors, isValid },
     reset,
     watch,
+    setValue,
   } = useForm<any>({
     resolver: yupResolver(getValidationSchema()),
     mode: 'onChange',
@@ -249,6 +251,7 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
       provider: selectedProvider,
       model: selectedModel,
       temperature: 0.7,
+      max_tokens: selectedTokens,
     };
 
     if (selectedWorkflow?.id === 'enhanced_article') {
@@ -302,6 +305,11 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
   useEffect(() => {
     reset(getDefaultValues());
   }, [selectedWorkflow, selectedClient, reset]);
+
+  // Keep form max_tokens in sync with selectedTokens
+  useEffect(() => {
+    setValue('max_tokens', selectedTokens);
+  }, [selectedTokens, setValue]);
 
   const onSubmit = async (data: any) => {
     if (!selectedClient || !selectedWorkflow) {
@@ -989,8 +997,10 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
         control={control}
         selectedProvider={selectedProvider}
         selectedModel={selectedModel}
+        selectedTokens={selectedTokens}
         onProviderChange={setSelectedProvider}
         onModelChange={setSelectedModel}
+        onTokensChange={setSelectedTokens}
       />
 
       {/* RAG Content Selection */}

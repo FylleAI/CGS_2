@@ -58,8 +58,13 @@ export interface GenerationRequest {
 export interface ProviderInfo {
   name: string;
   available: boolean;
-  models: string[];
+  models: ModelInfo[];
   default_model: string;
+}
+
+export interface ModelInfo {
+  name: string;
+  max_tokens: number;
 }
 
 export interface ProvidersResponse {

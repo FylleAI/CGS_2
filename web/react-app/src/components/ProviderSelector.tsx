@@ -25,25 +25,30 @@ import { Controller, Control } from 'react-hook-form';
 import toast from 'react-hot-toast';
 
 import apiService from '../services/api';
-import { ProviderInfo } from '../types';
+import { ProviderInfo, ModelInfo } from '../types';
 
 interface ProviderSelectorProps {
   control: Control<any>;
   selectedProvider?: string;
   selectedModel?: string;
+  selectedTokens?: number;
   onProviderChange?: (provider: string) => void;
   onModelChange?: (model: string) => void;
+  onTokensChange?: (tokens: number) => void;
 }
 
 const ProviderSelector: React.FC<ProviderSelectorProps> = ({
   control,
   selectedProvider,
   selectedModel,
+  selectedTokens,
   onProviderChange,
   onModelChange,
+  onTokensChange,
 }) => {
   const [currentProvider, setCurrentProvider] = useState<string>(selectedProvider || '');
-  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
+  const [selectedModelInfo, setSelectedModelInfo] = useState<ModelInfo | undefined>(undefined);
 
   // Fetch available providers
   const {
@@ -78,13 +83,29 @@ const ProviderSelector: React.FC<ProviderSelectorProps> = ({
       const provider = providersData.providers.find(p => p.name === currentProvider);
       if (provider) {
         setAvailableModels(provider.models);
+        const info = provider.models.find(m => m.name === (selectedModel || provider.default_model));
+        setSelectedModelInfo(info);
         // Auto-select default model if no model is selected
         if (!selectedModel && provider.default_model) {
           onModelChange?.(provider.default_model);
         }
+        if (info) {
+          onTokensChange?.(info.max_tokens);
+        }
       }
     }
-  }, [currentProvider, providersData, selectedModel, onModelChange]);
+  }, [currentProvider, providersData, selectedModel, onModelChange, onTokensChange]);
+
+  // Update selected model info when model changes
+  useEffect(() => {
+    if (availableModels && selectedModel) {
+      const info = availableModels.find(m => m.name === selectedModel);
+      setSelectedModelInfo(info);
+      if (info) {
+        onTokensChange?.(info.max_tokens);
+      }
+    }
+  }, [selectedModel, availableModels, onTokensChange]);
 
   const handleProviderChange = (provider: string) => {
     setCurrentProvider(provider);
@@ -171,7 +192,7 @@ const ProviderSelector: React.FC<ProviderSelectorProps> = ({
 
       <Grid container spacing={3}>
         {/* Provider Selection */}
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={4}>
           <Controller
             name="provider"
             control={control}
@@ -181,6 +202,7 @@ const ProviderSelector: React.FC<ProviderSelectorProps> = ({
                 <InputLabel>LLM Provider *</InputLabel>
                 <Select
                   {...field}
+                  value={currentProvider || field.value}
                   label="LLM Provider *"
                   onChange={(e) => {
                     field.onChange(e);
@@ -211,7 +233,7 @@ const ProviderSelector: React.FC<ProviderSelectorProps> = ({
         </Grid>
 
         {/* Model Selection */}
-        <Grid item xs={12} sm={6}>
+        <Grid item xs={12} sm={4}>
           <Controller
             name="model"
             control={control}
@@ -221,18 +243,56 @@ const ProviderSelector: React.FC<ProviderSelectorProps> = ({
                 <InputLabel>Model *</InputLabel>
                 <Select
                   {...field}
+                  value={selectedModel || field.value}
                   label="Model *"
                   onChange={(e) => {
                     field.onChange(e);
                     onModelChange?.(e.target.value as string);
                   }}
                 >
-                  {availableModels.map((model: string) => (
-                    <MenuItem key={model} value={model}>
-                      <Typography>{model}</Typography>
+                  {availableModels.map((model: ModelInfo) => (
+                    <MenuItem key={model.name} value={model.name}>
+                      <Typography>{model.name}</Typography>
                     </MenuItem>
                   ))}
                 </Select>
+              </FormControl>
+            )}
+          />
+        </Grid>
+
+        {/* Token Limit Selection */}
+        <Grid item xs={12} sm={4}>
+          <Controller
+            name="max_tokens"
+            control={control}
+            defaultValue={selectedTokens || selectedModelInfo?.max_tokens || 4096}
+            render={({ field }) => (
+              <FormControl fullWidth disabled={!selectedModelInfo}>
+                <InputLabel>Max Tokens *</InputLabel>
+                <Select
+                  {...field}
+                  value={selectedTokens ?? field.value}
+                  label="Max Tokens *"
+                  onChange={(e) => {
+                    field.onChange(e);
+                    onTokensChange?.(Number(e.target.value));
+                  }}
+                >
+                  {selectedModelInfo && [0.25, 0.5, 0.75, 1].map((p) => {
+                    const value = Math.floor(selectedModelInfo.max_tokens * p);
+                    return (
+                      <MenuItem key={value} value={value}>
+                        {value}
+                      </MenuItem>
+                    );
+                  })}
+                </Select>
+                {selectedModelInfo && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                    Model limit: {selectedModelInfo.max_tokens} tokens
+                  </Typography>
+                )}
               </FormControl>
             )}
           />
@@ -247,11 +307,11 @@ const ProviderSelector: React.FC<ProviderSelectorProps> = ({
               </Typography>
               {availableModels.map((model) => (
                 <Chip
-                  key={model}
-                  label={model}
+                  key={model.name}
+                  label={model.name}
                   size="small"
-                  variant={selectedModel === model ? "filled" : "outlined"}
-                  color={selectedModel === model ? "primary" : "default"}
+                  variant={selectedModel === model.name ? "filled" : "outlined"}
+                  color={selectedModel === model.name ? "primary" : "default"}
                 />
               ))}
             </Box>

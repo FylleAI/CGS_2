@@ -275,8 +275,8 @@ class GeminiAdapter(LLMProviderInterface):
             logger.warning(f"Gemini config validation failed: {str(e)}")
             return False
 
-    async def get_available_models(self, config: ProviderConfig) -> List[str]:
-        """Get available Gemini models."""
+    async def get_available_models(self, config: ProviderConfig) -> List[Dict[str, Any]]:
+        """Get available Gemini models with token limits."""
         try:
             api_key = config.api_key or self.api_key
             if not api_key:
@@ -284,29 +284,22 @@ class GeminiAdapter(LLMProviderInterface):
 
             genai.configure(api_key=api_key)
             models = genai.list_models()
-            
-            # Filter for text generation models
-            text_models = []
+
+            text_models: List[Dict[str, Any]] = []
+            config_models = {m["name"]: m for m in config.get_available_models()}
             for model in models:
                 if 'generateContent' in model.supported_generation_methods:
-                    # Remove 'models/' prefix for cleaner names
                     model_name = model.name.replace('models/', '')
-                    text_models.append(model_name)
-            
-            return text_models
+                    info = config_models.get(model_name)
+                    if info:
+                        text_models.append(info)
+
+            return text_models or config.get_available_models()
 
         except Exception as e:
             logger.warning(f"Failed to fetch Gemini models: {str(e)}")
             # Return default models including latest Gemini 2.5 series
-            return [
-                "gemini-2.5-pro",
-                "gemini-2.5-flash",
-                "gemini-2.5-flash-lite",
-                "gemini-2.5-flash-live",
-                "gemini-1.5-pro",
-                "gemini-1.5-flash",
-                "gemini-pro"
-            ]
+            return config.get_available_models()
 
     async def estimate_tokens(self, text: str, model: str) -> int:
         """Estimate token count for given text."""
