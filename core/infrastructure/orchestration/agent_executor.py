@@ -237,8 +237,8 @@ class AgentExecutor:
             system_message += f"\n[{ToolNames.RAG_GET_CLIENT_CONTENT}] client_name, document_name [/{ToolNames.RAG_GET_CLIENT_CONTENT}]"
             system_message += f"\n[{ToolNames.RAG_SEARCH_CONTENT}] client_name, search_query [/{ToolNames.RAG_SEARCH_CONTENT}]"
             system_message += f"\n[{ToolNames.RAG_SEARCH_CONTENT}] search_query [/{ToolNames.RAG_SEARCH_CONTENT}] (defaults to 'siebert' client)"
-            system_message += f"\n[{ToolNames.WEB_SEARCH}] your search query [/{ToolNames.WEB_SEARCH}]"
-            system_message += f"\n[{ToolNames.RESEARCH_PREMIUM_FINANCIAL}] topic=your topic, exclude_topics=topics to exclude [/{ToolNames.RESEARCH_PREMIUM_FINANCIAL}]"
+            system_message += f"\n[{ToolNames.WEB_SEARCH_SERPER}] your search query [/{ToolNames.WEB_SEARCH_SERPER}]"
+            system_message += f"\n[{ToolNames.WEB_SEARCH_PERPLEXITY}] your search query [/{ToolNames.WEB_SEARCH_PERPLEXITY}]"
             system_message += "\n\nCRITICAL RULES:"
             system_message += "\n- Use EXACT tool names from the list above"
             system_message += "\n- For rag_search_content: ALWAYS provide a specific search query"
@@ -278,16 +278,10 @@ class AgentExecutor:
                     tools_reminder += f"- {tool}: Use [{ToolNames.RAG_SEARCH_CONTENT}] client_name, search_query [/{ToolNames.RAG_SEARCH_CONTENT}] to search within client content\n"
                     tools_reminder += f"  Example: [{ToolNames.RAG_SEARCH_CONTENT}] siebert, Mark Malek insights [/{ToolNames.RAG_SEARCH_CONTENT}]\n"
                     tools_reminder += f"  Shorthand: [{ToolNames.RAG_SEARCH_CONTENT}] Mark Malek insights [/{ToolNames.RAG_SEARCH_CONTENT}] (defaults to siebert)\n"
-                elif tool == ToolNames.WEB_SEARCH:
-                    tools_reminder += f"- {tool}: Use [{ToolNames.WEB_SEARCH}] your search query [/{ToolNames.WEB_SEARCH}] to search the web for current information\n"
-                elif tool == ToolNames.WEB_SEARCH_FINANCIAL:
-                    tools_reminder += f"- {tool}: Use [{ToolNames.WEB_SEARCH_FINANCIAL}] topic, exclude_topics [/{ToolNames.WEB_SEARCH_FINANCIAL}] for financial content\n"
-                elif tool == ToolNames.RESEARCH_PREMIUM_FINANCIAL:
-                    tools_reminder += f"- {tool}: Use [{ToolNames.RESEARCH_PREMIUM_FINANCIAL}] topic, exclude_topics [/{ToolNames.RESEARCH_PREMIUM_FINANCIAL}] for premium financial research with Perplexity\n"
-                elif tool == ToolNames.RESEARCH_CLIENT_SOURCES:
-                    tools_reminder += f"- {tool}: Use [{ToolNames.RESEARCH_CLIENT_SOURCES}] client_name, topic, days_back [/{ToolNames.RESEARCH_CLIENT_SOURCES}] for client-specific source research\n"
-                elif tool == ToolNames.RESEARCH_GENERAL_TOPIC:
-                    tools_reminder += f"- {tool}: Use [{ToolNames.RESEARCH_GENERAL_TOPIC}] topic [/{ToolNames.RESEARCH_GENERAL_TOPIC}] for general topic research with Perplexity\n"
+                elif tool == ToolNames.WEB_SEARCH_SERPER:
+                    tools_reminder += f"- {tool}: Use [{ToolNames.WEB_SEARCH_SERPER}] your search query [/{ToolNames.WEB_SEARCH_SERPER}] to search the web for current information\n"
+                elif tool == ToolNames.WEB_SEARCH_PERPLEXITY:
+                    tools_reminder += f"- {tool}: Use [{ToolNames.WEB_SEARCH_PERPLEXITY}] your search query [/{ToolNames.WEB_SEARCH_PERPLEXITY}] for Perplexity research with citations\n"
                 else:
                     tools_reminder += f"- {tool}: Use [{tool}] your input [/{tool}]\n"
 
