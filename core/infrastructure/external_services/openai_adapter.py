@@ -1,6 +1,7 @@
 """OpenAI service adapter."""
 
 import logging
+import re
 from typing import Dict, List, Optional, Any, AsyncGenerator
 import openai
 from openai import AsyncOpenAI
@@ -75,11 +76,12 @@ class OpenAIAdapter(LLMProviderInterface):
         request_params = {
             "model": config.model,
             "messages": messages,
-            "temperature": config.temperature,
             "top_p": config.top_p,
             "frequency_penalty": config.frequency_penalty,
             "presence_penalty": config.presence_penalty,
         }
+        if not re.match(r"o\d", config.model.lower()):
+            request_params["temperature"] = config.temperature
         
         if config.max_tokens:
             request_params["max_tokens"] = config.max_tokens
@@ -135,12 +137,13 @@ class OpenAIAdapter(LLMProviderInterface):
         request_params = {
             "model": config.model,
             "messages": messages,
-            "temperature": config.temperature,
             "top_p": config.top_p,
             "frequency_penalty": config.frequency_penalty,
             "presence_penalty": config.presence_penalty,
             "stream": True
         }
+        if not re.match(r"o\d", config.model.lower()):
+            request_params["temperature"] = config.temperature
         
         if config.max_tokens:
             request_params["max_tokens"] = config.max_tokens
@@ -189,11 +192,12 @@ class OpenAIAdapter(LLMProviderInterface):
         request_params = {
             "model": config.model,
             "messages": messages,
-            "temperature": config.temperature,
             "top_p": config.top_p,
             "frequency_penalty": config.frequency_penalty,
             "presence_penalty": config.presence_penalty,
         }
+        if not re.match(r"o\d", config.model.lower()):
+            request_params["temperature"] = config.temperature
         
         if config.max_tokens:
             request_params["max_tokens"] = config.max_tokens
@@ -237,12 +241,18 @@ class OpenAIAdapter(LLMProviderInterface):
         except Exception:
             return False
     
-    async def get_available_models(self, config: ProviderConfig) -> List[str]:
-        """Get available OpenAI models."""
+    async def get_available_models(self, config: ProviderConfig) -> List[Dict[str, Any]]:
+        """Get available OpenAI models with token limits."""
         try:
             client = self._get_client(config)
             models = await client.models.list()
-            return [model.id for model in models.data if "gpt" in model.id.lower()]
+            config_models = {m["name"]: m for m in config.get_available_models()}
+            available = []
+            for model in models.data:
+                info = config_models.get(model.id)
+                if info:
+                    available.append(info)
+            return available or config.get_available_models()
         except Exception:
             # Return default models if API call fails
             return config.get_available_models()

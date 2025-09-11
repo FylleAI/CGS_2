@@ -285,19 +285,18 @@ class AnthropicAdapter(LLMProviderInterface):
             logger.debug(f"Anthropic config validation failed: {str(e)}")
             return False
     
-    async def get_available_models(self, config: ProviderConfig) -> List[str]:
-        """Get available Anthropic models."""
+    async def get_available_models(self, config: ProviderConfig) -> List[Dict[str, Any]]:
+        """Get available Anthropic models with token limits."""
         try:
-            # For now, return the predefined list
-            # In the future, this could make an API call to get real-time model availability
+            # For now, return the predefined list from config
             return config.get_available_models()
         except Exception:
-            # Return default models if API call fails
+            # Fallback to a basic static list
             return [
-                "claude-3-5-haiku-latest",
-                "claude-3-7-sonnet-latest",
-                "claude-sonnet-4-20250514",
-                "claude-opus-4-20250514"
+                {"name": "claude-3-5-haiku-latest", "max_tokens": 200000},
+                {"name": "claude-3-7-sonnet-latest", "max_tokens": 200000},
+                {"name": "claude-sonnet-4-20250514", "max_tokens": 200000},
+                {"name": "claude-opus-4-20250514", "max_tokens": 200000},
             ]
 
     async def estimate_tokens(self, text: str, model: str) -> int:

@@ -1,7 +1,7 @@
 """Provider configuration value object."""
 
 from dataclasses import dataclass
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from enum import Enum
 
 
@@ -71,49 +71,50 @@ class ProviderConfig:
         }
         return defaults.get(self.provider, "gpt-4o")
     
-    def get_available_models(self) -> list[str]:
-        """Get list of available models for the provider."""
-        models = {
+    def get_available_models(self) -> List[Dict[str, Any]]:
+        """Get list of available models for the provider with token limits."""
+        models: Dict[LLMProvider, List[Dict[str, Any]]] = {
             LLMProvider.OPENAI: [
-                "gpt-3.5-turbo",
-                "gpt-4",
-                "gpt-4-turbo",
-                "gpt-4o",
-                "gpt-4o-mini",
-                "o1",
-                "o1-mini",
-                "o1-pro",
-                "o3-mini"
+                {"name": "gpt-3.5-turbo", "max_tokens": 16000},
+                {"name": "gpt-4", "max_tokens": 8000},
+                {"name": "gpt-4-turbo", "max_tokens": 128000},
+                {"name": "gpt-4o", "max_tokens": 128000},
+                {"name": "gpt-4o-mini", "max_tokens": 128000},
+                {"name": "gpt-5", "max_tokens": 200000},
+                {"name": "o1", "max_tokens": 200000},
+                {"name": "o1-mini", "max_tokens": 200000},
+                {"name": "o1-pro", "max_tokens": 200000},
+                {"name": "o3-mini", "max_tokens": 200000},
             ],
             LLMProvider.ANTHROPIC: [
-                "claude-3-5-haiku-20241022",
-                "claude-3-5-haiku-latest",
-                "claude-3-7-sonnet-20250219",
-                "claude-3-7-sonnet-latest",
-                "claude-sonnet-4-20250514",
-                "claude-opus-4-20250514"
+                {"name": "claude-3-5-haiku-20241022", "max_tokens": 200000},
+                {"name": "claude-3-5-haiku-latest", "max_tokens": 200000},
+                {"name": "claude-3-7-sonnet-20250219", "max_tokens": 200000},
+                {"name": "claude-3-7-sonnet-latest", "max_tokens": 200000},
+                {"name": "claude-sonnet-4-20250514", "max_tokens": 200000},
+                {"name": "claude-opus-4-20250514", "max_tokens": 200000},
             ],
             LLMProvider.DEEPSEEK: [
-                "deepseek-chat",
-                "deepseek-coder"
+                {"name": "deepseek-chat", "max_tokens": 64000},
+                {"name": "deepseek-coder", "max_tokens": 64000},
             ],
             LLMProvider.GEMINI: [
-                "gemini-2.5-pro",
-                "gemini-2.5-flash",
-                "gemini-2.5-flash-lite",
-                "gemini-2.5-flash-live",
-                "gemini-1.5-pro",
-                "gemini-1.5-flash",
-                "gemini-pro",
-                "gemini-1.5-pro-latest",
-                "gemini-1.5-flash-latest"
-            ]
+                {"name": "gemini-2.5-pro", "max_tokens": 1000000},
+                {"name": "gemini-2.5-flash", "max_tokens": 1000000},
+                {"name": "gemini-2.5-flash-lite", "max_tokens": 1000000},
+                {"name": "gemini-2.5-flash-live", "max_tokens": 1000000},
+                {"name": "gemini-1.5-pro", "max_tokens": 1000000},
+                {"name": "gemini-1.5-flash", "max_tokens": 1000000},
+                {"name": "gemini-pro", "max_tokens": 1000000},
+                {"name": "gemini-1.5-pro-latest", "max_tokens": 1000000},
+                {"name": "gemini-1.5-flash-latest", "max_tokens": 1000000},
+            ],
         }
         return models.get(self.provider, [])
     
     def is_model_available(self) -> bool:
         """Check if the configured model is available for the provider."""
-        return self.model in self.get_available_models()
+        return any(m["name"] == self.model for m in self.get_available_models())
     
     def with_temperature(self, temperature: float) -> "ProviderConfig":
         """Create a new config with different temperature."""
