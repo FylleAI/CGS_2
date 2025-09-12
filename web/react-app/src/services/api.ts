@@ -104,9 +104,22 @@ export const apiService = {
   async getAvailableProviders(): Promise<ProvidersResponse> {
     console.log('🔧 Fetching available LLM providers');
     try {
-      const response = await api.get<ProvidersResponse>('/api/v1/content/providers');
-      console.log('✅ Providers fetched successfully:', response.data);
-      return response.data;
+      const response = await api.get('/api/v1/content/providers');
+      const data: any = response.data;
+
+      // Normalize models to string[] for frontend consumption
+      const normalized: ProvidersResponse = {
+        ...data,
+        providers: (data?.providers ?? []).map((p: any) => ({
+          ...p,
+          models: Array.isArray(p?.models)
+            ? p.models.map((m: any) => (typeof m === 'string' ? m : m?.name ?? String(m)))
+            : [],
+        })),
+      };
+
+      console.log('✅ Providers fetched successfully (normalized):', normalized);
+      return normalized;
     } catch (error) {
       console.error('❌ CRITICAL: Error fetching providers - no fallback allowed:', error);
       throw new Error('Failed to fetch LLM providers - system cannot proceed without real provider data');
