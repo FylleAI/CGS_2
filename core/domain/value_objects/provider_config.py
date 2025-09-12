@@ -17,11 +17,11 @@ class LLMProvider(Enum):
 class ProviderConfig:
     """
     Immutable configuration for LLM providers.
-    
+
     This value object encapsulates all configuration needed
     to interact with a specific LLM provider.
     """
-    
+
     provider: LLMProvider = LLMProvider.OPENAI
     model: str = "gpt-4o"
     temperature: float = 0.7
@@ -32,35 +32,46 @@ class ProviderConfig:
     api_key: Optional[str] = None
     base_url: Optional[str] = None
     additional_params: Dict[str, Any] = None
-    
+
     def __post_init__(self) -> None:
         """Validate configuration after initialization."""
         if self.additional_params is None:
             object.__setattr__(self, 'additional_params', {})
-        
+
         # Validate temperature
         if not 0.0 <= self.temperature <= 2.0:
             raise ValueError("Temperature must be between 0.0 and 2.0")
-        
+
         # Validate top_p
         if not 0.0 <= self.top_p <= 1.0:
             raise ValueError("Top_p must be between 0.0 and 1.0")
-        
+
         # Validate penalties
         if not -2.0 <= self.frequency_penalty <= 2.0:
             raise ValueError("Frequency penalty must be between -2.0 and 2.0")
-        
+
         if not -2.0 <= self.presence_penalty <= 2.0:
             raise ValueError("Presence penalty must be between -2.0 and 2.0")
-        
+
         # Validate max_tokens
         if self.max_tokens is not None and self.max_tokens <= 0:
             raise ValueError("Max tokens must be positive")
-        
+
         # Set default model for provider if not specified
         if not self.model:
             object.__setattr__(self, 'model', self._get_default_model())
-    
+
+
+        # Cap max_tokens to the model's limit when provided
+        try:
+            model_info = next((m for m in self.get_available_models() if m.get("name") == self.model), None)
+            if self.max_tokens is not None and model_info and isinstance(model_info.get("max_tokens"), int):
+                if self.max_tokens > model_info["max_tokens"]:
+                    object.__setattr__(self, 'max_tokens', model_info["max_tokens"])
+        except Exception:
+            # Be conservative: if anything goes wrong, keep provided max_tokens
+            pass
+
     def _get_default_model(self) -> str:
         """Get default model for the provider."""
         defaults = {
@@ -70,7 +81,7 @@ class ProviderConfig:
             LLMProvider.GEMINI: "gemini-2.5-pro"
         }
         return defaults.get(self.provider, "gpt-4o")
-    
+
     def get_available_models(self) -> List[Dict[str, Any]]:
         """Get list of available models for the provider with token limits."""
         models: Dict[LLMProvider, List[Dict[str, Any]]] = {
@@ -111,11 +122,11 @@ class ProviderConfig:
             ],
         }
         return models.get(self.provider, [])
-    
+
     def is_model_available(self) -> bool:
         """Check if the configured model is available for the provider."""
         return any(m["name"] == self.model for m in self.get_available_models())
-    
+
     def with_temperature(self, temperature: float) -> "ProviderConfig":
         """Create a new config with different temperature."""
         return ProviderConfig(
@@ -130,7 +141,7 @@ class ProviderConfig:
             base_url=self.base_url,
             additional_params=self.additional_params
         )
-    
+
     def with_model(self, model: str) -> "ProviderConfig":
         """Create a new config with different model."""
         return ProviderConfig(
@@ -145,7 +156,7 @@ class ProviderConfig:
             base_url=self.base_url,
             additional_params=self.additional_params
         )
-    
+
     def with_provider(self, provider: LLMProvider) -> "ProviderConfig":
         """Create a new config with different provider and default model."""
         return ProviderConfig(
@@ -160,7 +171,7 @@ class ProviderConfig:
             base_url=self.base_url,
             additional_params=self.additional_params
         )
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary representation."""
         return {
@@ -175,7 +186,7 @@ class ProviderConfig:
             "base_url": self.base_url,
             "additional_params": self.additional_params
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ProviderConfig":
         """Create from dictionary representation."""
@@ -191,7 +202,7 @@ class ProviderConfig:
             base_url=data.get("base_url"),
             additional_params=data.get("additional_params", {})
         )
-    
+
     @classmethod
     def create_openai_config(cls, model: str = "gpt-4o", temperature: float = 0.7) -> "ProviderConfig":
         """Create OpenAI configuration."""
@@ -200,7 +211,7 @@ class ProviderConfig:
             model=model,
             temperature=temperature
         )
-    
+
     @classmethod
     def create_anthropic_config(cls, model: str = "claude-3-7-sonnet-latest", temperature: float = 0.7) -> "ProviderConfig":
         """Create Anthropic configuration."""
@@ -209,7 +220,7 @@ class ProviderConfig:
             model=model,
             temperature=temperature
         )
-    
+
     @classmethod
     def create_deepseek_config(cls, model: str = "deepseek-chat", temperature: float = 0.7) -> "ProviderConfig":
         """Create DeepSeek configuration."""
