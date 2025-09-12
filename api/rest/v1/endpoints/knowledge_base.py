@@ -136,12 +136,12 @@ async def get_document_content(
 ) -> DocumentContentResponse:
     """
     Get full content of a specific document.
-    
+
     Args:
         client_name: Name of the client
         document_id: ID of the document (filename without extension)
         rag_tool: RAG tool instance
-        
+
     Returns:
         Document content with metadata
     """
@@ -188,6 +188,104 @@ async def get_document_content(
         logger.error(f"Error getting document content {client_name}/{document_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Error retrieving document: {e}")
 
+
+
+class UploadDocumentRequest(BaseModel):
+    title: str
+    content: str
+    description: Optional[str] = None
+    tags: Optional[List[str]] = None
+
+
+@router.post("/clients/{client_name}/documents")
+async def upload_document(
+    client_name: str,
+    payload: UploadDocumentRequest,
+    rag_tool: RAGTool = Depends(get_rag_tool),
+) -> Dict[str, Any]:
+    """Upload a new document to Supabase (Storage + DB) for a client."""
+    try:
+        # Ensure .md extension
+        document_name = payload.title if "." in payload.title else f"{payload.title}.md"
+
+        # Upload content via RAG tool (handles storage + insert)
+        result_msg = await rag_tool.add_content(client_name, document_name, payload.content)
+
+        # Optionally update description/tags metadata
+        try:
+            supabase = rag_tool.supabase
+            client_res = (
+                supabase.table("clients").select("id").eq("name", client_name).single().execute()
+            )
+            client_id = client_res.data["id"]
+            update_data: Dict[str, Any] = {}
+            update_data["description"] = (
+                payload.description if payload.description is not None else payload.content[:200]
+            )
+            if payload.tags is not None:
+                update_data["tags"] = payload.tags
+            if update_data:
+                supabase.table("documents").update(update_data).eq("client_id", client_id).eq("title", document_name).execute()
+        except Exception as meta_e:  # pragma: no cover
+            logger.warning(f"Upload succeeded but metadata update failed: {meta_e}")
+
+        return {"status": "ok", "message": result_msg, "document": {"client": client_name, "title": document_name}}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error uploading document for {client_name}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error uploading document: {e}")
+
+
+
+
+@router.post("/clients/{client_name}/backfill-embeddings")
+async def backfill_embeddings(
+    client_name: str,
+    limit: int = 100,
+    rag_tool: RAGTool = Depends(get_rag_tool)
+) -> Dict[str, Any]:
+    """Backfill missing embeddings for a client's documents (no scripts required)."""
+    try:
+        supabase = rag_tool.supabase
+        # Resolve client id
+        client_res = (
+            supabase.table("clients").select("id").eq("name", client_name).single().execute()
+        )
+        client_data = client_res.data
+        if not client_data:
+            raise HTTPException(status_code=404, detail=f"Client {client_name} not found")
+        client_id = client_data["id"]
+
+        # Fetch docs with null embeddings
+        docs_res = (
+            supabase.table("documents")
+            .select("id,title,content")
+            .eq("client_id", client_id)
+            .is_("embedding", "null")
+            .limit(limit)
+            .execute()
+        )
+        docs = docs_res.data or []
+
+        updated = 0
+        for doc in docs:
+            emb = rag_tool._embed_text(doc.get("content", ""))
+            try:
+                supabase.table("documents").update({"embedding": emb}).eq("id", doc["id"]).execute()
+                updated += 1
+            except Exception as ue:  # pragma: no cover
+                logger.warning(f"Failed to update embedding for {doc.get('id')}: {ue}")
+                continue
+
+        return {"status": "ok", "client": client_name, "updated": updated, "total_candidates": len(docs)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error backfilling embeddings for {client_name}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error backfilling embeddings: {e}")
 
 @router.get("/clients", response_model=List[str])
 async def get_available_clients(

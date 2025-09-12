@@ -1,7 +1,7 @@
 """Content generation endpoints."""
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
@@ -32,6 +32,7 @@ class ContentGenerationRequestModel(BaseModel):
     provider: str = "openai"
     model: str = "gpt-4o"
     temperature: float = 0.7
+    max_tokens: Optional[int] = None
 
     # Enhanced Article specific parameters
     target_word_count: Optional[int] = None
@@ -50,6 +51,9 @@ class ContentGenerationRequestModel(BaseModel):
     custom_instructions: str = ""
     target_audience: str = "general"  # Fallback for general use
     include_sources: bool = True
+
+    # RAG selection from frontend
+    selected_documents: Optional[List[str]] = None
 
     # Additional frontend parameters (will be ignored if not needed)
     client_name: Optional[str] = None
@@ -125,7 +129,8 @@ async def generate_content(
             provider_config = ProviderConfig(
                 provider=LLMProvider(request.provider),
                 model=request.model,
-                temperature=request.temperature
+                temperature=request.temperature,
+                max_tokens=request.max_tokens
             )
             logger.info("Provider config created successfully")
         except Exception as e:
@@ -184,6 +189,25 @@ async def generate_content(
             logger.error(f"Error creating content request: {str(e)}")
             raise
         
+        # Pass selected documents (if any) to the RAG tool so agents restrict retrieval
+        try:
+            if hasattr(request, "selected_documents") and request.selected_documents:
+                logger.info(f"📎 Selected documents provided: {len(request.selected_documents)}")
+                try:
+                    # Set selection on the use case's RAG tool
+                    use_case.rag_tool.set_selected_documents(request.selected_documents)
+                    logger.info("RAG tool selection set successfully")
+                except Exception as sel_err:  # pragma: no cover
+                    logger.warning(f"Failed to set selected documents on RAG tool: {sel_err}")
+            else:
+                # Clear any previous selection
+                try:
+                    use_case.rag_tool.set_selected_documents(None)
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"Issue handling selected_documents: {e}")
+
         # Execute content generation
         logger.info("Starting content generation execution")
         try:
@@ -192,7 +216,7 @@ async def generate_content(
         except Exception as e:
             logger.error(f"Error during content generation: {str(e)}")
             raise
-        
+
         # Convert workflow metrics if present
         workflow_metrics = None
         if response.workflow_metrics:
@@ -258,11 +282,17 @@ async def list_content(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+class ModelInfo(BaseModel):
+    """Information about a specific model."""
+    name: str
+    max_tokens: int
+
+
 class ProviderInfo(BaseModel):
     """Information about an LLM provider."""
     name: str
     available: bool
-    models: List[str]
+    models: List[ModelInfo]
     default_model: str
 
 
@@ -300,13 +330,13 @@ async def get_available_providers():
 
                 # Create a dummy config to get available models
                 dummy_config = ProviderConfig(provider=provider_enum)
-                models = dummy_config.get_available_models()
+                models_data = dummy_config.get_available_models()
                 default_model = dummy_config._get_default_model()
 
                 providers_info.append(ProviderInfo(
                     name=provider_name,
                     available=available_providers.get(provider_name, False),
-                    models=models,
+                    models=[ModelInfo(**m) for m in models_data],
                     default_model=default_model
                 ))
             except ValueError:

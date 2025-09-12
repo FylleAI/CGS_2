@@ -17,6 +17,10 @@ class AgentFactory:
 
     async def get(self, *, name: Optional[str], role: Optional[AgentRole], ctx: Dict[str, Any]) -> Agent:
         """Resolve an Agent by name (preferred) or role, with client-specific overrides if present."""
+        # Map legacy agent names to new identifiers
+        if name == "research_specialist":
+            name = "research_agent"
+
         # Prefer explicit client_profile; fallback to client_name used elsewhere in context
         client_profile = (ctx or {}).get("client_profile") or (ctx or {}).get("client_name")
 

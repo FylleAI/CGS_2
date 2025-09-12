@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
 
     # CORS settings
-    cors_allowed_origins: List[str] = Field(default=["http://localhost:3000", "http://localhost:3001"])
+    cors_allowed_origins: List[str] = Field(default=["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"])
 
     # AI Provider API Keys
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")

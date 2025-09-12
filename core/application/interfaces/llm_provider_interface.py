@@ -135,15 +135,15 @@ class LLMProviderInterface(ABC):
         pass
     
     @abstractmethod
-    async def get_available_models(self, config: ProviderConfig) -> List[str]:
+    async def get_available_models(self, config: ProviderConfig) -> List[Dict[str, Any]]:
         """
-        Get list of available models for the provider.
-        
+        Get list of available models for the provider with metadata.
+
         Args:
             config: Provider configuration
-            
+
         Returns:
-            List of available model names
+            List of model information dictionaries
         """
         pass
     
