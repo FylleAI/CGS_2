@@ -180,13 +180,9 @@ async def execute_dynamic_workflow(workflow_type: str, context: Dict[str, Any]) 
         perplexity_tool = PerplexityResearchTool(settings.perplexity_api_key)
 
         agent_executor.register_tools({
-            ToolNames.WEB_SEARCH: {
+            ToolNames.WEB_SEARCH_SERPER: {
                 'function': web_search_tool.search,
                 'description': 'Search the web for current information and trends'
-            },
-            ToolNames.WEB_SEARCH_FINANCIAL: {
-                'function': web_search_tool.search_financial_content,
-                'description': 'Search for current financial content and market trends'
             },
             ToolNames.RAG_GET_CLIENT_CONTENT: {
                 'function': rag_tool.get_client_content,
@@ -196,17 +192,9 @@ async def execute_dynamic_workflow(workflow_type: str, context: Dict[str, Any]) 
                 'function': rag_tool.search_content,
                 'description': 'Search within client knowledge base'
             },
-            ToolNames.RESEARCH_PREMIUM_FINANCIAL: {
-                'function': perplexity_tool.research_premium_financial,
-                'description': 'Research premium financial content using Perplexity AI with domain filtering'
-            },
-            ToolNames.RESEARCH_CLIENT_SOURCES: {
-                'function': perplexity_tool.research_client_sources,
-                'description': 'Research content from client-specific sources using Perplexity AI'
-            },
-            ToolNames.RESEARCH_GENERAL_TOPIC: {
-                'function': perplexity_tool.research_general_topic,
-                'description': 'General topic research using Perplexity AI without domain restrictions'
+            ToolNames.WEB_SEARCH_PERPLEXITY: {
+                'function': perplexity_tool.search,
+                'description': 'Search using Perplexity AI'
             }
         })
 

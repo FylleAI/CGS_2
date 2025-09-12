@@ -235,16 +235,22 @@ class DeepSeekAdapter(LLMProviderInterface):
             logger.error(f"DeepSeek config validation failed: {str(e)}")
             return False
 
-    async def get_available_models(self, config: ProviderConfig) -> List[str]:
-        """Get available DeepSeek models."""
+    async def get_available_models(self, config: ProviderConfig) -> List[Dict[str, Any]]:
+        """Get available DeepSeek models with token limits."""
         try:
             client = self._get_client()
             models = await client.models.list()
-            return [model.id for model in models.data]
+            config_models = {m["name"]: m for m in config.get_available_models()}
+            available = []
+            for model in models.data:
+                info = config_models.get(model.id)
+                if info:
+                    available.append(info)
+            return available or config.get_available_models()
         except Exception as e:
             logger.warning(f"Failed to fetch DeepSeek models: {str(e)}")
             # Return default models
-            return ["deepseek-chat", "deepseek-coder"]
+            return config.get_available_models()
 
     async def estimate_tokens(self, text: str, model: str) -> int:
         """Estimate token count for DeepSeek models."""

@@ -9,7 +9,11 @@ import {
   Step,
   StepLabel,
   Paper,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useQuery } from 'react-query';
 import toast from 'react-hot-toast';
 
@@ -20,6 +24,7 @@ import ClientSelector from './ClientSelector';
 import WorkflowSelector from './WorkflowSelector';
 import WorkflowForm from './WorkflowForm';
 import GenerationResults from './GenerationResults';
+import RAGUploader from './RAGUploader';
 
 const steps = [
   'Select Client',
@@ -130,6 +135,18 @@ const ContentGenerator: React.FC = () => {
                 <ClientSelector loading={loadingClients} />
               </CardContent>
             </Card>
+
+            {/* Knowledge Base Uploader (collapsed by default) */}
+            {selectedClient && (
+              <Accordion disableGutters>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="h6">Knowledge Base — Upload document</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <RAGUploader />
+                </AccordionDetails>
+              </Accordion>
+            )}
 
             {/* Workflow Selection */}
             {selectedClient && (
