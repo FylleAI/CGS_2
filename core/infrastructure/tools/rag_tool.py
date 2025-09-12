@@ -32,6 +32,9 @@ class RAGTool:
         self.rag_base_dir = Path(settings.knowledge_base_dir)
         self.use_filesystem_fallback = self.supabase is None
 
+        # Optional selection of documents (ids) to restrict retrieval during a run
+        self.selected_document_ids: Optional[set[str]] = None
+
     def _init_supabase_client(self):
         """Create a Supabase client if configuration is available."""
         try:
@@ -47,7 +50,16 @@ class RAGTool:
         self.run_id = run_id
         self.tracker = tracker
         self.supabase = tracker.client
-    
+
+    def set_selected_documents(self, ids: Optional[list[str]]) -> None:
+        """Restrict retrieval to a set of document IDs (strings). Pass None to clear."""
+        if ids:
+            self.selected_document_ids = set(ids)
+            logger.info(f"📌 RAG: Selection filter active for {len(self.selected_document_ids)} document(s)")
+        else:
+            self.selected_document_ids = None
+            logger.info("📌 RAG: Selection filter cleared (all documents allowed)")
+
     async def get_client_content(
         self,
         client_name: str,
@@ -148,13 +160,18 @@ class RAGTool:
             return "Supabase client not configured"
 
         try:
-            docs_res = (
+            query = (
                 self.supabase.table("documents")
                 .select("id,title,content,file_path")
                 .eq("client_id", client_id)
-                .execute()
             )
+            if self.selected_document_ids:
+                ids_list = list(self.selected_document_ids)
+                logger.info(f"📌 RAG: Applying selection filter to documents (ids={ids_list})")
+                query = query.in_("id", ids_list)
+            docs_res = query.execute()
             docs = docs_res.data or []
+            logger.info(f"📚 RAG: Retrieved {len(docs)} document(s) for client '{client_name}'")
         except Exception as e:  # pragma: no cover
             logger.error(f"Error retrieving documents for {client_name}: {e}")
             return f"Error retrieving documents: {e}"
@@ -315,6 +332,12 @@ The following documents contain additional information that may be relevant to c
                 },
             ).execute()
             matches = response.data or []
+            # Apply selection filter if active
+            if self.selected_document_ids:
+                before = len(matches)
+                matches = [m for m in matches if m.get("id") in self.selected_document_ids]
+                logger.info(f"[36mRAG: Filtered semantic matches by selection: {before} [0m[90m->[0m {len(matches)}")
+
             if not matches:
                 return f"No results found for query '{query}' in {client_name}'s knowledge base"
 
@@ -354,18 +377,42 @@ The following documents contain additional information that may be relevant to c
             return [0.0] * 1536
 
     def upload_document(self, client_name: str, path: str, content: str) -> str:
-        """Upload a document to Supabase Storage and index it."""
+        """Upload a document to Supabase Storage and index it.
+        Always insert the DB record even if Storage upload fails (due to RLS),
+        so the document is immediately usable by the app and agents.
+        """
         if self.supabase is None:
             raise ValueError("Supabase client not configured")
 
         storage_path = f"{client_name}/{path}"
+
+        # 1) Try to upload to Storage (best-effort)
         try:
             self.supabase.storage.from_("knowledge-base").upload(
                 storage_path, content.encode("utf-8"), {"content-type": "text/markdown"}
             )
-            embedding = self._embed_text(content)
+        except Exception as e:  # pragma: no cover
+            logger.warning(f"Error uploading document to Supabase Storage (continuo con DB insert): {e}")
+
+        # 2) Resolve client_id
+        client_res = (
+            self.supabase.table("clients")
+            .select("id")
+            .eq("name", client_name)
+            .single()
+            .execute()
+        )
+        client_data = client_res.data
+        if not client_data:
+            raise ValueError(f"Client '{client_name}' not found")
+        client_id = client_data["id"]
+
+        # 3) Insert document record (try with embedding, then fallback without)
+        embedding = self._embed_text(content)
+        try:
             self.supabase.table("documents").insert(
                 {
+                    "client_id": client_id,
                     "title": path,
                     "content": content,
                     "file_path": storage_path,
@@ -373,8 +420,22 @@ The following documents contain additional information that may be relevant to c
                     "embedding": embedding,
                 }
             ).execute()
-        except Exception as e:  # pragma: no cover
-            logger.warning(f"Error uploading document to Supabase: {e}")
+        except Exception as e1:  # pragma: no cover
+            logger.warning(f"Error inserting document record (with embedding): {e1}")
+            try:
+                self.supabase.table("documents").insert(
+                    {
+                        "client_id": client_id,
+                        "title": path,
+                        "content": content,
+                        "file_path": storage_path,
+                        "metadata": {"client_name": client_name},
+                    }
+                ).execute()
+                logger.info("Inserted document record without embedding (fallback)")
+            except Exception as e2:  # pragma: no cover
+                logger.warning(f"Error inserting document record (fallback): {e2}")
+
         return storage_path
 
     def download_document(self, client_name: str, path: str) -> Optional[str]:

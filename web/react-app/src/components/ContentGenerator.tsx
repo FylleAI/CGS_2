@@ -20,6 +20,7 @@ import ClientSelector from './ClientSelector';
 import WorkflowSelector from './WorkflowSelector';
 import WorkflowForm from './WorkflowForm';
 import GenerationResults from './GenerationResults';
+import RAGUploader from './RAGUploader';
 
 const steps = [
   'Select Client',
@@ -130,6 +131,11 @@ const ContentGenerator: React.FC = () => {
                 <ClientSelector loading={loadingClients} />
               </CardContent>
             </Card>
+
+            {/* Knowledge Base Uploader */}
+            {selectedClient && (
+              <RAGUploader />
+            )}
 
             {/* Workflow Selection */}
             {selectedClient && (

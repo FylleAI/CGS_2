@@ -399,6 +399,33 @@ export const apiService = {
     }
   },
 
+
+  // Upload a new RAG document for a client
+  async uploadRAGDocument(
+    clientProfile: string,
+    params: { title: string; content: string; description?: string; tags?: string[] }
+  ): Promise<any> {
+    try {
+      frontendLogger.info(EventType.USER_ACTION, 'Uploading RAG document', {
+        clientProfile,
+        title: params.title,
+      });
+      const response = await api.post(
+        `/api/v1/knowledge-base/clients/${clientProfile}/documents`,
+        params
+      );
+      frontendLogger.info(EventType.API_RESPONSE, 'RAG document uploaded', {
+        clientProfile,
+        title: params.title,
+      });
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error uploading RAG document:', error);
+      throw error;
+    }
+  },
+
+
   // Get available clients from knowledge base
   async getAvailableClients(): Promise<string[]> {
     try {
