@@ -162,8 +162,15 @@ class WorkflowHandler(ABC):
             logger.info(f"⏭️ Skipping task: {task_id}")
             return None
 
-        # Keep raw description template; we'll substitute at execution time with full context
-        description_template = task_template.get('description_template', '')
+        # Load prompt template from external repository using prompt_id
+        prompt_id = task_template.get('prompt_id')
+        description_template = ''
+        if prompt_id:
+            try:
+                prompt_path = Path(__file__).resolve().parents[3] / 'prompts' / f'{prompt_id}.md'
+                description_template = prompt_path.read_text(encoding='utf-8')
+            except FileNotFoundError:
+                logger.error(f"❌ Prompt file not found for task {task_id}: {prompt_id}")
 
         # Create task (store template as description)
         task = Task(
@@ -263,9 +270,14 @@ class WorkflowHandler(ABC):
             }
 
             logger.info(f"🎯 Executing agent for task: {task.name}")
+
+            # Build final prompt using centralized prompt builder
+            from ...orchestration import prompt_builder
+            final_prompt = prompt_builder.build(agent, task.description, enhanced_context)
+
             result = await agent_executor.execute_agent(
                 agent=agent,
-                task_description=task.description,
+                task_description=final_prompt,
                 context=enhanced_context
             )
 
