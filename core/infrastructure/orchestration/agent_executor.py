@@ -177,6 +177,8 @@ class AgentExecutor:
                         output_data={"response": final_response},
                         tokens=token_usage.total_tokens,
                         cost=cost_breakdown.total_cost,
+                        provider_name=dynamic_config.provider.value,
+                        model_name=dynamic_config.model,
                         duration_seconds=duration_ms / 1000,
                     )
                 except Exception as e:  # pragma: no cover

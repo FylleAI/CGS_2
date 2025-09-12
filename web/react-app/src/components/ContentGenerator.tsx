@@ -9,7 +9,11 @@ import {
   Step,
   StepLabel,
   Paper,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useQuery } from 'react-query';
 import toast from 'react-hot-toast';
 
@@ -132,9 +136,16 @@ const ContentGenerator: React.FC = () => {
               </CardContent>
             </Card>
 
-            {/* Knowledge Base Uploader */}
+            {/* Knowledge Base Uploader (collapsed by default) */}
             {selectedClient && (
-              <RAGUploader />
+              <Accordion disableGutters>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography variant="h6">Knowledge Base — Upload document</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <RAGUploader />
+                </AccordionDetails>
+              </Accordion>
             )}
 
             {/* Workflow Selection */}
