@@ -51,6 +51,9 @@ class ContentGenerationRequestModel(BaseModel):
     target_audience: str = "general"  # Fallback for general use
     include_sources: bool = True
 
+    # RAG selection from frontend
+    selected_documents: Optional[List[str]] = None
+
     # Additional frontend parameters (will be ignored if not needed)
     client_name: Optional[str] = None
     brand_voice: Optional[str] = None
@@ -184,6 +187,25 @@ async def generate_content(
             logger.error(f"Error creating content request: {str(e)}")
             raise
         
+        # Pass selected documents (if any) to the RAG tool so agents restrict retrieval
+        try:
+            if hasattr(request, "selected_documents") and request.selected_documents:
+                logger.info(f"📎 Selected documents provided: {len(request.selected_documents)}")
+                try:
+                    # Set selection on the use case's RAG tool
+                    use_case.rag_tool.set_selected_documents(request.selected_documents)
+                    logger.info("RAG tool selection set successfully")
+                except Exception as sel_err:  # pragma: no cover
+                    logger.warning(f"Failed to set selected documents on RAG tool: {sel_err}")
+            else:
+                # Clear any previous selection
+                try:
+                    use_case.rag_tool.set_selected_documents(None)
+                except Exception:
+                    pass
+        except Exception as e:
+            logger.warning(f"Issue handling selected_documents: {e}")
+
         # Execute content generation
         logger.info("Starting content generation execution")
         try:
@@ -192,7 +214,7 @@ async def generate_content(
         except Exception as e:
             logger.error(f"Error during content generation: {str(e)}")
             raise
-        
+
         # Convert workflow metrics if present
         workflow_metrics = None
         if response.workflow_metrics:
