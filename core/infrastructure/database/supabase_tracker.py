@@ -87,6 +87,8 @@ class SupabaseTracker:
         thoughts: Optional[str] = None,
         tokens: Optional[int] = None,
         cost: Optional[float] = None,
+        provider_name: Optional[str] = None,
+        model_name: Optional[str] = None,
         duration_seconds: Optional[float] = None,
     ) -> None:
         data: Dict[str, Any] = {
@@ -106,8 +108,16 @@ class SupabaseTracker:
             data["tokens_used"] = tokens
         if cost is not None:
             data["cost_usd"] = cost
+        if provider_name:
+            data["provider_name"] = provider_name
+        if model_name:
+            data["model_name"] = model_name
         if duration_seconds is not None:
-            data["duration_seconds"] = duration_seconds
+            # Store fractional seconds with up to 3 decimals (DB is NUMERIC(10,3))
+            try:
+                data["duration_seconds"] = round(float(duration_seconds), 3)
+            except Exception:
+                data["duration_seconds"] = None
         try:
             self.client.table("agent_executions").insert(data).execute()
         except Exception as e:  # pragma: no cover
