@@ -238,3 +238,17 @@ External interfaces for system interaction.
 - Database read replicas
 - CDN for static content
 - Microservice decomposition
+
+## Research Tools
+
+Three minimal adapters provide external research capabilities while keeping
+business logic in agents:
+
+1. **web_search** – Serper API for general web results.
+2. **perplexity_search** – Perplexity API for citation-grade answers.
+3. **rag_get_client_content / rag_search_content** – retrieve or search
+   client knowledge bases.
+
+Legacy tool names resolve via `ToolNames.ALIASES` so older workflows remain
+compatible during migration. Agents are responsible for domain filtering,
+timeframe selection, and output formatting.

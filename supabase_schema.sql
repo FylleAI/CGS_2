@@ -174,7 +174,7 @@ CREATE POLICY "Users can insert their own profile" ON user_profiles FOR INSERT W
 -- API keys policies (admin only)
 CREATE POLICY "Only admins can manage API keys" ON api_keys FOR ALL USING (
     EXISTS (
-        SELECT 1 FROM user_profiles 
+        SELECT 1 FROM user_profiles
         WHERE id = auth.uid() AND role = 'admin'
     )
 );
@@ -214,6 +214,35 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+
+-- Similarity search function for RAG using pgvector
+CREATE OR REPLACE FUNCTION public.match_documents(
+    query_embedding vector(1536),
+    match_count integer,
+    client_name text
+)
+RETURNS TABLE (
+    id uuid,
+    title text,
+    content text,
+    file_path text,
+    similarity float
+)
+LANGUAGE sql STABLE
+AS $$
+  SELECT d.id,
+         d.title,
+         d.content,
+         d.file_path,
+         1 - (d.embedding <=> query_embedding) AS similarity
+  FROM public.documents d
+  JOIN public.clients c ON c.id = d.client_id
+  WHERE c.name = client_name
+    AND d.embedding IS NOT NULL
+  ORDER BY d.embedding <=> query_embedding
+  LIMIT LEAST(match_count, 50);
+$$;
 
 -- =====================================================
 -- INITIAL DATA
