@@ -15,7 +15,7 @@ const RAGUploader: React.FC = () => {
   const handleFileSelected = async (file?: File | null) => {
     try {
       if (!file) return;
-      const isText = file.type.startsWith('text') || /\.(md|txt)$/i.test(file.name);
+      const isText = file.type.startsWith('text') || /(\.md|\.txt)$/i.test(file.name);
       if (!isText) {
         toast.error('Supportiamo solo file .md o .txt per ora');
         return;
@@ -60,6 +60,7 @@ const RAGUploader: React.FC = () => {
       setTags('');
       setContent('');
     } catch (e: any) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       toast.error(e?.response?.data?.detail || 'Upload failed');
     } finally {
       setSubmitting(false);
@@ -98,7 +99,7 @@ const RAGUploader: React.FC = () => {
               type="file"
               hidden
               accept=".md,.txt,text/markdown,text/plain"
-              onChange={(e) => handleFileSelected(e.target.files?.[0])}
+              onChange={(e) => handleFileSelected(e.target.files?.[0] ?? null)}
             />
           </Button>
 

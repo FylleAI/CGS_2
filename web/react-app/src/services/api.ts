@@ -107,13 +107,18 @@ export const apiService = {
       const response = await api.get('/api/v1/content/providers');
       const data: any = response.data;
 
-      // Normalize models to string[] for frontend consumption
+      // Keep models as objects { name, max_tokens } when provided by backend.
+      // If backend returns strings for models (legacy), wrap into objects with a safe default max_tokens.
       const normalized: ProvidersResponse = {
         ...data,
         providers: (data?.providers ?? []).map((p: any) => ({
           ...p,
           models: Array.isArray(p?.models)
-            ? p.models.map((m: any) => (typeof m === 'string' ? m : m?.name ?? String(m)))
+            ? p.models.map((m: any) =>
+                typeof m === 'string'
+                  ? { name: m, max_tokens: 4096 }
+                  : { name: m?.name ?? String(m), max_tokens: m?.max_tokens ?? 4096 }
+              )
             : [],
         })),
       };
