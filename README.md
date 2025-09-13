@@ -1,69 +1,74 @@
 # CGS_2
 
 ## Overview
-CGS_2 is a multi‑agent content generation system 
-- A FastAPI backend that orchestrates workflows and agents
-- YAML‑configured agents and workflows per client profile (e.g., Siebert)
-- Tooling for real‑time research (Perplexity), RAG over client knowledge bases (Supabase), and web search
-- A React frontend for triggering runs and inspecting outputs
+CGS_2 è un sistema di content generation multi‑agent con:
+- Backend FastAPI che orchestra workflow e agent
+- Agent e workflow configurati via YAML per profilo cliente (data/profiles/<client>/agents/*.yaml)
+- Tooling per ricerche real‑time (Perplexity), RAG su knowledge base (Supabase) e web search
+- Frontend React per avviare run e ispezionare output
 
-### High‑level architecture
-- API layer: FastAPI (api/rest), WebSocket updates, tracking to Supabase
-- Orchestration: Workflow handlers + AgentExecutor (tools registry, tool call parsing, logging)
-- Agents: YAML profiles (data/profiles/*/agents/*.yaml) with system messages, tools, and parameters
-- Tools:
-  - PerplexityResearchTool (real‑time research via Perplexity API)
-  - RAGTool (Supabase KB retrieval and similarity search)
-  - WebSearchTool (generic/financial search)
-- Storage & Tracking: Supabase (optional), local filesystem fallback
-- Frontend: web/react-app (local dev with proxy to API)
+### Architettura (alto livello)
+- API layer: FastAPI (api/rest), WebSocket, tracking opzionale su Supabase
+- Orchestrazione: Workflow handler + AgentExecutor (registry tool, parsing tool call, logging/costi)
+- Agents: YAML con system_message, tools, goal/backstory
+- Prompt: template Markdown per task (core/prompts/*.md), renderizzati con Jinja2 se disponibile
+- Storage & Tracking: Supabase (opzionale) o filesystem locale
+- Frontend: web/react-app (dev locale)
 
-Reference code:
-- core/infrastructure/workflows/handlers/* (workflow business logic)
-- core/infrastructure/orchestration/agent_executor.py (tool invocation model)
+Riferimenti codice:
+- core/infrastructure/workflows/handlers/* (logica di workflow)
+- core/infrastructure/workflows/templates/*.json (task graph e mapping agent)
+- core/infrastructure/orchestration/agent_executor.py (esecuzione agent + system message)
+- core/infrastructure/orchestration/prompt_builder.py (render prompt)
 - core/infrastructure/tools/* (Perplexity, RAG, WebSearch)
-- core/infrastructure/config/settings.py (env settings)
+- core/infrastructure/config/settings.py (settings/env)
 
 ---
 
-## Quick start
+## Avvio rapido
 
-### 1) Backend (local script)
-Prerequisites: Python 3.11+, virtualenv recommended.
+### 1) Backend (locale)
+Prerequisiti: Python 3.11+, virtualenv consigliato.
 
 ```bash
-# From repo root
+# Da root repository
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-# Start backend (defaults to http://localhost:8000)
+# Avvia backend (default http://localhost:8000)
 python3 start_backend.py
 ```
 
-### 2) Backend (Docker Compose)
-```bash
-# Build and run API, Postgres and Chroma services
-docker-compose up -d --build
-# API will be exposed at http://localhost:8000
-```
+Endpoint utili:
+- Health: http://localhost:8000/health
+- System info: http://localhost:8000/api/v1/system/info
+- OpenAPI docs: http://localhost:8000/docs
 
-### 3) Frontend (React)
+Porte backend: 8000 (override via .env: API_HOST, API_PORT)
+
+### 2) Frontend (React)
 ```bash
 cd web/react-app
 npm install
+# Configurare l’URL dell’API nel .env del frontend
+# web/react-app/.env
+# REACT_APP_API_URL=http://localhost:8000
 npm start
-# Dev server at http://localhost:3000
+# Dev server su http://localhost:3000
 ```
 
-> Note: The frontend dev server typically proxies API calls to the backend. If you change API_PORT, update the proxy setting in web/react-app/package.json accordingly.
+Nota: il frontend NON usa il campo "proxy" nel package.json; usa REACT_APP_API_URL. Se cambi porta/host dell’API, aggiorna web/react-app/.env.
+
+### 3) Docker (opzionale)
+Se usi docker-compose, l’API è tipicamente esposta su http://localhost:8000.
 
 ---
 
-## Configuration (.env)
-Create a .env file in the repository root. The backend reads all keys via Pydantic Settings (core/infrastructure/config/settings.py).
+## Configurazione (.env)
+Crea un file .env nella root del repository. Il backend carica i valori con Pydantic Settings.
 
-Minimum recommended variables:
+Minimo consigliato:
 
 ```env
 # App & API
@@ -72,52 +77,76 @@ API_HOST=0.0.0.0
 API_PORT=8000
 SECRET_KEY=replace-with-a-secure-random-string
 
-# AI Providers (set at least one)
+# Provider AI (configura almeno uno)
 OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
 DEEPSEEK_API_KEY=
 GEMINI_API_KEY=
 
-# Perplexity (for research tool)
+# Perplexity (ricerche real‑time)
 PERPLEXITY_API_KEY=
 
-# Supabase (optional but recommended for tracking & KB)
+# Supabase (tracking e KB opzionali)
 USE_SUPABASE=true
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
 
-# Database (when not using docker-compose Postgres)
+# Database (se non usi Postgres via docker-compose)
 # DATABASE_URL=sqlite:///./cgsref.db
 
-# CORS (optional)
+# CORS (lista separata da virgole)
 # CORS_ALLOWED_ORIGINS=http://localhost:3000
 
-# Premium research source defaults (optional, comma-separated URLs)
+# Fonti premium di default (lista separata da virgole)
 # PREMIUM_DEFAULT_SOURCES=https://www.bloomberg.com,https://www.reuters.com,https://www.wsj.com
 ```
 
-### Provider models and temps
-- Default provider/model/temperature can be overridden via env:
-  - DEFAULT_PROVIDER, DEFAULT_MODEL, DEFAULT_TEMPERATURE, MAX_TOKENS
+Provider di default e token:
+- Override via env: DEFAULT_PROVIDER, DEFAULT_MODEL, DEFAULT_TEMPERATURE, MAX_TOKENS
+
+### Configurazione frontend
+Crea web/react-app/.env:
+```
+REACT_APP_API_URL=http://localhost:8000
+```
 
 ---
 
-## Running a newsletter workflow (Siebert)
-- Client profile YAML: data/profiles/siebert
-- Key agents: copywriter, compliance_specialist, research_specialist
-- Handler: core/infrastructure/workflows/handlers/siebert_premium_newsletter_handler.py
-- Trigger via frontend (Start Run) or POST /api/v1/content/generate
+## Come funzionano workflow, task, agent e system message
 
-Example request (simplified):
+### Esempio: workflow "enhanced_article"
+- Definito in: core/infrastructure/workflows/templates/enhanced_article.json
+- Sequenza task → agent:
+  - task1_brief → agent: rag_specialist → prompt: core/prompts/enhanced_article_task1_brief.md
+  - task2_research → agent: web_searcher → prompt: core/prompts/enhanced_article_task2_research.md
+  - task3_content → agent: enhanced_article_writer → prompt: core/prompts/enhanced_article_task3_content.md
+  - task4_compliance_review → agent: enhanced_article_compliance_specialist → prompt: core/prompts/enhanced_article_task4_compliance_review.md
+
+### Dove sono definiti gli agent
+- YAML per profilo cliente: data/profiles/<client>/agents/*.yaml (es. data/profiles/default/agents/)
+- Ogni file include: name, role, system_message, goal, backstory, tools, metadata
+
+### Composizione della system message (runtime)
+Durante l’esecuzione di un task, AgentExecutor costruisce la system message così:
+1) Base: `agent.system_message` dal file YAML (se non presente, fallback per ruolo)
+2) Append: `backstory` e `goal` dell’agent (se presenti)
+3) Append: contesto dinamico (es. client_profile, target_audience)
+4) Se l’agent ha tools, aggiunge elenco tool e FORMATO esatto per invocare i tool (es. `[rag_get_client_content] client [/rag_get_client_content]`)
+
+Il prompt utente del task è renderizzato dal template Markdown con il context (Jinja2 se disponibile), tramite `prompt_builder`.
+
+---
+
+## Esecuzione via API (esempio)
 ```bash
 curl -X POST http://localhost:8000/api/v1/content/generate \
   -H 'Content-Type: application/json' \
   -d '{
-    "topic": "Finance News of the last 7 Days",
-    "workflow_type": "siebert_premium_newsletter",
-    "client_profile": "siebert",
-    "provider": "anthropic",
-    "model": "claude-opus-4-20250514",
+    "topic": "Gen Z investing trends 2025",
+    "workflow_type": "enhanced_article",
+    "client_profile": "default",
+    "provider": "openai",
+    "model": "gpt-4o",
     "temperature": 0.7,
     "include_sources": true
   }'
@@ -125,27 +154,34 @@ curl -X POST http://localhost:8000/api/v1/content/generate \
 
 ---
 
-## Requirements check
-We reviewed runtime imports vs requirements.txt. Suggested updates:
-- The code imports aiohttp in PerplexityResearchTool → add: `aiohttp>=3.9.0`
-- The diagnostics script imports requests → add: `requests>=2.31.0`
+## Requisiti (Python)
+Le dipendenze principali sono in requirements.txt e coprono backend API, provider AI, RAG e tool:
+- FastAPI, Uvicorn, Pydantic, pydantic-settings
+- OpenAI/Anthropic/Gemini SDK, LangChain
+- Supabase, SQLAlchemy, Alembic, ChromaDB
+- httpx, aiofiles, websockets, requests, aiohttp
+- Jinja2 (render dei prompt), typer, rich
+- pytest e tool di sviluppo (black/isort/flake8/mypy/pre-commit)
 
-Current requirements.txt includes FastAPI, Uvicorn, httpx, Supabase, SQLAlchemy, LangChain, OpenAI/Anthropic/Gemini SDKs, pytest, and dev tools. If you want, we can update requirements.txt to include the two missing dependencies.
+Se aggiungi/aggiorni dipendenze, rigenera l’ambiente:
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt
+```
 
 ---
 
 ## Testing
 ```bash
 pytest -q
-# Or target specific tests, e.g.
-pytest test_siebert_workflow.py -q
+# Oppure test mirati
+pytest tests/test_workflows.py -q
 ```
 
 ---
 
 ## Troubleshooting
-- Backend not responding? Check logs from start_backend.py or `docker-compose logs -f api`.
-- ECONNREFUSED from frontend? Ensure API_PORT matches the proxy in web/react-app/package.json.
-- Supabase issues? Verify SUPABASE_URL and SUPABASE_ANON_KEY are set and reachable.
-- No providers configured? Set at least one of OPENAI_API_KEY / ANTHROPIC_API_KEY / DEEPSEEK_API_KEY / GEMINI_API_KEY.
-
+- Frontend: errore "REACT_APP_API_URL is not defined" → crea web/react-app/.env e imposta REACT_APP_API_URL
+- CORS: imposta CORS_ALLOWED_ORIGINS in .env come lista separata da virgole (es. http://localhost:3000)
+- Provider non configurati: imposta almeno una API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, …)
+- Supabase: verifica SUPABASE_URL e SUPABASE_ANON_KEY, e USE_SUPABASE=true
