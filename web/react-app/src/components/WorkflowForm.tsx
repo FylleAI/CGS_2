@@ -306,7 +306,15 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
     reset(getDefaultValues());
   }, [selectedWorkflow, selectedClient, reset]);
 
-  // Keep form max_tokens in sync with selectedTokens
+  // Keep form provider/model/max_tokens in sync with local selection state
+  useEffect(() => {
+    setValue('provider', selectedProvider);
+  }, [selectedProvider, setValue]);
+
+  useEffect(() => {
+    setValue('model', selectedModel);
+  }, [selectedModel, setValue]);
+
   useEffect(() => {
     setValue('max_tokens', selectedTokens);
   }, [selectedTokens, setValue]);

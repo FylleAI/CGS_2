@@ -162,8 +162,21 @@ class WorkflowHandler(ABC):
             logger.info(f"⏭️ Skipping task: {task_id}")
             return None
 
-        # Keep raw description template; we'll substitute at execution time with full context
-        description_template = task_template.get('description_template', '')
+        # Load prompt template from external repository using prompt_id if available
+        prompt_id = task_template.get('prompt_id')
+        description_template = ''
+        if prompt_id:
+            try:
+                prompt_path = Path(__file__).resolve().parents[3] / 'core' / 'prompts' / f'{prompt_id}.md'
+                description_template = prompt_path.read_text(encoding='utf-8')
+                logger.debug(f"📝 Loaded prompt file for task {task_id}: {prompt_id}")
+            except FileNotFoundError:
+                logger.error(f"❌ Prompt file not found for task {task_id}: {prompt_id}")
+                # Fallback to inline description_template if present
+                description_template = task_template.get('description_template', '')
+        else:
+            # Fallback to inline description_template
+            description_template = task_template.get('description_template', '')
 
         # Create task (store template as description)
         task = Task(
@@ -263,9 +276,18 @@ class WorkflowHandler(ABC):
             }
 
             logger.info(f"🎯 Executing agent for task: {task.name}")
+
+            # Build final prompt using centralized prompt builder (with Jinja2 if available)
+            try:
+                from ...orchestration import prompt_builder
+                final_prompt = prompt_builder.build(agent, task.description, enhanced_context)
+            except Exception as e:
+                logger.warning(f"⚠️ PromptBuilder unavailable, using raw description. Error: {e}")
+                final_prompt = task.description
+
             result = await agent_executor.execute_agent(
                 agent=agent,
-                task_description=task.description,
+                task_description=final_prompt,
                 context=enhanced_context
             )
 
