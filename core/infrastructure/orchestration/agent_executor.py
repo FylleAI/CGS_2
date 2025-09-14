@@ -17,6 +17,9 @@ from ..logging.cost_calculator import cost_calculator, TokenUsage, CostBreakdown
 
 logger = logging.getLogger(__name__)
 
+# Token safety margin to avoid hitting provider hard limits
+SAFETY_MARGIN = 256
+
 
 class AgentExecutor:
     """
@@ -110,6 +113,38 @@ class AgentExecutor:
 
             # Get dynamic provider config from context or use default
             dynamic_config = self._get_dynamic_provider_config(context)
+
+            # Estimate prompt tokens and apply dynamic max_tokens cap
+            full_prompt = f"{system_message}\n\n{prompt}" if system_message else prompt
+            try:
+                prompt_tokens = await self.llm_provider.estimate_tokens(full_prompt, dynamic_config.model)
+            except Exception:
+                prompt_tokens = len(full_prompt.split())
+
+            model_info = next((m for m in dynamic_config.get_available_models() if m.get("name") == dynamic_config.model), {})
+            model_output_limit = model_info.get("max_tokens", dynamic_config.max_tokens or 4096)
+            available_completion = max(1, model_output_limit - prompt_tokens - SAFETY_MARGIN)
+            requested_max = dynamic_config.max_tokens if dynamic_config.max_tokens is not None else available_completion
+            effective_max_tokens = min(requested_max, available_completion)
+
+            # Rebuild config with effective max tokens
+            dynamic_config = ProviderConfig(
+                provider=dynamic_config.provider,
+                model=dynamic_config.model,
+                temperature=dynamic_config.temperature,
+                max_tokens=effective_max_tokens,
+                top_p=dynamic_config.top_p,
+                frequency_penalty=dynamic_config.frequency_penalty,
+                presence_penalty=dynamic_config.presence_penalty,
+                api_key=dynamic_config.api_key,
+                base_url=dynamic_config.base_url,
+                additional_params=dynamic_config.additional_params
+            )
+
+            # Store token metadata in context for later use
+            context['prompt_tokens'] = prompt_tokens
+            context['effective_max_tokens'] = effective_max_tokens
+            context['model_output_limit'] = model_output_limit
 
             # Log LLM request
             request_id = agent_logger.log_llm_request(

@@ -187,7 +187,10 @@ class GenerateContentUseCase:
                     "client_profile": request.client_profile,
                     "provider": request.provider_config.provider.value if request.provider_config else None,
                     "dynamic_workflow": True,
-                    "workflow_summary": workflow_result.get('workflow_summary', {})
+                    "workflow_summary": workflow_result.get('workflow_summary', {}),
+                    "prompt_tokens": context.get('prompt_tokens'),
+                    "effective_max_tokens": context.get('effective_max_tokens'),
+                    "model_output_limit": context.get('model_output_limit')
                 }
             )
 

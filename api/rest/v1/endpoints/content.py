@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+SAFETY_MARGIN = 256
+
 
 # Pydantic models for API
 class ContentGenerationRequestModel(BaseModel):
@@ -351,6 +353,43 @@ async def get_available_providers():
     except Exception as e:
         logger.error(f"Error getting providers: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get providers: {str(e)}")
+
+
+class TokenLimitRequestModel(BaseModel):
+    provider: str = "openai"
+    model: str = "gpt-4o"
+    prompt: str
+    system_message: Optional[str] = None
+
+
+class TokenLimitResponseModel(BaseModel):
+    prompt_tokens: int
+    available_completion: int
+    model_output_limit: int
+
+
+@router.post("/limits", response_model=TokenLimitResponseModel)
+async def get_content_limits(request: TokenLimitRequestModel):
+    try:
+        provider_enum = LLMProvider(request.provider)
+        settings = get_settings()
+        adapter = LLMProviderFactory.create_provider(provider_enum, settings)
+        full_prompt = f"{request.system_message}\n\n{request.prompt}" if request.system_message else request.prompt
+        prompt_tokens = await adapter.estimate_tokens(full_prompt, request.model)
+
+        dummy_config = ProviderConfig(provider=provider_enum, model=request.model)
+        model_info = next((m for m in dummy_config.get_available_models() if m.get("name") == request.model), {})
+        model_output_limit = model_info.get("max_tokens", dummy_config.max_tokens or 4096)
+        available_completion = max(1, model_output_limit - prompt_tokens - SAFETY_MARGIN)
+
+        return TokenLimitResponseModel(
+            prompt_tokens=prompt_tokens,
+            available_completion=available_completion,
+            model_output_limit=model_output_limit,
+        )
+    except Exception as e:
+        logger.error(f"Error calculating content limits: {e}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/{content_id}", response_model=ContentGenerationResponseModel)
