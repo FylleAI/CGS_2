@@ -185,3 +185,59 @@ pytest tests/test_workflows.py -q
 - CORS: imposta CORS_ALLOWED_ORIGINS in .env come lista separata da virgole (es. http://localhost:3000)
 - Provider non configurati: imposta almeno una API key (OPENAI_API_KEY, ANTHROPIC_API_KEY, …)
 - Supabase: verifica SUPABASE_URL e SUPABASE_ANON_KEY, e USE_SUPABASE=true
+
+
+---
+
+## Modelli e limiti token: context_window vs max_tokens
+
+Per evitare errori 400 dai provider e rendere trasparente la capacità dei modelli, distinguiamo:
+- context_window: capacità totale per richiesta (prompt + output). È informativa in UI.
+- max_tokens (output): massimo di token di OUTPUT per singola chiamata API. È vincolante.
+
+Comportamento nell’applicazione:
+- Backend espone per ogni modello sia max_tokens (output cap) sia context_window (se disponibile) su GET /api/v1/content/providers.
+- Frontend mostra la context window e consente di selezionare i “Max output tokens” fino al limite reale del modello.
+- Ogni chiamata LLM nel workflow applica il cap di output selezionato; quindi il limite è per‑chiamata, configurato a livello di run.
+
+Esempio rapida verifica endpoint modelli:
+```bash
+curl -s http://localhost:8000/api/v1/content/providers | jq '.'
+```
+
+Evitare 400 Invalid Request:
+- Anche se la context window è molto ampia, i provider impongono un cap separato per l’output.
+- Esempio: Anthropic claude-3-7-sonnet-20250219 → max output 64.000 token; chiedere 200.000 genera 400.
+- Tenendo max_tokens entro i limiti del modello per ogni chiamata, il workflow non fallisce per eccesso di output.
+
+Nota avanzata: è possibile introdurre lato backend un “clamp dinamico” (opzionale) per ridurre automaticamente l’output massimo in base alla lunghezza del prompt: effective_max = min(model_max_output, context_window − prompt_tokens − margine).
+
+---
+
+## Supabase tracking: abilitazione, tabelle e health check
+
+Abilitazione:
+- .env → USE_SUPABASE=true, SUPABASE_URL, SUPABASE_ANON_KEY.
+- Il tracker viene creato automaticamente se le variabili sono presenti.
+
+Tabelle utilizzate:
+- workflow_runs: testate/chiuse le esecuzioni di workflow
+- run_logs: log di run
+- agent_executions: esecuzioni per agente/step
+- run_documents: documenti usati dal RAG
+- run_document_chunks: chunk RAG (opzionale)
+- content_generations: contenuti finali salvati per la run
+
+Health check rapido (read‑only):
+```bash
+python3 - <<'PY'
+from core.infrastructure.database.supabase_tracker import get_tracker
+trk = get_tracker()
+assert trk is not None, 'Tracker non inizializzato'
+print('Tracker OK')
+print('workflow_runs sample:', trk.client.table('workflow_runs').select('id').limit(1).execute().data)
+print('run_logs sample:', trk.client.table('run_logs').select('id').limit(1).execute().data)
+PY
+```
+
+Questo verifica connettività e permessi di lettura senza scrivere dati. Per un test end‑to‑end con insert/update, avvia un run reale oppure chiama i metodi del tracker (start_workflow_run → add_log → complete_workflow_run) su una run di test.

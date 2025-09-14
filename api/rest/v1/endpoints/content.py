@@ -324,13 +324,22 @@ async def get_available_providers():
 
         providers_info = []
 
+        # Build providers info using adapters (fetch real models where possible)
         for provider_name in ["openai", "anthropic", "deepseek", "gemini"]:
             try:
                 provider_enum = LLMProvider(provider_name)
 
-                # Create a dummy config to get available models
-                dummy_config = ProviderConfig(provider=provider_enum)
-                models = dummy_config.get_available_models()
+                # Instantiate provider adapter
+                provider_adapter = LLMProviderFactory.create_provider(provider_enum, settings)
+
+                # Create a config with API key to allow adapters to query provider models
+                dummy_config = ProviderConfig(
+                    provider=provider_enum,
+                    api_key=settings.get_provider_api_key(provider_name)
+                )
+
+                # Try to fetch models via adapter; fallback handled inside adapters
+                models = await provider_adapter.get_available_models(dummy_config)
                 default_model = dummy_config._get_default_model()
 
                 providers_info.append(ProviderInfo(
