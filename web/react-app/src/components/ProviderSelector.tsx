@@ -50,6 +50,17 @@ const ProviderSelector: React.FC<ProviderSelectorProps> = ({
   const [availableModels, setAvailableModels] = useState<ModelInfo[]>([]);
   const [selectedModelInfo, setSelectedModelInfo] = useState<ModelInfo | undefined>(undefined);
 
+
+  // Generate discrete token options up to the model limit using canonical steps
+  const getTokenOptions = (limit: number): number[] => {
+    if (!limit || limit <= 0) return [];
+    const candidates = [256, 512, 1024, 1536, 2048, 3072, 4096, 6144, 8192, 12000, 16000, 24000, 32000, 48000, 64000, 96000, 128000, 200000];
+    const options = candidates.filter(v => v <= limit);
+    if (!options.includes(limit)) options.push(limit);
+    // Ensure ascending unique values
+    return Array.from(new Set(options)).sort((a, b) => a - b);
+  };
+
   // Fetch available providers
   const {
     data: providersData,
@@ -110,7 +121,7 @@ const ProviderSelector: React.FC<ProviderSelectorProps> = ({
   const handleProviderChange = (provider: string) => {
     setCurrentProvider(provider);
     onProviderChange?.(provider);
-    
+
     // Reset model selection when provider changes
     const providerInfo = providersData?.providers.find(p => p.name === provider);
     if (providerInfo && providerInfo.default_model) {
@@ -157,8 +168,8 @@ const ProviderSelector: React.FC<ProviderSelectorProps> = ({
 
   if (providersError || !providersData) {
     return (
-      <Alert 
-        severity="error" 
+      <Alert
+        severity="error"
         action={
           <IconButton size="small" onClick={() => refetchProviders()}>
             <RefreshIcon />
@@ -210,8 +221,8 @@ const ProviderSelector: React.FC<ProviderSelectorProps> = ({
                   }}
                 >
                   {providersData.providers.map((provider: ProviderInfo) => (
-                    <MenuItem 
-                      key={provider.name} 
+                    <MenuItem
+                      key={provider.name}
                       value={provider.name}
                       disabled={!provider.available}
                     >
@@ -279,19 +290,23 @@ const ProviderSelector: React.FC<ProviderSelectorProps> = ({
                     onTokensChange?.(Number(e.target.value));
                   }}
                 >
-                  {selectedModelInfo && [0.25, 0.5, 0.75, 1].map((p) => {
-                    const value = Math.floor(selectedModelInfo.max_tokens * p);
-                    return (
-                      <MenuItem key={value} value={value}>
-                        {value}
-                      </MenuItem>
-                    );
-                  })}
+                  {selectedModelInfo && getTokenOptions(selectedModelInfo.max_tokens).map((value) => (
+                    <MenuItem key={value} value={value}>
+                      {value}
+                    </MenuItem>
+                  ))}
                 </Select>
                 {selectedModelInfo && (
-                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                    Model limit: {selectedModelInfo.max_tokens} tokens
-                  </Typography>
+                  <>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                      Max output tokens: {selectedModelInfo.max_tokens} tokens
+                    </Typography>
+                    {selectedModelInfo.context_window ? (
+                      <Typography variant="caption" color="text.secondary">
+                        Context window: {selectedModelInfo.context_window} tokens
+                      </Typography>
+                    ) : null}
+                  </>
                 )}
               </FormControl>
             )}

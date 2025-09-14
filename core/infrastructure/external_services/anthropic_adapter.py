@@ -291,13 +291,8 @@ class AnthropicAdapter(LLMProviderInterface):
             # For now, return the predefined list from config
             return config.get_available_models()
         except Exception:
-            # Fallback to a basic static list
-            return [
-                {"name": "claude-3-5-haiku-latest", "max_tokens": 200000},
-                {"name": "claude-3-7-sonnet-latest", "max_tokens": 200000},
-                {"name": "claude-sonnet-4-20250514", "max_tokens": 200000},
-                {"name": "claude-opus-4-20250514", "max_tokens": 200000},
-            ]
+            # Fallback to ProviderConfig source of truth
+            return config.get_available_models()
 
     async def estimate_tokens(self, text: str, model: str) -> int:
         """

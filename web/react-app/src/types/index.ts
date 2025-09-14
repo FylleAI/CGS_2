@@ -64,7 +64,8 @@ export interface ProviderInfo {
 
 export interface ModelInfo {
   name: string;
-  max_tokens: number;
+  max_tokens: number; // maximum output tokens allowed by the provider API
+  context_window?: number; // optional: maximum context window supported by the model
 }
 
 export interface ProvidersResponse {
