@@ -121,7 +121,7 @@ class RAGTool:
             duration_ms = (time.time() - start_time) * 1000
             logger.error(f"❌ RAG ERROR: Failed to retrieve content for {client_name}: {str(e)} ({duration_ms:.2f}ms)")
             return f"Error retrieving content: {str(e)}"
-    
+
     async def _get_specific_document(self, client_id: str, client_name: str, document_name: str, agent_name: Optional[str] = None) -> str:
         """Retrieve a specific document from Supabase."""
 
@@ -152,7 +152,7 @@ class RAGTool:
         except Exception as e:  # pragma: no cover
             logger.error(f"Error retrieving document {document_name}: {e}")
             return f"Error retrieving document: {e}"
-    
+
     async def _get_all_client_content(self, client_id: str, client_name: str, agent_name: Optional[str] = None) -> str:
         """Retrieve and categorize all documents for a client from Supabase."""
 
@@ -259,14 +259,14 @@ The following documents contain additional information that may be relevant to c
             return f"No documents found for client '{client_name}'"
 
         return "\n\n".join(formatted_output)
-    
+
     async def get_available_documents(self, client_name: str) -> List[str]:
         """
         Get list of available documents for a client.
-        
+
         Args:
             client_name: Name of the client
-            
+
         Returns:
             List of available document names
         """
@@ -296,7 +296,7 @@ The following documents contain additional information that may be relevant to c
         except Exception as e:  # pragma: no cover
             logger.warning(f"Error getting documents for {client_name}: {e}")
             return []
-    
+
     async def search_content(
         self,
         client_name: str,
@@ -306,12 +306,12 @@ The following documents contain additional information that may be relevant to c
     ) -> str:
         """
         Search for content within client's knowledge base.
-        
+
         Args:
             client_name: Name of the client
             query: Search query
             max_results: Maximum number of results to return
-            
+
         Returns:
             Search results as formatted string
         """
@@ -339,7 +339,7 @@ The following documents contain additional information that may be relevant to c
                 logger.info(f"[36mRAG: Filtered semantic matches by selection: {before} [0m[90m->[0m {len(matches)}")
 
             if not matches:
-                return f"No results found for query '{query}' in {client_name}'s knowledge base"
+                return await self._fallback_keyword_search_supabase(client_name, query, max_results, agent_name)
 
             formatted_results = [f"# Search Results for '{query}'\n"]
             for match in matches:
@@ -362,8 +362,95 @@ The following documents contain additional information that may be relevant to c
                     )
             return "\n".join(formatted_results)
         except Exception as e:  # pragma: no cover
-            logger.warning(f"Supabase similarity search failed: {e}")
-            return f"Error searching documents: {e}"
+            logger.warning(f"Supabase similarity search failed (falling back to keyword search): {e}")
+            return await self._fallback_keyword_search_supabase(client_name, query, max_results, agent_name)
+
+
+    async def _fallback_keyword_search_supabase(
+        self,
+        client_name: str,
+        query: str,
+        max_results: int = 5,
+        agent_name: Optional[str] = None,
+    ) -> str:
+        """Fallback keyword search using ILIKE on documents when RPC is unavailable.
+
+        Tries content match first, then title match. Applies selection filter if present.
+        """
+        if self.supabase is None:
+            return "Supabase client not configured"
+
+        try:
+            # Resolve client_id
+            client_res = (
+                self.supabase.table("clients")
+                .select("id")
+                .eq("name", client_name)
+                .single()
+                .execute()
+            )
+            client_data = client_res.data
+            if not client_data:
+                return f"Client '{client_name}' not found"
+            client_id = client_data["id"]
+
+            # Content ILIKE
+            query_builder = (
+                self.supabase.table("documents")
+                .select("id,title,content,file_path")
+                .eq("client_id", client_id)
+            )
+            if self.selected_document_ids:
+                query_builder = query_builder.in_("id", list(self.selected_document_ids))
+            docs_res = (
+                query_builder
+                .ilike("content", f"%{query}%")
+                .limit(max_results)
+                .execute()
+            )
+            matches = docs_res.data or []
+
+            # If no content match, try title ILIKE
+            if not matches:
+                query_builder = (
+                    self.supabase.table("documents")
+                    .select("id,title,content,file_path")
+                    .eq("client_id", client_id)
+                )
+                if self.selected_document_ids:
+                    query_builder = query_builder.in_("id", list(self.selected_document_ids))
+                docs_res2 = (
+                    query_builder
+                    .ilike("title", f"%{query}%")
+                    .limit(max_results)
+                    .execute()
+                )
+                matches = docs_res2.data or []
+
+            if not matches:
+                return (
+                    f"No results found for query '{query}' in {client_name}'s knowledge base "
+                    f"(keyword fallback)"
+                )
+
+            formatted_results = [f"# Search Results for '{query}' (keyword match)\n"]
+            for match in matches:
+                title = match.get("title") or match.get("file_path") or "document"
+                content = match.get("content", "")
+                formatted_results.append(f"## {title}\n\n{content}\n")
+                if self.tracker and self.run_id:
+                    self.tracker.log_rag_document(
+                        self.run_id, client_name, title, agent_name=agent_name
+                    )
+                    self.tracker.log_rag_chunk(
+                        self.run_id, agent_name or "", match.get("id"), content, None
+                    )
+
+            logger.info("RAG: Used keyword fallback for search (RPC `match_documents` unavailable or empty)")
+            return "\n".join(formatted_results)
+        except Exception as e:  # pragma: no cover
+            logger.warning(f"Keyword fallback search failed: {e}")
+            return f"Error searching documents (fallback): {e}"
 
     def _embed_text(self, text: str) -> List[float]:
         """Generate embedding for given text using OpenAI if available."""
@@ -450,21 +537,21 @@ The following documents contain additional information that may be relevant to c
         except Exception as e:  # pragma: no cover
             logger.warning(f"Error downloading document from Supabase: {e}")
             return None
-    
+
     async def add_content(
-        self, 
-        client_name: str, 
-        document_name: str, 
+        self,
+        client_name: str,
+        document_name: str,
         content: str
     ) -> str:
         """
         Add new content to client's knowledge base.
-        
+
         Args:
             client_name: Name of the client
             document_name: Name of the document
             content: Content to add
-            
+
         Returns:
             Success message or error
         """

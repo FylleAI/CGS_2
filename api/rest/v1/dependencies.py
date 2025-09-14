@@ -52,11 +52,19 @@ def get_llm_provider(provider_type: Optional[str] = None):
     return LLMProviderFactory.create_provider(provider_enum, settings)
 
 
-def get_content_use_case(provider_type: Optional[str] = None) -> GenerateContentUseCase:
-    """Get content generation use case with dynamic provider selection."""
+def get_content_use_case(
+    provider_type: Optional[str] = None,
+    model: Optional[str] = None,
+    temperature: Optional[float] = None,
+    max_tokens: Optional[int] = None,
+) -> GenerateContentUseCase:
+    """Get content generation use case with dynamic provider selection.
+    Allows overriding model/temperature/max_tokens so that the AgentExecutor
+    uses exactly the configuration selected in the frontend for this request.
+    """
     settings = get_settings()
 
-    # Create provider and config using factory
+    # Resolve provider enum
     if provider_type:
         try:
             provider_enum = LLMProvider(provider_type)
@@ -65,8 +73,18 @@ def get_content_use_case(provider_type: Optional[str] = None) -> GenerateContent
     else:
         provider_enum = LLMProviderFactory.get_default_provider(settings)
 
+    # Create provider instance
     llm_provider = LLMProviderFactory.create_provider(provider_enum, settings)
-    provider_config = LLMProviderFactory.create_provider_config(provider_enum, settings)
+
+    # Use overrides when provided, otherwise fallback to settings/defaults
+    eff_temperature = temperature if temperature is not None else settings.default_temperature
+    provider_config = LLMProviderFactory.create_provider_config(
+        provider_enum,
+        settings,
+        model=model,
+        temperature=eff_temperature,
+        max_tokens=max_tokens,
+    )
 
     return GenerateContentUseCase(
         content_repository=get_content_repository(),

@@ -66,7 +66,7 @@ class PerplexityResearchTool:
 
         start = time.time()
         async with aiohttp.ClientSession() as session:
-            async with session.post(self.base_url, json=payload, headers=headers, timeout=self.timeout, ssl=True) as resp:
+            async with session.post(self.base_url, json=payload, headers=headers, timeout=self.timeout, ssl=False) as resp:
                 data = await resp.json()
                 if resp.status != 200:
                     raise Exception(f"API error {resp.status}: {data}")
