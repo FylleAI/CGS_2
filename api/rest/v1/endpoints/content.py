@@ -1,7 +1,7 @@
 """Content generation endpoints."""
 
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
@@ -121,7 +121,12 @@ async def generate_content(
         logger.info(f"🔧 Requested provider: {request.provider}")
 
         # Get use case with dynamic provider selection
-        use_case = get_content_use_case(provider_type=request.provider)
+        use_case = get_content_use_case(
+            provider_type=request.provider,
+            model=request.model,
+            temperature=request.temperature,
+            max_tokens=request.max_tokens
+        )
         logger.info(f"✅ Use case created with provider: {request.provider}")
 
         # Convert API model to application DTO
@@ -282,17 +287,12 @@ async def list_content(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-class ModelInfo(BaseModel):
-    """Information about a specific model."""
-    name: str
-    max_tokens: int
-
-
 class ProviderInfo(BaseModel):
     """Information about an LLM provider."""
     name: str
     available: bool
-    models: List[ModelInfo]
+    # Models can be returned as strings (legacy) or as objects with metadata (name, max_tokens)
+    models: List[dict] | List[str]
     default_model: str
 
 
@@ -330,13 +330,13 @@ async def get_available_providers():
 
                 # Create a dummy config to get available models
                 dummy_config = ProviderConfig(provider=provider_enum)
-                models_data = dummy_config.get_available_models()
+                models = dummy_config.get_available_models()
                 default_model = dummy_config._get_default_model()
 
                 providers_info.append(ProviderInfo(
                     name=provider_name,
                     available=available_providers.get(provider_name, False),
-                    models=[ModelInfo(**m) for m in models_data],
+                    models=models,
                     default_model=default_model
                 ))
             except ValueError:
