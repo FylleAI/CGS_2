@@ -86,16 +86,16 @@ class ProviderConfig:
         """Get list of available models for the provider with token limits."""
         models: Dict[LLMProvider, List[Dict[str, Any]]] = {
             LLMProvider.OPENAI: [
-                {"name": "gpt-3.5-turbo", "max_tokens": 16000},
-                {"name": "gpt-4", "max_tokens": 8000},
-                {"name": "gpt-4-turbo", "max_tokens": 128000},
-                {"name": "gpt-4o", "max_tokens": 128000},
-                {"name": "gpt-4o-mini", "max_tokens": 128000},
-                {"name": "gpt-5", "max_tokens": 200000},
-                {"name": "o1", "max_tokens": 200000},
-                {"name": "o1-mini", "max_tokens": 200000},
-                {"name": "o1-pro", "max_tokens": 200000},
-                {"name": "o3-mini", "max_tokens": 200000},
+                {"name": "gpt-3.5-turbo", "max_tokens": 4096},
+                {"name": "gpt-4", "max_tokens": 4096},
+                {"name": "gpt-4-turbo", "max_tokens": 4096},
+                {"name": "gpt-4o", "max_tokens": 16384},
+                {"name": "gpt-4o-mini", "max_tokens": 16384},
+                {"name": "gpt-5", "max_tokens": 8192},
+                {"name": "o1", "max_tokens": 8192},
+                {"name": "o1-mini", "max_tokens": 8192},
+                {"name": "o1-pro", "max_tokens": 8192},
+                {"name": "o3-mini", "max_tokens": 8192},
             ],
             LLMProvider.ANTHROPIC: [
                 {"name": "claude-3-5-haiku-20241022", "max_tokens": 200000},
