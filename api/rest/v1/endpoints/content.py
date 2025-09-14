@@ -32,6 +32,7 @@ class ContentGenerationRequestModel(BaseModel):
     provider: str = "openai"
     model: str = "gpt-4o"
     temperature: float = 0.7
+    max_tokens: Optional[int] = None
 
     # Enhanced Article specific parameters
     target_word_count: Optional[int] = None
@@ -120,7 +121,12 @@ async def generate_content(
         logger.info(f"🔧 Requested provider: {request.provider}")
 
         # Get use case with dynamic provider selection
-        use_case = get_content_use_case(provider_type=request.provider)
+        use_case = get_content_use_case(
+            provider_type=request.provider,
+            model=request.model,
+            temperature=request.temperature,
+            max_tokens=request.max_tokens
+        )
         logger.info(f"✅ Use case created with provider: {request.provider}")
 
         # Convert API model to application DTO
@@ -128,7 +134,8 @@ async def generate_content(
             provider_config = ProviderConfig(
                 provider=LLMProvider(request.provider),
                 model=request.model,
-                temperature=request.temperature
+                temperature=request.temperature,
+                max_tokens=request.max_tokens
             )
             logger.info("Provider config created successfully")
         except Exception as e:
