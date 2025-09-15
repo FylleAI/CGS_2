@@ -167,7 +167,9 @@ class WorkflowHandler(ABC):
         description_template = ''
         if prompt_id:
             try:
-                prompt_path = Path(__file__).resolve().parents[3] / 'core' / 'prompts' / f'{prompt_id}.md'
+                # parents[3] resolves to the 'core' directory; prompts live under 'core/prompts'
+                # So we must not append an extra 'core' here.
+                prompt_path = Path(__file__).resolve().parents[3] / 'prompts' / f'{prompt_id}.md'
                 description_template = prompt_path.read_text(encoding='utf-8')
                 logger.debug(f"📝 Loaded prompt file for task {task_id}: {prompt_id}")
             except FileNotFoundError:

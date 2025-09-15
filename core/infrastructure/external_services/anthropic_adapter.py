@@ -87,6 +87,20 @@ class AnthropicAdapter(LLMProviderInterface):
             return content
 
         except Exception as e:
+            # If Anthropic requires streaming for long requests, transparently retry with streaming
+            if "Streaming is required" in str(e):
+                try:
+                    accumulated = []
+                    async with client.messages.stream(**request_params) as stream:
+                        async for event in stream:
+                            if event.type == "content_block_delta":
+                                delta = getattr(event, "delta", None)
+                                if delta and getattr(delta, "type", None) == "text_delta":
+                                    accumulated.append(delta.text)
+                    return "".join(accumulated)
+                except Exception as se:
+                    logger.error(f"Anthropic streaming fallback failed: {str(se)}")
+                    raise
             logger.error(f"Anthropic content generation error: {str(e)}")
             raise
     
@@ -146,6 +160,42 @@ class AnthropicAdapter(LLMProviderInterface):
             )
 
         except Exception as e:
+            # Retry with streaming if required by Anthropic
+            if "Streaming is required" in str(e):
+                try:
+                    accumulated = []
+                    async with client.messages.stream(**request_params) as stream:
+                        async for event in stream:
+                            if event.type == "content_block_delta":
+                                delta = getattr(event, "delta", None)
+                                if delta and getattr(delta, "type", None) == "text_delta":
+                                    accumulated.append(delta.text)
+                        # Try to fetch final message for usage metrics
+                        try:
+                            final_msg = await stream.get_final_message()
+                            usage = {
+                                "prompt_tokens": final_msg.usage.input_tokens if getattr(final_msg, "usage", None) else 0,
+                                "completion_tokens": final_msg.usage.output_tokens if getattr(final_msg, "usage", None) else 0,
+                                "total_tokens": (final_msg.usage.input_tokens + final_msg.usage.output_tokens) if getattr(final_msg, "usage", None) else 0
+                            }
+                            model = getattr(final_msg, "model", config.model)
+                            finish_reason = getattr(final_msg, "stop_reason", "") or ""
+                            return LLMResponse(
+                                content="".join(accumulated),
+                                usage=usage,
+                                model=model,
+                                finish_reason=finish_reason
+                            )
+                        except Exception:
+                            return LLMResponse(
+                                content="".join(accumulated),
+                                usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                                model=config.model,
+                                finish_reason="stream"
+                            )
+                except Exception as se:
+                    logger.error(f"Anthropic streaming fallback (detailed) failed: {str(se)}")
+                    raise
             logger.error(f"Anthropic detailed generation error: {str(e)}")
             raise
     
@@ -264,6 +314,40 @@ class AnthropicAdapter(LLMProviderInterface):
             )
 
         except Exception as e:
+            if "Streaming is required" in str(e):
+                try:
+                    accumulated = []
+                    async with client.messages.stream(**request_params) as stream:
+                        async for event in stream:
+                            if event.type == "content_block_delta":
+                                delta = getattr(event, "delta", None)
+                                if delta and getattr(delta, "type", None) == "text_delta":
+                                    accumulated.append(delta.text)
+                        try:
+                            final_msg = await stream.get_final_message()
+                            usage = {
+                                "prompt_tokens": final_msg.usage.input_tokens if getattr(final_msg, "usage", None) else 0,
+                                "completion_tokens": final_msg.usage.output_tokens if getattr(final_msg, "usage", None) else 0,
+                                "total_tokens": (final_msg.usage.input_tokens + final_msg.usage.output_tokens) if getattr(final_msg, "usage", None) else 0
+                            }
+                            model = getattr(final_msg, "model", config.model)
+                            finish_reason = getattr(final_msg, "stop_reason", "") or ""
+                            return LLMResponse(
+                                content="".join(accumulated),
+                                usage=usage,
+                                model=model,
+                                finish_reason=finish_reason
+                            )
+                        except Exception:
+                            return LLMResponse(
+                                content="".join(accumulated),
+                                usage={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                                model=config.model,
+                                finish_reason="stream"
+                            )
+                except Exception as se:
+                    logger.error(f"Anthropic chat streaming fallback failed: {str(se)}")
+                    raise
             logger.error(f"Anthropic chat completion error: {str(e)}")
             raise
     
