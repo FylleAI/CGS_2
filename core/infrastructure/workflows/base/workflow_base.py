@@ -173,9 +173,17 @@ class WorkflowHandler(ABC):
                 description_template = prompt_path.read_text(encoding='utf-8')
                 logger.debug(f"📝 Loaded prompt file for task {task_id}: {prompt_id}")
             except FileNotFoundError:
-                logger.error(f"❌ Prompt file not found for task {task_id}: {prompt_id}")
-                # Fallback to inline description_template if present
-                description_template = task_template.get('description_template', '')
+                fallback_template = task_template.get('description_template', '')
+                log_message = (
+                    f"Prompt file not found for task {task_id}: {prompt_id}"
+                    f" (expected at {prompt_path})"
+                )
+                if fallback_template:
+                    logger.warning(f"⚠️ {log_message} — using inline description template")
+                    description_template = fallback_template
+                else:
+                    logger.error(f"❌ {log_message}")
+                    description_template = ''
         else:
             # Fallback to inline description_template
             description_template = task_template.get('description_template', '')

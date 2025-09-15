@@ -39,6 +39,10 @@ def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
     settings = get_settings()
     
+    if not settings.debug:
+        logging.getLogger("httpx").setLevel(logging.WARNING)
+        logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+
     app = FastAPI(
         title="CGSRef API",
         description="Clean Content Generation System - REST API",

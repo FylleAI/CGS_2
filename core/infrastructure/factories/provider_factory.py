@@ -45,24 +45,28 @@ class LLMProviderFactory:
         if provider_type == LLMProvider.OPENAI:
             api_key = settings.openai_api_key
             if not api_key:
+                logger.warning("⚠️ OpenAI provider requested but API key is not configured")
                 raise ValueError("OpenAI API key not configured")
             return OpenAIAdapter(api_key)
-            
+
         elif provider_type == LLMProvider.ANTHROPIC:
             api_key = settings.anthropic_api_key
             if not api_key:
+                logger.warning("⚠️ Anthropic provider requested but API key is not configured")
                 raise ValueError("Anthropic API key not configured")
             return AnthropicAdapter(api_key)
-            
+
         elif provider_type == LLMProvider.DEEPSEEK:
             api_key = settings.deepseek_api_key
             if not api_key:
+                logger.warning("⚠️ DeepSeek provider requested but API key is not configured")
                 raise ValueError("DeepSeek API key not configured")
             return DeepSeekAdapter(api_key)
 
         elif provider_type == LLMProvider.GEMINI:
             api_key = settings.gemini_api_key
             if not api_key:
+                logger.warning("⚠️ Gemini provider requested but API key is not configured")
                 raise ValueError("Gemini API key not configured")
             return GeminiAdapter(api_key)
 
@@ -97,6 +101,9 @@ class LLMProviderFactory:
         # Get API key for the provider
         api_key = settings.get_provider_api_key(provider_type.value)
         if not api_key:
+            logger.warning(
+                f"⚠️ Provider config requested for {provider_type.value} but API key is not configured"
+            )
             raise ValueError(f"API key not configured for provider: {provider_type.value}")
         
         # Use default model if not specified
@@ -130,12 +137,23 @@ class LLMProviderFactory:
         Returns:
             Dictionary mapping provider names to availability status
         """
-        return {
-            "openai": bool(settings.openai_api_key),
-            "anthropic": bool(settings.anthropic_api_key),
-            "deepseek": bool(settings.deepseek_api_key),
-            "gemini": bool(settings.gemini_api_key)
+        availability = {}
+        provider_keys = {
+            "openai": settings.openai_api_key,
+            "anthropic": settings.anthropic_api_key,
+            "deepseek": settings.deepseek_api_key,
+            "gemini": settings.gemini_api_key,
         }
+
+        for provider_name, api_key in provider_keys.items():
+            available = bool(api_key)
+            availability[provider_name] = available
+            if not available:
+                logger.debug(
+                    f"🔍 Provider '{provider_name}' is not configured (missing API key)"
+                )
+
+        return availability
     
     @staticmethod
     def get_default_provider(settings: Settings) -> LLMProvider:

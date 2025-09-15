@@ -130,11 +130,14 @@ class WorkflowReporter:
         metrics.total_duration_ms = (
             metrics.end_time - metrics.start_time
         ).total_seconds() * 1000
-        
-        # Set final output information
-        metrics.final_output_length = len(final_output)
-        metrics.final_output_preview = (
-            final_output[:200] + "..." if len(final_output) > 200 else final_output
+
+        # Set final output information (with intelligent fallback)
+        (
+            metrics.final_output_length,
+            metrics.final_output_preview,
+        ) = self._resolve_final_output_details(
+            workflow_id=workflow_id,
+            final_output=final_output,
         )
         
         # Analyze agent logs for this workflow
@@ -151,8 +154,54 @@ class WorkflowReporter:
         
         # Log completion summary
         self._log_workflow_completion(metrics)
-        
+
         return metrics
+
+    def _resolve_final_output_details(
+        self,
+        workflow_id: str,
+        final_output: str,
+    ) -> tuple[int, str]:
+        """Resolve the final output length/preview with fallbacks."""
+
+        if final_output:
+            preview = (
+                final_output[:200] + "..."
+                if len(final_output) > 200
+                else final_output
+            )
+            return len(final_output), preview
+
+        fallback_task_order = [
+            "task4_compliance_review",
+            "task3_content",
+            "task2_research",
+            "task1_brief",
+        ]
+
+        # Gather agent end entries once for efficiency
+        relevant_entries = [
+            entry
+            for entry in agent_logger.entries
+            if entry.workflow_id == workflow_id
+            and entry.interaction_type == InteractionType.AGENT_END
+        ]
+
+        for task_id in fallback_task_order:
+            for entry in reversed(relevant_entries):
+                if entry.task_id != task_id:
+                    continue
+
+                data = entry.data or {}
+                length = int(data.get("final_output_length") or 0)
+                preview = data.get("final_output_preview") or ""
+
+                if length > 0:
+                    return length, preview
+                if preview:
+                    return len(preview), preview
+
+        return 0, ""
     
     def _analyze_workflow_logs(self, metrics: WorkflowMetrics) -> None:
         """Analyze agent logs to extract detailed metrics."""
