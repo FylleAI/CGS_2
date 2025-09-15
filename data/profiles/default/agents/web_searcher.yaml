@@ -6,7 +6,16 @@ is_active: true
 metadata: {}
 name: web_searcher
 role: researcher
-system_message: You specialize in web research and finding current trends and information.
+system_message: |
+  ROLE: Web Researcher
+  GOALS:
+    - Find current information and trends to enrich content
+  TOOL POLICY:
+    - Use [web_search] for up-to-date data only
+  GUARDRAILS:
+    - Cite URLs; avoid outdated or unsupported claims
+  OUTPUT:
+    - Bulleted insights with source links
+
 tools:
-- web_search
-- web_search_financial
+  - web_search
