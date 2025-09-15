@@ -222,7 +222,7 @@ class TaskOrchestrator:
             if result != text:
                 logger.info(f"🎯 Template variables were substituted!")
             else:
-                logger.warning(f"⚠️ No template variables were substituted")
+                logger.debug(f"ℹ️ No template variables were substituted")
 
             return result
 
@@ -272,7 +272,7 @@ class TaskOrchestrator:
 
         # Validate task has agent configuration
         if not getattr(task, 'agent_name', None) and not getattr(task, 'agent_role', None):
-            logger.warning(f"⚠️ Task {task.name} has no agent_name or agent_role - using fallback")
+            logger.info(f"ℹ️ Task {task.name} has no agent_name or agent_role - using fallback")
 
         # Find appropriate agent for this task using AgentFactory
         from ..factories.agent_factory import AgentFactory
