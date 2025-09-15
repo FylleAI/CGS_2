@@ -34,6 +34,15 @@ class AgentFactory:
         context_keys = list((ctx or {}).keys())
         logger.debug(f"📋 Available context keys: {context_keys}")
 
+        # Helper: normalize names to snake_case (slug) for permissive matching
+        import re
+        def _norm(x: Optional[str]) -> Optional[str]:
+            if x is None:
+                return None
+            return re.sub(r"[^a-z0-9]+", "_", x.lower()).strip("_")
+
+        normalized_requested = _norm(name) if name else None
+
         # 1) Prefer client-specific YAML override by name
         if name and self.agent_repository:
             try:
@@ -48,9 +57,9 @@ class AgentFactory:
                     )
 
                     for a in client_agents:
-                        if a.name == name:
+                        if a.name == name or _norm(a.name) == normalized_requested:
                             logger.info(
-                                f"✅ Resolved client-specific agent '{name}' for profile '{client_profile}'"
+                                f"✅ Resolved client-specific agent '{a.name}' for profile '{client_profile}'"
                             )
                             return a
 
@@ -62,14 +71,18 @@ class AgentFactory:
                 # Fallback: global search by name (may return default profile)
                 logger.debug(f"🔍 Searching for global agent '{name}'")
                 agent = await getattr(self.agent_repository, "get_by_name")(name)  # type: ignore[attr-defined]
+                if not agent and normalized_requested and normalized_requested != name:
+                    logger.debug(f"🔍 Global agent not found by '{name}', retry with normalized '{normalized_requested}'")
+                    agent = await getattr(self.agent_repository, "get_by_name")(normalized_requested)  # type: ignore[attr-defined]
                 if agent:
+                    resolved_key = name if agent.name == name else normalized_requested
                     if client_profile:
                         logger.warning(
-                            f"⚠️ Using global agent '{name}' instead of client-specific for profile '{client_profile}'"
+                            f"⚠️ Using global agent '{resolved_key}' instead of client-specific for profile '{client_profile}'"
                         )
                     else:
                         logger.info(
-                            f"✅ Resolved global agent by name '{name}' (no client profile specified)"
+                            f"✅ Resolved global agent by name '{resolved_key}' (no client profile specified)"
                         )
                     return agent
             except Exception as e:
