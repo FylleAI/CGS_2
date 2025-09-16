@@ -1,0 +1,6 @@
+sections:
+  compliance_rules:
+    text: |
+      You are reviewing the assembled article for compliance. Verify every claim,
+      ensure disclosures are explicit, and refuse to approve sections lacking
+      substantiation.

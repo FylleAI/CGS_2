@@ -92,6 +92,22 @@ class Settings(BaseSettings):
     default_temperature: float = Field(default=0.7, env="DEFAULT_TEMPERATURE")
     max_tokens: Optional[int] = Field(default=None, env="MAX_TOKENS")
 
+    # Prompt orchestration flags
+    use_system_prompt_builder_v2: bool = Field(
+        default=False, env="USE_SYSTEM_PROMPT_BUILDER_V2"
+    )
+    system_prompt_version: str = Field(
+        default="v1", env="SYSTEM_PROMPT_VERSION"
+    )
+
+    # Context pipeline configuration
+    use_context_pipeline_v1: bool = Field(
+        default=False, env="USE_CONTEXT_PIPELINE_V1"
+    )
+    use_context_pipeline_summarize: bool = Field(
+        default=False, env="USE_CONTEXT_PIPELINE_SUMMARIZE"
+    )
+
     # Workflow settings
     workflow_timeout_seconds: int = Field(default=600, env="WORKFLOW_TIMEOUT_SECONDS")  # 10 minutes for complex workflows
     max_retries: int = Field(default=3, env="MAX_RETRIES")

@@ -5,15 +5,17 @@ import json
 import time
 import re
 import inspect
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from uuid import UUID
 
 from ...domain.entities.agent import Agent, AgentRole
 from ...domain.repositories.agent_repository import AgentRepository
 from ...application.interfaces.llm_provider_interface import LLMProviderInterface
 from ...domain.value_objects.provider_config import ProviderConfig
+from ..config.settings import Settings, get_settings
 from ..logging.agent_logger import agent_logger, LogLevel, InteractionType
 from ..logging.cost_calculator import cost_calculator, TokenUsage, CostBreakdown
+from .system_prompt_builder import SystemPromptBuilder, SystemPromptBuilderConfig
 
 logger = logging.getLogger(__name__)
 
@@ -30,12 +32,15 @@ class AgentExecutor:
         self, 
         agent_repository: AgentRepository,
         llm_provider: LLMProviderInterface,
-        provider_config: ProviderConfig
+        provider_config: ProviderConfig,
+        settings: Optional[Settings] = None
     ):
         self.agent_repository = agent_repository
         self.llm_provider = llm_provider
         self.provider_config = provider_config
         self.tools_registry = {}
+        self.settings = settings or get_settings()
+        self.system_prompt_builder: Optional[SystemPromptBuilder] = None
     
     def register_tool(self, tool_name: str, tool_function: callable, description: str):
         """Register a tool for agent use."""
@@ -91,7 +96,7 @@ class AgentExecutor:
             )
 
             # Prepare system message
-            system_message = self._prepare_system_message(agent, context)
+            system_message, budget_report = self._build_system_message(agent, context)
 
             # Prepare tools for this agent
             agent_tools = self._get_agent_tools(agent)
@@ -117,7 +122,9 @@ class AgentExecutor:
                 provider=dynamic_config.provider.value,
                 model=dynamic_config.model,
                 prompt=prompt,
-                system_message=system_message
+                system_message=system_message,
+                system_prompt_version=budget_report.get("version") if budget_report else None,
+                system_prompt_budget=budget_report.get("sections") if budget_report else None
             )
 
             # Execute LLM call with timing
@@ -194,11 +201,44 @@ class AgentExecutor:
                 error_message=str(e)
             )
             raise
-    
+
+    def _build_system_message(self, agent: Agent, context: Dict[str, Any]) -> Tuple[str, Dict[str, Any]]:
+        """Build system message using the configured strategy."""
+
+        context = context or {}
+
+        if self.settings.use_system_prompt_builder_v2:
+            try:
+                if self.system_prompt_builder is None:
+                    self.system_prompt_builder = SystemPromptBuilder(self.settings)
+
+                builder_config = SystemPromptBuilderConfig(
+                    version=self.settings.system_prompt_version,
+                    tools=self._get_agent_tools_metadata(agent),
+                    runtime_overrides=context.get("system_prompt_overrides"),
+                )
+                system_message, budget_report = self.system_prompt_builder.build(
+                    agent, context, builder_config
+                )
+                logger.debug(
+                    "System prompt builder v2 produced %s tokens",
+                    budget_report.get("total_tokens"),
+                )
+                return system_message, budget_report
+            except Exception as exc:
+                logger.exception(
+                    "SystemPromptBuilder v2 failed for agent %s: %s. Falling back to legacy builder.",
+                    agent.name,
+                    exc,
+                )
+
+        legacy_message = self._prepare_system_message(agent, context)
+        return legacy_message, {}
+
     def _prepare_system_message(self, agent: Agent, context: Dict[str, Any] = None) -> str:
         """Prepare system message for the agent."""
         context = context or {}
-        
+
         # Start with agent's system message
         if agent.system_message:
             system_message = agent.system_message
@@ -230,9 +270,9 @@ class AgentExecutor:
             system_message += f"\n\nThe target audience is: {context.get('target_audience')}"
         
         # Add tools information
-        tools_info = self._get_agent_tools_descriptions(agent)
-        if tools_info:
-            system_message += f"\n\nYou have access to the following tools:\n{tools_info}"
+        tool_descriptions = self._get_agent_tools_descriptions(agent)
+        if tool_descriptions:
+            system_message += f"\n\nYou have access to the following tools:\n{tool_descriptions}"
             from ..tools.tool_names import ToolNames
             system_message += "\n\nIMPORTANT: When you need to use a tool, format your response EXACTLY like this:"
             system_message += f"\n[{ToolNames.RAG_GET_CLIENT_CONTENT}] client_name [/{ToolNames.RAG_GET_CLIENT_CONTENT}]"
@@ -307,18 +347,31 @@ class AgentExecutor:
 
         return available_tools
 
-    def _get_agent_tools_descriptions(self, agent: Agent) -> str:
-        """Get descriptions of tools available to this agent."""
-        tool_descriptions = []
-        
+    def _get_agent_tools_metadata(self, agent: Agent) -> List[Dict[str, Any]]:
+        """Return metadata for the tools available to the agent."""
+
+        tools_metadata: List[Dict[str, Any]] = []
         from ..tools.tool_names import ALIASES
+
         for tool_name in agent.tools:
             canonical = ALIASES.get(tool_name, tool_name)
             if canonical in self.tools_registry:
-                description = self.tools_registry[canonical]['description']
-                tool_descriptions.append(f"- {canonical}: {description}")
+                description = self.tools_registry[canonical].get('description', '')
+                tools_metadata.append({
+                    'name': canonical,
+                    'description': description,
+                })
 
-        return "\n".join(tool_descriptions)
+        return tools_metadata
+
+    def _get_agent_tools_descriptions(self, agent: Agent) -> str:
+        """Human readable tool descriptions for legacy builder."""
+
+        entries = self._get_agent_tools_metadata(agent)
+        return "\n".join(
+            f"- {entry['name']}: {entry['description']}" if entry.get('description') else f"- {entry['name']}"
+            for entry in entries
+        )
 
     async def process_tool_calls(self, agent_response: str, session_id: str = None, agent_name: Optional[str] = None) -> str:
         """

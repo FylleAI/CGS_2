@@ -311,17 +311,19 @@ class AgentLogger:
         self._log_entry(entry)
     
     def log_llm_request(
-        self, 
-        session_id: str, 
-        provider: str, 
-        model: str, 
+        self,
+        session_id: str,
+        provider: str,
+        model: str,
         prompt: str,
-        system_message: str = ""
+        system_message: str = "",
+        system_prompt_version: Optional[str] = None,
+        system_prompt_budget: Optional[Dict[str, Any]] = None
     ) -> str:
         """Log an LLM request."""
         request_id = str(uuid4())
         session = self.active_sessions.get(session_id, {})
-        
+
         if session_id in self.active_sessions:
             self.active_sessions[session_id]['llm_calls'] += 1
         
@@ -345,7 +347,12 @@ class AgentLogger:
                 'call_number': session.get('llm_calls', 0)
             }
         )
-        
+
+        if system_prompt_version:
+            entry.data['system_prompt_version'] = system_prompt_version
+        if system_prompt_budget:
+            entry.data['system_prompt_budget'] = system_prompt_budget
+
         self._log_entry(entry)
         return request_id
     
