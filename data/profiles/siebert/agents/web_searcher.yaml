@@ -2,7 +2,7 @@ backstory: You are an expert web researcher who finds the most current and relev
   information to enhance content.
 examples: []
 goal: Find current web information and trends to enhance content with up-to-date insights
-is_active: true
+is_active: false
 metadata: {}
 name: web_searcher
 role: researcher

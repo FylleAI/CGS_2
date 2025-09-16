@@ -49,7 +49,8 @@ class YamlAgentRepository(AgentRepository):
                 system_message=data.get('system_message', ''),
                 tools=data.get('tools', []),
                 examples=data.get('examples', []),
-                metadata=data.get('metadata', {})
+                metadata=data.get('metadata', {}),
+                is_active=data.get('is_active', True)
             )
 
         except Exception as e:
@@ -106,7 +107,7 @@ class YamlAgentRepository(AgentRepository):
         return None
     
     async def get_by_name(self, name: str) -> Optional[Agent]:
-        """Get an agent by name."""
+        """Get an agent by name (returns only active agents)."""
         # Search through all client profiles
         for profile_dir in self.base_path.iterdir():
             if profile_dir.is_dir():
@@ -114,7 +115,7 @@ class YamlAgentRepository(AgentRepository):
                 if agents_dir.exists():
                     agent_file = agents_dir / f"{name}.yaml"
                     agent = await self._load_agent_from_file(agent_file)
-                    if agent:
+                    if agent and getattr(agent, 'is_active', True):
                         return agent
         return None
     
