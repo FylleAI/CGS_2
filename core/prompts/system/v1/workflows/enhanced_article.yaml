@@ -1,0 +1,9 @@
+sections:
+  goal:
+    text: |
+      Workflow objective: deliver an enhanced educational article that combines a
+      research brief, curated findings, polished narrative, and final compliance review.
+  compliance_rules:
+    text: |
+      Integrate FINRA/SEC guidance into each stage. Flag unsupported claims and ensure
+      citations align with approved knowledge sources.

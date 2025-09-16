@@ -1,5 +1,6 @@
 import pytest
 
+from core.infrastructure.config.settings import Settings
 from core.infrastructure.repositories.yaml_agent_repository import YamlAgentRepository
 from core.infrastructure.orchestration.agent_executor import AgentExecutor
 from core.infrastructure.tools.tool_names import ToolNames
@@ -48,7 +49,12 @@ async def test_research_agent_triggers_perplexity():
     assert "blog.siebert.com" in agent.system_message
 
     provider = DummyProvider()
-    executor = AgentExecutor(repo, provider, ProviderConfig())
+    executor = AgentExecutor(
+        repo,
+        provider,
+        ProviderConfig(),
+        settings=Settings(secret_key="test-key"),
+    )
 
     calls = {}
 

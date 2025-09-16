@@ -11,6 +11,8 @@ from pathlib import Path
 
 from ....domain.entities.task import Task, TaskStatus
 from ....domain.entities.workflow import Workflow
+from ...config.settings import get_settings
+from ...orchestration.context_pipeline import ContextPipeline
 from ...utils.template_utils import substitute_template
 from ...logging.workflow_reporter import workflow_reporter
 
@@ -286,6 +288,25 @@ class WorkflowHandler(ABC):
             }
 
             logger.info(f"🎯 Executing agent for task: {task.name}")
+
+            # Optionally compact context before rendering the prompt
+            settings = context.get('settings') or get_settings()
+            if settings.use_context_pipeline_v1:
+                try:
+                    pipeline = ContextPipeline(settings=settings)
+                    pipeline_output = pipeline.build(enhanced_context)
+                    enhanced_context['context_sections'] = pipeline_output
+                    enhanced_context['kb_summary'] = pipeline_output.get('kb_summary')
+                    enhanced_context['runtime_context'] = pipeline_output.get('runtime_context')
+                    enhanced_context['context_examples'] = pipeline_output.get('examples')
+                    enhanced_context['context_citations'] = pipeline_output.get('citations')
+                    enhanced_context['context_pipeline_report'] = pipeline_output.get('notes')
+                    logger.debug(
+                        "Context pipeline applied (tokens=%s)",
+                        pipeline_output.get('notes', {}).get('total_tokens'),
+                    )
+                except Exception as pipeline_error:  # pragma: no cover - defensive logging
+                    logger.exception("Context pipeline failed: %s", pipeline_error)
 
             # Build final prompt using centralized prompt builder (with Jinja2 if available)
             try:
