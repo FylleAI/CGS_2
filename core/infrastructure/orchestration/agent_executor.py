@@ -8,12 +8,13 @@ import inspect
 from typing import Dict, Any, List, Optional
 from uuid import UUID
 
-from ...domain.entities.agent import Agent, AgentRole
+from ...domain.entities.agent import Agent
 from ...domain.repositories.agent_repository import AgentRepository
 from ...application.interfaces.llm_provider_interface import LLMProviderInterface
 from ...domain.value_objects.provider_config import ProviderConfig
 from ..logging.agent_logger import agent_logger, LogLevel, InteractionType
 from ..logging.cost_calculator import cost_calculator, TokenUsage, CostBreakdown
+from .simple_system_prompt_builder import SimpleSystemPromptBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ class AgentExecutor:
         self.llm_provider = llm_provider
         self.provider_config = provider_config
         self.tools_registry = {}
+        self.system_prompt_builder = SimpleSystemPromptBuilder()
     
     def register_tool(self, tool_name: str, tool_function: callable, description: str):
         """Register a tool for agent use."""
@@ -122,6 +124,7 @@ class AgentExecutor:
 
             # Execute LLM call with timing
             start_time = time.time()
+            logger.debug(f"system_prompt_source=builder_v1, length={len(system_message)}")
             llm_response = await self.llm_provider.generate_content(
                 prompt=prompt,
                 config=dynamic_config,
@@ -196,58 +199,10 @@ class AgentExecutor:
             raise
     
     def _prepare_system_message(self, agent: Agent, context: Dict[str, Any] = None) -> str:
-        """Prepare system message for the agent."""
+        """Prepare system message for the agent using the simple builder."""
         context = context or {}
-        
-        # Start with agent's system message
-        if agent.system_message:
-            system_message = agent.system_message
-        else:
-            # Default system messages based on role
-            role_messages = {
-                AgentRole.RESEARCHER: "You are an expert researcher who finds accurate, relevant information and presents it clearly.",
-                AgentRole.WRITER: "You are an expert writer who creates engaging, well-structured content tailored to specific audiences.",
-                AgentRole.EDITOR: "You are an expert editor who refines content for clarity, coherence, and alignment with style guidelines.",
-                AgentRole.ANALYST: "You are an expert analyst who examines data and information to extract meaningful insights.",
-                AgentRole.PLANNER: "You are an expert planner who organizes complex tasks into clear, actionable steps.",
-                AgentRole.COMPLIANCE_REVIEWER: "You are an expert compliance reviewer who ensures content meets regulatory standards and risk management requirements."
-            }
-            system_message = role_messages.get(agent.role, "You are an AI assistant helping with content generation.")
-        
-        # Add agent backstory if available
-        if agent.backstory:
-            system_message += f"\n\n{agent.backstory}"
-        
-        # Add agent goal if available
-        if agent.goal:
-            system_message += f"\n\nYour goal is: {agent.goal}"
-        
-        # Add context-specific information
-        if context.get('client_profile'):
-            system_message += f"\n\nYou are working for client: {context.get('client_profile')}"
-        
-        if context.get('target_audience'):
-            system_message += f"\n\nThe target audience is: {context.get('target_audience')}"
-        
-        # Add tools information
         tools_info = self._get_agent_tools_descriptions(agent)
-        if tools_info:
-            system_message += f"\n\nYou have access to the following tools:\n{tools_info}"
-            from ..tools.tool_names import ToolNames
-            system_message += "\n\nIMPORTANT: When you need to use a tool, format your response EXACTLY like this:"
-            system_message += f"\n[{ToolNames.RAG_GET_CLIENT_CONTENT}] client_name [/{ToolNames.RAG_GET_CLIENT_CONTENT}]"
-            system_message += f"\n[{ToolNames.RAG_GET_CLIENT_CONTENT}] client_name, document_name [/{ToolNames.RAG_GET_CLIENT_CONTENT}]"
-            system_message += f"\n[{ToolNames.RAG_SEARCH_CONTENT}] client_name, search_query [/{ToolNames.RAG_SEARCH_CONTENT}]"
-            system_message += f"\n[{ToolNames.RAG_SEARCH_CONTENT}] search_query [/{ToolNames.RAG_SEARCH_CONTENT}] (defaults to 'siebert' client)"
-            system_message += f"\n[{ToolNames.WEB_SEARCH_SERPER}] your search query [/{ToolNames.WEB_SEARCH_SERPER}]"
-            system_message += f"\n[{ToolNames.WEB_SEARCH_PERPLEXITY}] your search query [/{ToolNames.WEB_SEARCH_PERPLEXITY}]"
-            system_message += "\n\nCRITICAL RULES:"
-            system_message += "\n- Use EXACT tool names from the list above"
-            system_message += "\n- For rag_search_content: ALWAYS provide a specific search query"
-            system_message += "\n- For multi-parameter tools: separate parameters with commas"
-            system_message += "\n- Do NOT use generic placeholders like 'TOOL_NAME'"
-
-        return system_message
+        return self.system_prompt_builder.build(agent, context, tools_info)
     
     def _prepare_prompt(
         self, 
