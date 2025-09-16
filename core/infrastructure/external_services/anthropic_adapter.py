@@ -89,6 +89,7 @@ class AnthropicAdapter(LLMProviderInterface):
         except Exception as e:
             # If Anthropic requires streaming for long requests, transparently retry with streaming
             if "Streaming is required" in str(e):
+                logger.info("Anthropic response requires streaming, retrying with stream")
                 try:
                     accumulated = []
                     async with client.messages.stream(**request_params) as stream:
@@ -162,6 +163,7 @@ class AnthropicAdapter(LLMProviderInterface):
         except Exception as e:
             # Retry with streaming if required by Anthropic
             if "Streaming is required" in str(e):
+                logger.info("Anthropic response requires streaming, retrying with stream")
                 try:
                     accumulated = []
                     async with client.messages.stream(**request_params) as stream:
@@ -315,6 +317,7 @@ class AnthropicAdapter(LLMProviderInterface):
 
         except Exception as e:
             if "Streaming is required" in str(e):
+                logger.info("Anthropic response requires streaming, retrying with stream")
                 try:
                     accumulated = []
                     async with client.messages.stream(**request_params) as stream:

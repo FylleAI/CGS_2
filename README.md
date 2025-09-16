@@ -112,6 +112,33 @@ REACT_APP_API_URL=http://localhost:8000
 
 ---
 
+## Logging di default (più silenzioso)
+
+- Di default il backend lavora con log più puliti quando DEBUG=false (vedi .env). In questa modalità:
+  - httpx e uvicorn.access sono portati a WARNING (meno rumore nelle richieste HTTP)
+  - i provider senza API key vengono loggati a DEBUG in fase di discovery; compaiono WARNING solo se richiedi esplicitamente quel provider senza chiave
+  - nei workflow, alcune condizioni aspettate passano a INFO/DEBUG (es. nessuna variabile di template sostituita, fallback agent per ruolo)
+  - Anthropic: se la SDK richiede streaming, facciamo retry automatico in streaming e logghiamo INFO; ERROR solo se fallisce anche lo stream
+  - Il reporter calcola la lunghezza dell’output finale usando final_output oppure un fallback per-task (niente più "Output Length: 0" fuorviante)
+
+### Come abilitare/disabilitare la verbosità
+- Verboso (debug): imposta `DEBUG=true` nel tuo `.env` oppure usa lo starter di debug dedicato.
+- Silenzioso (default): imposta `DEBUG=false` nel tuo `.env` oppure avvia temporaneamente così:
+
+```bash
+DEBUG=false uvicorn api.rest.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### Avvio in debug esplicito (developer)
+- Per sessioni di debug dettagliate puoi usare lo script dedicato:
+
+```bash
+python3 start_backend_debug.py
+```
+
+Questo imposta livelli di log più verbosi su FastAPI, moduli core e provider.
+
+
 ## Come funzionano workflow, task, agent e system message
 
 ### Esempio: workflow "enhanced_article"
