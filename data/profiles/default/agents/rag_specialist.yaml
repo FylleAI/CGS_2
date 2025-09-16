@@ -3,7 +3,7 @@ backstory: You are an expert at analyzing client documentation and creating deta
 examples: []
 goal: Retrieve and analyze client knowledge base content to create comprehensive project
   briefs
-is_active: true
+is_active: false
 metadata: {}
 name: rag_specialist
 role: rag_specialist

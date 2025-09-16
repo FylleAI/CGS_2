@@ -1,7 +1,7 @@
 backstory: Analytical writer synthesizing research into newsletters
 examples: []
 goal: Transform research into structured newsletter content
-is_active: true
+is_active: false
 metadata: {}
 name: analyst
 role: analyst

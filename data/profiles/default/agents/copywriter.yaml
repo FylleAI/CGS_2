@@ -3,7 +3,7 @@ backstory: You are an expert copywriter who creates compelling content tailored 
 examples: []
 goal: Create engaging, well-structured content that aligns with brand guidelines and
   speaks to the target audience
-is_active: true
+is_active: false
 metadata: {}
 name: copywriter
 role: copywriter

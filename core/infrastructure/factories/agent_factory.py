@@ -17,9 +17,7 @@ class AgentFactory:
 
     async def get(self, *, name: Optional[str], role: Optional[AgentRole], ctx: Dict[str, Any]) -> Agent:
         """Resolve an Agent by name (preferred) or role, with client-specific overrides if present."""
-        # Map legacy agent names to new identifiers
-        if name == "research_specialist":
-            name = "research_agent"
+        # Legacy name mapping removed to honor canonical agent names (e.g., 'research_specialist')
 
         # Prefer explicit client_profile; fallback to client_name used elsewhere in context
         client_profile = (ctx or {}).get("client_profile") or (ctx or {}).get("client_name")
@@ -58,6 +56,11 @@ class AgentFactory:
 
                     for a in client_agents:
                         if a.name == name or _norm(a.name) == normalized_requested:
+                            if not getattr(a, 'is_active', True):
+                                logger.warning(
+                                    f"⚠️ Client-specific agent '{a.name}' is inactive (is_active=false); skipping"
+                                )
+                                continue
                             logger.info(
                                 f"✅ Resolved client-specific agent '{a.name}' for profile '{client_profile}'"
                             )
@@ -75,16 +78,21 @@ class AgentFactory:
                     logger.debug(f"🔍 Global agent not found by '{name}', retry with normalized '{normalized_requested}'")
                     agent = await getattr(self.agent_repository, "get_by_name")(normalized_requested)  # type: ignore[attr-defined]
                 if agent:
-                    resolved_key = name if agent.name == name else normalized_requested
-                    if client_profile:
+                    if not getattr(agent, 'is_active', True):
                         logger.warning(
-                            f"⚠️ Using global agent '{resolved_key}' instead of client-specific for profile '{client_profile}'"
+                            f"⚠️ Global agent '{agent.name}' is inactive (is_active=false); ignoring and continuing fallback"
                         )
                     else:
-                        logger.info(
-                            f"✅ Resolved global agent by name '{resolved_key}' (no client profile specified)"
-                        )
-                    return agent
+                        resolved_key = name if agent.name == name else normalized_requested
+                        if client_profile:
+                            logger.warning(
+                                f"⚠️ Using global agent '{resolved_key}' instead of client-specific for profile '{client_profile}'"
+                            )
+                        else:
+                            logger.info(
+                                f"✅ Resolved global agent by name '{resolved_key}' (no client profile specified)"
+                            )
+                        return agent
             except Exception as e:
                 logger.warning(f"⚠️ Agent resolution via repository failed: {e}")
 

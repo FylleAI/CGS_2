@@ -15,7 +15,7 @@ system_message: |
 
 tools:
   - rag_search_content
-is_active: true
+is_active: false
 metadata:
   specialization: "Content synthesis and cultural integration"
   target_audience: "Gen Z investors (18-26 years old)"

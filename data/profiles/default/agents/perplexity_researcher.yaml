@@ -1,7 +1,7 @@
 backstory: Premium financial researcher using multi-source evidence
 examples: []
 goal: Gather and synthesize financial insights from diverse sources
-is_active: true
+is_active: false
 metadata: {}
 name: perplexity_researcher
 role: researcher

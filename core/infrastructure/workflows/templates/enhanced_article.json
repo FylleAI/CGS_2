@@ -75,22 +75,22 @@
     },
     {
       "id": "task2_research",
-      "name": "Web Research & Brief Enhancement", 
-      "agent": "web_searcher",
+      "name": "Web Research & Brief Enhancement",
+      "agent": "research_specialist",
       "dependencies": ["task1_brief"],
       "prompt_id": "enhanced_article_task2_research"
     },
     {
       "id": "task3_content",
       "name": "Article Content Creation",
-      "agent": "enhanced_article_writer",
+      "agent": "copywriter",
       "dependencies": ["task2_research"],
       "prompt_id": "enhanced_article_task3_content"
     },
     {
       "id": "task4_compliance_review",
       "name": "FINRA/SEC Compliance Review & Validation",
-      "agent": "enhanced_article_compliance_specialist",
+      "agent": "compliance_specialist",
       "dependencies": ["task3_content"],
       "prompt_id": "enhanced_article_task4_compliance_review"
     }

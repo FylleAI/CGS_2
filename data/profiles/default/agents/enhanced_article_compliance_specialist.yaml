@@ -1,7 +1,7 @@
 backstory: Ensures enhanced articles meet compliance standards
 examples: []
 goal: Review content for FINRA/SEC compliance while preserving style
-is_active: true
+is_active: false
 metadata: {}
 name: enhanced_article_compliance_specialist
 role: enhanced_article_compliance_specialist

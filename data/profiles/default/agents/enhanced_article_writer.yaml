@@ -1,7 +1,7 @@
 backstory: Specialist in composing enhanced articles with brand alignment
 examples: []
 goal: Produce enhanced articles that match brand voice and target audience
-is_active: true
+is_active: false
 metadata: {}
 name: enhanced_article_writer
 role: enhanced_article_writer
