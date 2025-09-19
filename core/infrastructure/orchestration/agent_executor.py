@@ -444,6 +444,65 @@ class AgentExecutor:
                 else:
                     raise ValueError("rag_get_client_content requires format: 'client_name' or 'client_name, document_name'")
 
+            elif tool_name == "perplexity_search":
+                # Parse a structured input like: "topic=..., exclude_topics=[...], premium_sources=...|..., research_timeframe=last 7 days"
+                raw = tool_input
+                parts = [p.strip() for p in raw.split(',') if p.strip()]
+                params = {}
+                for p in parts:
+                    if '=' in p:
+                        k, v = p.split('=', 1)
+                        params[k.strip()] = v.strip()
+                topic = params.get('topic') or params.get('query') or raw
+                timeframe = params.get('research_timeframe', '')
+                exclude = params.get('exclude_topics', '')
+                sources = params.get('premium_sources', '')
+
+                # Build site filters from premium_sources (pipe-separated URLs)
+                domains = []
+                for src in sources.split('|'):
+                    src = src.strip()
+                    if not src:
+                        continue
+                    if '://' in src:
+                        host_and_path = src.split('://', 1)[1]
+                    else:
+                        host_and_path = src
+                    domain = host_and_path.split('/', 1)[0]
+                    if domain:
+                        domains.append(domain)
+                site_filter = ''
+                if domains:
+                    site_filter = ' (' + ' OR '.join([f"site:{d}" for d in domains]) + ')'
+
+                # Exclude listing pages that cause generic/old info
+                url_excludes = " -inurl:/tag/ -inurl:/category/ -inurl:/topics/ -inurl:/newsletter -inurl:/newsletters"
+
+                # Map timeframe to a natural-language hint for PPLX
+                tf_hint = ''
+                if timeframe:
+                    if '7' in timeframe:
+                        tf_hint = ' past week'
+                    elif 'yesterday' in timeframe.lower():
+                        tf_hint = ' since yesterday'
+                    elif 'month' in timeframe.lower():
+                        tf_hint = ' past month'
+
+                # Exclude topics
+                ex_hint = ''
+                if exclude:
+                    # normalize list-like input
+                    ex_items = []
+                    if exclude.startswith('[') and exclude.endswith(']'):
+                        ex_items = [x.strip(" ' \"") for x in exclude[1:-1].split(',') if x.strip()]
+                    else:
+                        ex_items = [x.strip() for x in exclude.split('|') if x.strip()]
+                    if ex_items:
+                        ex_hint = ' ' + ' '.join([f"-{x}" for x in ex_items])
+
+                query = f"{topic}{site_filter}{url_excludes}{tf_hint}{ex_hint}".strip()
+                return await tool_function(query)
+
             else:
                 # Default behavior for other tools (single parameter)
                 return await tool_function(tool_input)
