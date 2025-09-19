@@ -1,23 +1,17 @@
-"""
-Dynamic workflow system for CGSRef.
-
-This module provides a flexible, dynamic workflow system that allows:
-- Creating new workflows without modifying core code
-- Dynamic variable handling from frontend forms
-- Template-based task descriptions with variable substitution
-- Workflow-specific business logic in handlers
-"""
+"""Dynamic workflow system for CGSRef."""
 
 # Import handlers to register them automatically
 from .handlers.enhanced_article_handler import EnhancedArticleHandler
 from .handlers.premium_newsletter_handler import PremiumNewsletterHandler
 from .handlers.siebert_premium_newsletter_handler import SiebertPremiumNewsletterHandler
+from .handlers.siebert_newsletter_html_handler import SiebertNewsletterHtmlHandler
 from .registry import workflow_registry, execute_dynamic_workflow, list_available_workflows
 
 __all__ = [
     'EnhancedArticleHandler',
     'PremiumNewsletterHandler',
     'SiebertPremiumNewsletterHandler',
+    'SiebertNewsletterHtmlHandler',
     'workflow_registry',
     'execute_dynamic_workflow',
     'list_available_workflows'
