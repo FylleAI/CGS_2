@@ -5,6 +5,7 @@ Optimized workflow with Perplexity integration and 8-section Gen Z format.
 
 import logging
 import json
+from datetime import datetime
 
 from typing import Dict, Any, List
 
@@ -68,9 +69,16 @@ class SiebertPremiumNewsletterHandler(WorkflowHandler):
         context.setdefault('client_name', 'siebert')
         context.setdefault('client_profile', 'siebert')  # Ensure consistent client identification
 
+        # Branding and dating
+        now = datetime.now()
+        context.setdefault('current_date', now.strftime('%B %d, %Y'))           # e.g., September 18, 2025
+        context.setdefault('current_month_year', now.strftime('%B %Y'))         # e.g., September 2025
+        context.setdefault('community_name', 'Wealthbuilder')                   # enforce community brand name
+        context.setdefault('newsletter_title', 'WEALTHBUILDER NEWSLETTER')      # title/header brand
+
         # Set Siebert target URLs for premium research (specific URLs instead of domains)
         context.setdefault('siebert_target_urls',
-            'https://www.thedailyupside.com/finance/|https://www.thedailyupside.com/investments/|https://www.thedailyupside.com/economics/|https://www.thedailyupside.com/newsletter/|https://moneywithkatie.com/blog/category/investing|https://thehustle.co/news|https://www.morningbrew.com/tag/finance|https://www.morningbrew.com/tag/economy|https://blog.siebert.com/tag/daily-market#BlogListing|https://www.axios.com/newsletters/axios-markets|https://www.axios.com/newsletters/axios-macro|https://decrypt.co/|https://www.coindesk.com/')
+            'https://www.federalreserve.gov/newsevents/pressreleases/monetary|https://www.thedailyupside.com/finance/|https://www.thedailyupside.com/investments/|https://www.thedailyupside.com/economics/|https://www.thedailyupside.com/newsletter/|https://moneywithkatie.com/blog/category/investing|https://thehustle.co/news|https://www.morningbrew.com/tag/finance|https://www.morningbrew.com/tag/economy|https://blog.siebert.com/tag/daily-market#BlogListing|https://www.axios.com/newsletters/axios-markets|https://www.axios.com/newsletters/axios-macro|https://decrypt.co/|https://www.coindesk.com/')
 
         # Calculate word count distribution for 8 sections (Siebert format)
         total_words = context['target_word_count']
