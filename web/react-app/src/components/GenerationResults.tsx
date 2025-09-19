@@ -21,6 +21,7 @@ import {
   CheckCircle as CheckCircleIcon,
   Error as ErrorIcon,
   Download as DownloadIcon,
+  ContentCopy as ContentCopyIcon,
   Visibility as VisibilityIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
@@ -50,6 +51,11 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [filename, setFilename] = useState('');
+  const [htmlCopied, setHtmlCopied] = useState(false);
+
+  const isHtmlWorkflow = result?.metadata?.workflow_type === 'siebert_newsletter_html';
+  const htmlOutput = result?.htmlOutput || (isHtmlWorkflow ? result?.body : undefined);
+  const markdownArchive = result?.markdownOutput;
 
   React.useEffect(() => {
     if (result) {
@@ -57,9 +63,11 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
       // Generate default filename
       const timestamp = format(new Date(), 'yyyy-MM-dd_HH-mm');
       const title = result.title?.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 30) || 'content';
-      setFilename(`${title}_${timestamp}.md`);
+      const extension = isHtmlWorkflow ? 'html' : 'md';
+      setFilename(`${title}_${timestamp}.${extension}`);
+      setHtmlCopied(false);
     }
-  }, [result]);
+  }, [result, isHtmlWorkflow]);
 
   const handleSave = () => {
     if (result && filename && onSave) {
@@ -70,17 +78,29 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
 
   const handleDownload = () => {
     if (!result) return;
-    
-    const content = `# ${result.title}\n\n${result.body}`;
-    const blob = new Blob([content], { type: 'text/markdown' });
+
+    const isHtml = isHtmlWorkflow;
+    const bodyContent = isHtml ? (htmlOutput || result.body) : `# ${result.title}\n\n${result.body}`;
+    const blob = new Blob([bodyContent], { type: isHtml ? 'text/html' : 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = filename || 'content.md';
+    a.download = filename || `content.${isHtml ? 'html' : 'md'}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleCopyHtml = async () => {
+    if (!htmlOutput) return;
+    try {
+      await navigator.clipboard.writeText(htmlOutput);
+      setHtmlCopied(true);
+      setTimeout(() => setHtmlCopied(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy HTML to clipboard', error);
+    }
   };
 
   if (!isGenerating && !result) {
@@ -176,6 +196,15 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
 
                   {/* Actions */}
                   <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+                    {isHtmlWorkflow && (
+                      <Button
+                        size="small"
+                        startIcon={<ContentCopyIcon />}
+                        onClick={handleCopyHtml}
+                      >
+                        Copy HTML
+                      </Button>
+                    )}
                     <Button
                       size="small"
                       startIcon={<VisibilityIcon />}
@@ -200,6 +229,12 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
                       </Button>
                     )}
                   </Box>
+
+                  {isHtmlWorkflow && htmlCopied && (
+                    <Alert severity="success" sx={{ mb: 2 }}>
+                      HTML container copied to clipboard
+                    </Alert>
+                  )}
 
                   {/* Workflow Metrics */}
                   {result.workflowMetrics && (
@@ -228,17 +263,55 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
                       <Typography variant="h6" gutterBottom>
                         {result.title}
                       </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          whiteSpace: 'pre-wrap',
-                          fontFamily: 'monospace',
-                          fontSize: '0.875rem',
-                        }}
-                      >
-                        {result.body.substring(0, 500)}
-                        {result.body.length > 500 && '...'}
-                      </Typography>
+                      {isHtmlWorkflow ? (
+                        <>
+                          <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                            HTML Container Preview
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              whiteSpace: 'pre-wrap',
+                              fontFamily: 'monospace',
+                              fontSize: '0.85rem',
+                            }}
+                          >
+                            {(htmlOutput || '').substring(0, 600)}
+                            {(htmlOutput && htmlOutput.length > 600) && '...'}
+                          </Typography>
+                          {markdownArchive && (
+                            <>
+                              <Divider sx={{ my: 2 }} />
+                              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                Compliance Markdown Archive
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  whiteSpace: 'pre-wrap',
+                                  fontFamily: 'monospace',
+                                  fontSize: '0.8rem',
+                                }}
+                              >
+                                {markdownArchive.substring(0, 400)}
+                                {markdownArchive.length > 400 && '...'}
+                              </Typography>
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            whiteSpace: 'pre-wrap',
+                            fontFamily: 'monospace',
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          {result.body.substring(0, 500)}
+                          {result.body.length > 500 && '...'}
+                        </Typography>
+                      )}
                     </Box>
                   </Collapse>
                 </>
@@ -268,15 +341,67 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
               <Typography variant="h5" gutterBottom>
                 {result.title}
               </Typography>
-              <Typography
-                variant="body1"
-                sx={{
-                  whiteSpace: 'pre-wrap',
-                  lineHeight: 1.6,
-                }}
-              >
-                {result.body}
-              </Typography>
+              {isHtmlWorkflow ? (
+                <>
+                  <Typography variant="subtitle1" gutterBottom>
+                    Rendered Email Preview
+                  </Typography>
+                  <Box
+                    sx={{
+                      border: 1,
+                      borderColor: 'grey.300',
+                      borderRadius: 1,
+                      p: 2,
+                      mb: 3,
+                      backgroundColor: '#fff'
+                    }}
+                    dangerouslySetInnerHTML={{ __html: htmlOutput || '' }}
+                  />
+                  <Typography variant="subtitle1" gutterBottom>
+                    HTML Source
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      whiteSpace: 'pre-wrap',
+                      fontFamily: 'monospace',
+                      fontSize: '0.85rem',
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    {htmlOutput}
+                  </Typography>
+                  {markdownArchive && (
+                    <>
+                      <Divider sx={{ my: 2 }} />
+                      <Typography variant="subtitle1" gutterBottom>
+                        Compliance Markdown Archive
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          whiteSpace: 'pre-wrap',
+                          fontFamily: 'monospace',
+                          fontSize: '0.8rem',
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        {markdownArchive}
+                      </Typography>
+                    </>
+                  )}
+                </>
+              ) : (
+                <Typography
+                  variant="body1"
+                  sx={{
+                    whiteSpace: 'pre-wrap',
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {result.body}
+                </Typography>
+              )}
             </Box>
           )}
         </DialogContent>

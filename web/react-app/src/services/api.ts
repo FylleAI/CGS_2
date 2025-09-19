@@ -296,6 +296,91 @@ export const apiService = {
         ]
       },
       {
+        id: 'siebert_newsletter_html',
+        name: 'siebert_newsletter_html',
+        displayName: 'Siebert Newsletter HTML',
+        description: 'Premium Siebert workflow with HTML email builder and inline design-system enforcement',
+        category: 'newsletter',
+        requiredFields: [
+          {
+            id: 'topic',
+            name: 'topic',
+            label: 'Newsletter Topic',
+            type: 'textarea',
+            required: true,
+            placeholder: 'Enter the main financial theme for this newsletter edition',
+            validation: { min: 5, max: 200 }
+          },
+          {
+            id: 'target_word_count',
+            name: 'target_word_count',
+            label: 'Target Word Count',
+            type: 'number',
+            required: true,
+            placeholder: '1000',
+            validation: { min: 800, max: 1200 }
+          }
+        ],
+        optionalFields: [
+          {
+            id: 'target_audience',
+            name: 'target_audience',
+            label: 'Target Audience',
+            type: 'select',
+            required: false,
+            options: [
+              { value: 'Gen Z investors and young professionals', label: 'Gen Z Investors (Default)' },
+              { value: 'Millennial professionals building wealth', label: 'Millennial Professionals' },
+              { value: 'Mixed Gen Z and Millennial audience', label: 'Mixed Audience' }
+            ]
+          },
+          {
+            id: 'cultural_trends',
+            name: 'cultural_trends',
+            label: 'Cultural Trends',
+            type: 'textarea',
+            required: false,
+            placeholder: 'TikTok trends, viral topics, current events, gaming references...'
+          },
+          {
+            id: 'exclude_topics',
+            name: 'exclude_topics',
+            label: 'Topics to Exclude',
+            type: 'text',
+            required: false,
+            placeholder: 'crypto day trading, get rich quick schemes, penny stocks'
+          },
+          {
+            id: 'research_timeframe',
+            name: 'research_timeframe',
+            label: 'Research Timeframe',
+            type: 'select',
+            required: false,
+            options: [
+              { value: 'last 7 days', label: 'Last 7 days (Default)' },
+              { value: 'yesterday', label: 'Yesterday' },
+              { value: 'last month', label: 'Last month' }
+            ]
+          },
+          {
+            id: 'premium_sources',
+            name: 'premium_sources',
+            label: 'Premium Research Sources',
+            type: 'textarea',
+            required: false,
+            placeholder: 'Custom premium sources (one per line). Leave empty to use Siebert defaults.'
+          },
+          {
+            id: 'custom_instructions',
+            name: 'custom_instructions',
+            label: 'Custom Instructions',
+            type: 'textarea',
+            required: false,
+            placeholder: 'Additional requirements or focus areas for this edition...'
+          }
+        ]
+      },
+      {
         id: 'premium_newsletter',
         name: 'premium_newsletter',
         displayName: 'Premium Newsletter',
@@ -470,10 +555,18 @@ export const apiService = {
       ragContentIds: request.ragContentIds
     });
 
+    const isSiebertHtmlWorkflow = request.workflowType === 'siebert_newsletter_html';
+    const isNewsletterWorkflow = [
+      'newsletter_premium',
+      'siebert_premium_newsletter',
+      'siebert_newsletter_html',
+      'premium_newsletter'
+    ].includes(request.workflowType);
+
     const payload = {
       topic: request.parameters.topic || request.parameters.newsletter_topic,
-      content_type: request.workflowType === 'newsletter_premium' ? 'newsletter' : 'article',
-      content_format: 'markdown',
+      content_type: isNewsletterWorkflow ? 'newsletter' : 'article',
+      content_format: isSiebertHtmlWorkflow ? 'html' : 'markdown',
       client_profile: request.clientProfile,
       workflow_type: request.workflowType,
       selected_documents: request.ragContentIds || [], // Pass selected RAG content IDs
@@ -498,6 +591,9 @@ export const apiService = {
 
       // Extract workflow metrics from backend response
       const backendMetrics = response.data.workflow_metrics;
+      const metadata = response.data.metadata || {};
+      const htmlOutput = metadata.html_email_container || metadata.html_output;
+      const markdownOutput = metadata.compliance_markdown || metadata.approved_markdown;
 
       // Transform backend response to frontend format
       const result: GenerationResponse = {
@@ -507,9 +603,20 @@ export const apiService = {
         contentType: response.data.content_type || response.data.contentType || 'article',
         wordCount: response.data.word_count || response.data.wordCount || 0,
         generationTime: response.data.generation_time_seconds || response.data.generationTime || 0,
-        success: true,
-        workflowMetrics: backendMetrics // Include backend metrics in response
+        success: response.data.success !== false,
+        workflowMetrics: backendMetrics,
+        metadata
       };
+
+      if (isSiebertHtmlWorkflow && htmlOutput) {
+        result.body = htmlOutput;
+      }
+      if (htmlOutput) {
+        result.htmlOutput = htmlOutput;
+      }
+      if (markdownOutput) {
+        result.markdownOutput = markdownOutput;
+      }
 
       // Log workflow completion
       frontendLogger.logWorkflowComplete(workflowId, result, backendMetrics);

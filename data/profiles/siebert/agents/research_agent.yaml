@@ -20,7 +20,7 @@ tools:
 - web_search
 - rag_get_client_content
 - rag_search_content
-is_active: false
+is_active: true
 metadata:
   client: siebert
   domain_cap: 10

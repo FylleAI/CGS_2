@@ -91,6 +91,9 @@ export interface GenerationResponse {
   success: boolean;
   errorMessage?: string;
   workflowMetrics?: WorkflowMetrics;
+  metadata?: Record<string, any>;
+  htmlOutput?: string;
+  markdownOutput?: string;
 }
 
 export interface AppState {
