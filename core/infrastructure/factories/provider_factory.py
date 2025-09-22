@@ -68,7 +68,15 @@ class LLMProviderFactory:
             if not api_key:
                 logger.warning("⚠️ Gemini provider requested but API key is not configured")
                 raise ValueError("Gemini API key not configured")
-            return GeminiAdapter(api_key)
+            return GeminiAdapter(
+                api_key,
+                project_id=settings.gcp_project_id,
+                location=settings.gcp_location,
+                use_vertex=settings.use_vertex_gemini,
+                endpoint=settings.vertex_api_endpoint,
+                api_version=settings.vertex_api_version,
+                sa_credentials_path=settings.google_application_credentials,
+            )
 
         else:
             raise ValueError(f"Unsupported provider type: {provider_type}")

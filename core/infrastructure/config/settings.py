@@ -43,6 +43,17 @@ class Settings(BaseSettings):
     perplexity_api_key: Optional[str] = Field(default=None, env="PERPLEXITY_API_KEY")
 
 
+    # Vertex AI (Gemini) settings
+    use_vertex_gemini: bool = Field(default=True, env="USE_VERTEX_GEMINI")
+    gcp_project_id: Optional[str] = Field(default=None, env="GCP_PROJECT_ID")
+    gcp_location: str = Field(default="global", env="GCP_LOCATION")
+    vertex_api_endpoint: str = Field(default="aiplatform.googleapis.com", env="VERTEX_API_ENDPOINT")
+    vertex_api_version: str = Field(default="v1", env="VERTEX_API_VERSION")
+
+
+    # Service Account path (optional, for Vertex AI OAuth2)
+    google_application_credentials: Optional[str] = Field(default=None, env="GOOGLE_APPLICATION_CREDENTIALS")
+
     # External API settings (optional)
     external_api_key: Optional[str] = Field(default=None, env="EXTERNAL_API_KEY")
 
@@ -115,9 +126,18 @@ class Settings(BaseSettings):
 
         # Handle CORS origins from environment
         cors_env = os.getenv("CORS_ALLOWED_ORIGINS")
-        if cors_env:
-            if isinstance(cors_env, str):
-                self.cors_allowed_origins = [item.strip() for item in cors_env.split(",") if item.strip()]
+        if cors_env and isinstance(cors_env, str):
+            self.cors_allowed_origins = [item.strip() for item in cors_env.split(",") if item.strip()]
+
+        # Fallbacks for common Google env var names
+        if not self.gcp_project_id:
+            alt_project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCLOUD_PROJECT")
+            if alt_project:
+                self.gcp_project_id = alt_project
+        if not self.gcp_location:
+            alt_location = os.getenv("GOOGLE_CLOUD_LOCATION")
+            if alt_location:
+                self.gcp_location = alt_location
 
         # Handle premium sources from environment
         premium_env = os.getenv("PREMIUM_DEFAULT_SOURCES")
