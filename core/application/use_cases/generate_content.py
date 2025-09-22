@@ -187,7 +187,10 @@ class GenerateContentUseCase:
                     "client_profile": request.client_profile,
                     "provider": request.provider_config.provider.value if request.provider_config else None,
                     "dynamic_workflow": True,
-                    "workflow_summary": workflow_result.get('workflow_summary', {})
+                    "workflow_summary": workflow_result.get('workflow_summary', {}),
+                    "html_email_container": workflow_result.get('html_email_container'),
+                    "compliance_markdown": workflow_result.get('compliance_markdown'),
+                    "workflow_output_format": workflow_result.get('workflow_output_format')
                 }
             )
 

@@ -149,6 +149,21 @@ Questo imposta livelli di log più verbosi su FastAPI, moduli core e provider.
   - task3_content → agent: enhanced_article_writer → prompt: core/prompts/enhanced_article_task3_content.md
   - task4_compliance_review → agent: enhanced_article_compliance_specialist → prompt: core/prompts/enhanced_article_task4_compliance_review.md
 
+### Nuovo workflow: "siebert_newsletter_html"
+- Template: core/infrastructure/workflows/templates/siebert_newsletter_html.json
+- Handler: core/infrastructure/workflows/handlers/siebert_newsletter_html_handler.py
+- Task sequence (stesso stack del Premium Siebert, con un task finale extra):
+  1. **RAG brand setup** → agent `rag_specialist`
+  2. **Perplexity research** → agent `research_specialist`
+  3. **Newsletter assembly (markdown 8 sezioni)** → agent `copywriter`
+  4. **Compliance review** → agent `compliance_specialist`
+  5. **HTML Builder** → nuovo agent `html_email_builder` che converte il markdown approvato in un singolo `<div>` con soli inline style
+- Il task 5 riceve anche `html_design_system_instructions` con palette, spacing, layout (numeri in tabella 2×2, quote box, community violet, footer scuro, ecc.).
+- Guardrail automatici: il handler valida assenza di `<html>/<head>/<body>/<style>/<script>`, assenza di class/id, presenza `max-width: 600px`, niente em dash e link solo http/https/mailto. Se qualcosa rompe le regole il workflow fallisce.
+- Output nella tracking: `final_output` + `metadata.html_email_container` (div pronto da incollare) e `metadata.compliance_markdown` (archivio markdown post-compliance).
+- Frontend: nel pannello risultati compaiono pulsanti **Copy HTML**, **Download .html**, e anteprima HTML + markdown di archivio.
+- HubSpot/Mailchimp: copia/incolla direttamente il contenuto HTML (unico `<div>`). Nessun `<body>` o CSS esterno, quindi gli editor WYSIWYG non mostrano warning.
+
 ### Dove sono definiti gli agent
 - YAML per profilo cliente: data/profiles/<client>/agents/*.yaml (es. data/profiles/default/agents/)
 - Ogni file include: name, role, system_message, goal, backstory, tools, metadata

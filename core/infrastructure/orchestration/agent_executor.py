@@ -475,8 +475,10 @@ class AgentExecutor:
                 if domains:
                     site_filter = ' (' + ' OR '.join([f"site:{d}" for d in domains]) + ')'
 
-                # Exclude listing pages that cause generic/old info
-                url_excludes = " -inurl:/tag/ -inurl:/category/ -inurl:/topics/ -inurl:/newsletter -inurl:/newsletters"
+                # Exclude listing pages that cause generic/old info when filtering by site
+                url_excludes = ""
+                if domains:
+                    url_excludes = " -inurl:/tag/ -inurl:/category/ -inurl:/topics/ -inurl:/newsletter -inurl:/newsletters"
 
                 # Map timeframe to a natural-language hint for PPLX
                 tf_hint = ''
