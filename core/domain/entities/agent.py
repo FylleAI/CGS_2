@@ -66,7 +66,7 @@ class Agent:
             AgentRole.COMPLIANCE_REVIEWER: "Review content for regulatory compliance and risk management",
             AgentRole.ENHANCED_ARTICLE_WRITER: "Create comprehensive educational articles with Gen Z voice and research integration",
             AgentRole.ENHANCED_ARTICLE_COMPLIANCE_SPECIALIST: "Review Enhanced Articles for FINRA/SEC compliance while preserving Gen Z voice and blog structure",
-            AgentRole.IMAGE_SPECIALIST: "Design brand-aligned visual concepts and prompts for image generation"
+            AgentRole.IMAGE_SPECIALIST: "Design contextual image prompts and generate visuals that align with approved articles"
         }
         return default_goals.get(self.role, "Perform specialized tasks in content generation")
     

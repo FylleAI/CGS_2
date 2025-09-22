@@ -13,7 +13,7 @@ from ..registry import register_workflow
 logger = logging.getLogger(__name__)
 
 
-@register_workflow('enhanced_article_with_image')
+@register_workflow('reopla_enhanced_article_with_image')
 class ReoplaEnhancedArticleWithImageHandler(WorkflowHandler):
     """Coordinate Reopla-specific article creation and image strategy."""
 
@@ -53,7 +53,7 @@ class ReoplaEnhancedArticleWithImageHandler(WorkflowHandler):
         context.setdefault('brand_colors', ["#2E5BBA", "#8BC34A", "#FF9800"])
 
         context['workflow_stage'] = 'preparation'
-        context['workflow_type'] = 'enhanced_article_with_image'
+        context['workflow_type'] = 'reopla_enhanced_article_with_image'
 
         logger.debug("📋 Reopla context prepared: %s", {k: context[k] for k in [
             'client_name', 'target_audience', 'tone', 'target_word_count', 'image_style', 'image_provider'

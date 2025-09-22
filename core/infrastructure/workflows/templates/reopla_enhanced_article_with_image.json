@@ -1,0 +1,121 @@
+{
+  "name": "reopla_enhanced_article_with_image",
+  "version": "1.0",
+  "description": "Reopla enhanced article workflow with integrated hero image planning",
+  "handler": "reopla_enhanced_article_with_image_handler",
+  "variables": [
+    {
+      "name": "topic",
+      "type": "string",
+      "required": true,
+      "description": "Main topic for the Reopla article"
+    },
+    {
+      "name": "client_name",
+      "type": "string",
+      "required": false,
+      "default": "reopla",
+      "description": "Client profile identifier"
+    },
+    {
+      "name": "target_audience",
+      "type": "string",
+      "required": false,
+      "default": "real_estate_professionals",
+      "description": "Primary audience for the article"
+    },
+    {
+      "name": "context",
+      "type": "string",
+      "required": false,
+      "description": "Additional context or campaign brief"
+    },
+    {
+      "name": "tone",
+      "type": "string",
+      "required": false,
+      "default": "professional_approachable",
+      "description": "Desired tone of voice"
+    },
+    {
+      "name": "target_word_count",
+      "type": "integer",
+      "required": false,
+      "default": 900,
+      "description": "Target word count for the long-form article"
+    },
+    {
+      "name": "include_statistics",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "description": "Whether to include quantitative data and statistics"
+    },
+    {
+      "name": "include_case_studies",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Whether to include customer or market case studies"
+    },
+    {
+      "name": "image_style",
+      "type": "string",
+      "required": false,
+      "default": "professional",
+      "description": "Default hero image style guidance"
+    },
+    {
+      "name": "image_provider",
+      "type": "string",
+      "required": false,
+      "default": "openai",
+      "description": "Preferred image generation provider"
+    },
+    {
+      "name": "image_focus",
+      "type": "string",
+      "required": false,
+      "default": "modern urban real estate innovation",
+      "description": "Key visual theme for the hero image"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task1_reopla_brief",
+      "name": "Reopla Brand & Market Brief",
+      "agent": "rag_specialist",
+      "dependencies": [],
+      "prompt_id": "reopla_enhanced_article_task1_brief"
+    },
+    {
+      "id": "task2_reopla_research",
+      "name": "Market & Proptech Research",
+      "agent": "research_specialist",
+      "dependencies": ["task1_reopla_brief"],
+      "prompt_id": "reopla_enhanced_article_task2_research"
+    },
+    {
+      "id": "task3_reopla_draft",
+      "name": "Article Drafting & Narrative Build",
+      "agent": "copywriter",
+      "dependencies": ["task2_reopla_research"],
+      "prompt_id": "reopla_enhanced_article_task3_copy"
+    },
+    {
+      "id": "task4_reopla_compliance",
+      "name": "Compliance Review & Finalization",
+      "agent": "compliance_specialist",
+      "dependencies": ["task3_reopla_draft"],
+      "prompt_id": "reopla_enhanced_article_task4_compliance"
+    },
+    {
+      "id": "task5_reopla_image",
+      "name": "Hero Image Strategy",
+      "agent": "image_specialist",
+      "dependencies": ["task4_reopla_compliance"],
+      "prompt_id": "reopla_enhanced_article_task5_image"
+    }
+  ]
+}
+

@@ -1,120 +1,119 @@
 {
   "name": "enhanced_article_with_image",
   "version": "1.0",
-  "description": "Reopla enhanced article workflow with integrated hero image planning",
-  "handler": "reopla_enhanced_article_with_image_handler",
+  "description": "Enhanced article generation workflow with contextual image creation",
+  "handler": "enhanced_article_with_image_handler",
   "variables": [
     {
       "name": "topic",
       "type": "string",
       "required": true,
-      "description": "Main topic for the Reopla article"
+      "description": "Main topic for the article"
     },
     {
       "name": "client_name",
       "type": "string",
-      "required": false,
-      "default": "reopla",
-      "description": "Client profile identifier"
+      "required": true,
+      "description": "Client name for brand voice and guidelines"
     },
     {
       "name": "target_audience",
       "type": "string",
       "required": false,
-      "default": "real_estate_professionals",
-      "description": "Primary audience for the article"
+      "default": "general",
+      "description": "Target audience for the content"
     },
     {
       "name": "context",
       "type": "string",
       "required": false,
-      "description": "Additional context or campaign brief"
+      "description": "Additional context or background information"
     },
     {
       "name": "tone",
       "type": "string",
       "required": false,
-      "default": "professional_approachable",
-      "description": "Desired tone of voice"
+      "default": "professional",
+      "description": "Tone of voice for the content"
     },
     {
       "name": "target_word_count",
       "type": "integer",
       "required": false,
-      "default": 900,
-      "description": "Target word count for the long-form article"
+      "default": 500,
+      "description": "Target word count for the article"
     },
     {
       "name": "include_statistics",
       "type": "boolean",
       "required": false,
-      "default": true,
-      "description": "Whether to include quantitative data and statistics"
+      "default": false,
+      "description": "Whether to include statistics and data"
     },
     {
-      "name": "include_case_studies",
+      "name": "include_examples",
       "type": "boolean",
       "required": false,
       "default": false,
-      "description": "Whether to include customer or market case studies"
+      "description": "Whether to include examples and case studies"
+    },
+    {
+      "name": "include_sources",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "description": "Whether to include source citations"
     },
     {
       "name": "image_style",
       "type": "string",
       "required": false,
       "default": "professional",
-      "description": "Default hero image style guidance"
+      "description": "Desired visual style for the generated image"
     },
     {
       "name": "image_provider",
       "type": "string",
       "required": false,
       "default": "openai",
-      "description": "Preferred image generation provider"
-    },
-    {
-      "name": "image_focus",
-      "type": "string",
-      "required": false,
-      "default": "modern urban real estate innovation",
-      "description": "Key visual theme for the hero image"
+      "description": "Image generation provider (openai or gemini)"
     }
   ],
   "tasks": [
     {
-      "id": "task1_reopla_brief",
-      "name": "Reopla Brand & Market Brief",
+      "id": "task1_brief",
+      "name": "Brief Creation",
       "agent": "rag_specialist",
       "dependencies": [],
-      "prompt_id": "reopla_enhanced_article_task1_brief"
+      "prompt_id": "enhanced_article_task1_brief"
     },
     {
-      "id": "task2_reopla_research",
-      "name": "Market & Proptech Research",
+      "id": "task2_research",
+      "name": "Web Research & Brief Enhancement",
       "agent": "research_specialist",
-      "dependencies": ["task1_reopla_brief"],
-      "prompt_id": "reopla_enhanced_article_task2_research"
+      "dependencies": ["task1_brief"],
+      "prompt_id": "enhanced_article_task2_research"
     },
     {
-      "id": "task3_reopla_draft",
-      "name": "Article Drafting & Narrative Build",
+      "id": "task3_content",
+      "name": "Article Content Creation",
       "agent": "copywriter",
-      "dependencies": ["task2_reopla_research"],
-      "prompt_id": "reopla_enhanced_article_task3_copy"
+      "dependencies": ["task2_research"],
+      "prompt_id": "enhanced_article_task3_content"
     },
     {
-      "id": "task4_reopla_compliance",
-      "name": "Compliance Review & Finalization",
+      "id": "task4_compliance_review",
+      "name": "FINRA/SEC Compliance Review & Validation",
       "agent": "compliance_specialist",
-      "dependencies": ["task3_reopla_draft"],
-      "prompt_id": "reopla_enhanced_article_task4_compliance"
+      "dependencies": ["task3_content"],
+      "prompt_id": "enhanced_article_task4_compliance_review"
     },
     {
-      "id": "task5_reopla_image",
-      "name": "Hero Image Strategy",
+      "id": "task5_image_generation",
+      "name": "Contextual Image Generation",
       "agent": "image_specialist",
-      "dependencies": ["task4_reopla_compliance"],
-      "prompt_id": "reopla_enhanced_article_task5_image"
+      "dependencies": ["task4_compliance_review"],
+      "prompt_id": "enhanced_article_task5_image_generation"
     }
   ]
 }
