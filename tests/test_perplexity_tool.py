@@ -23,4 +23,3 @@ async def test_basic_search():
     assert isinstance(result, dict)
     assert "data" in result
     assert "choices" in result["data"] or "error" in result["data"]
-

@@ -4,6 +4,7 @@ import requests
 import json
 import sys
 
+
 def check_backend():
     """Check if backend is running and healthy."""
     try:
@@ -19,6 +20,7 @@ def check_backend():
         print(f"❌ Backend connection failed: {e}")
         return False
 
+
 def check_frontend():
     """Check if frontend is accessible."""
     try:
@@ -33,16 +35,21 @@ def check_frontend():
         print(f"❌ Frontend connection failed: {e}")
         return False
 
+
 if __name__ == "__main__":
     print("=== CGSRef Service Verification ===")
-    
+
     backend_ok = check_backend()
     frontend_ok = check_frontend()
-    
+
     print("\n=== Summary ===")
-    print(f"Backend (API): {'✓ Running on port 8002' if backend_ok else '❌ Not accessible'}")
-    print(f"Frontend (React): {'✓ Running on port 3000' if frontend_ok else '❌ Not accessible'}")
-    
+    print(
+        f"Backend (API): {'✓ Running on port 8002' if backend_ok else '❌ Not accessible'}"
+    )
+    print(
+        f"Frontend (React): {'✓ Running on port 3000' if frontend_ok else '❌ Not accessible'}"
+    )
+
     if backend_ok and frontend_ok:
         print("\n🎉 All services are running correctly!")
         print("You can access:")

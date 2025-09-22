@@ -32,10 +32,12 @@ class WorkflowHandler(ABC):
 
     def load_template(self) -> Dict[str, Any]:
         """Load workflow template from JSON file."""
-        template_path = Path(__file__).parent.parent / "templates" / f"{self.workflow_type}.json"
+        template_path = (
+            Path(__file__).parent.parent / "templates" / f"{self.workflow_type}.json"
+        )
 
         try:
-            with open(template_path, 'r', encoding='utf-8') as f:
+            with open(template_path, "r", encoding="utf-8") as f:
                 template = json.load(f)
                 logger.debug(f"📋 Loaded template for {self.workflow_type}")
                 return template
@@ -56,15 +58,17 @@ class WorkflowHandler(ABC):
         Returns:
             Updated context with execution results
         """
-        workflow_id = context.get('workflow_id', f"{self.workflow_type}_{int(time.time())}")
-        logger.info(f"🚀 Starting workflow execution: {self.workflow_type} (ID: {workflow_id})")
+        workflow_id = context.get(
+            "workflow_id", f"{self.workflow_type}_{int(time.time())}"
+        )
+        logger.info(
+            f"🚀 Starting workflow execution: {self.workflow_type} (ID: {workflow_id})"
+        )
         logger.debug(f"📊 Input context keys: {list(context.keys())}")
 
         # Start workflow tracking
         workflow_reporter.start_workflow_tracking(
-            workflow_id=workflow_id,
-            workflow_type=self.workflow_type,
-            context=context
+            workflow_id=workflow_id, workflow_type=self.workflow_type, context=context
         )
 
         try:
@@ -91,36 +95,34 @@ class WorkflowHandler(ABC):
             logger.debug("✅ Post-processing completed")
 
             # Get final output for reporting
-            final_output = context.get('final_content', context.get('content', ''))
+            final_output = context.get("final_content", context.get("content", ""))
 
             # Complete workflow tracking
             workflow_metrics = workflow_reporter.complete_workflow_tracking(
-                workflow_id=workflow_id,
-                final_output=final_output,
-                success=True
+                workflow_id=workflow_id, final_output=final_output, success=True
             )
 
             # Add metrics to context for API response
             if workflow_metrics:
-                context['workflow_metrics'] = {
-                    'total_cost': workflow_metrics.total_cost,
-                    'total_tokens': workflow_metrics.total_tokens,
-                    'duration_seconds': workflow_metrics.total_duration_ms / 1000,
-                    'agents_used': len(workflow_metrics.agents_used),
-                    'success_rate': workflow_metrics.success_rate
+                context["workflow_metrics"] = {
+                    "total_cost": workflow_metrics.total_cost,
+                    "total_tokens": workflow_metrics.total_tokens,
+                    "duration_seconds": workflow_metrics.total_duration_ms / 1000,
+                    "agents_used": len(workflow_metrics.agents_used),
+                    "success_rate": workflow_metrics.success_rate,
                 }
 
             logger.info(f"🎉 Workflow execution completed: {self.workflow_type}")
             return context
 
         except Exception as e:
-            logger.error(f"❌ Workflow execution failed: {self.workflow_type} - {str(e)}")
+            logger.error(
+                f"❌ Workflow execution failed: {self.workflow_type} - {str(e)}"
+            )
 
             # Complete workflow tracking with error
             workflow_reporter.complete_workflow_tracking(
-                workflow_id=workflow_id,
-                final_output="",
-                success=False
+                workflow_id=workflow_id, final_output="", success=False
             )
 
             raise
@@ -129,11 +131,13 @@ class WorkflowHandler(ABC):
         """Create workflow with dynamic tasks based on template and context."""
         workflow = Workflow(
             name=f"{self.workflow_type}_{context.get('workflow_id', 'unknown')}",
-            description=self.template.get('description', f"Dynamic {self.workflow_type} workflow")
+            description=self.template.get(
+                "description", f"Dynamic {self.workflow_type} workflow"
+            ),
         )
 
         # Create tasks dynamically
-        for task_template in self.template.get('tasks', []):
+        for task_template in self.template.get("tasks", []):
             task = self.create_task(task_template, context)
             if task:  # Only add if not skipped
                 workflow.add_task(task)
@@ -144,7 +148,9 @@ class WorkflowHandler(ABC):
 
         return workflow
 
-    def create_task(self, task_template: Dict[str, Any], context: Dict[str, Any]) -> Optional[Task]:
+    def create_task(
+        self, task_template: Dict[str, Any], context: Dict[str, Any]
+    ) -> Optional[Task]:
         """
         Create a single task from template with dynamic substitution.
 
@@ -155,7 +161,7 @@ class WorkflowHandler(ABC):
         Returns:
             Task instance or None if task should be skipped
         """
-        task_id = task_template.get('id')
+        task_id = task_template.get("id")
 
         # Check if task should be skipped (conditional logic)
         if self.should_skip_task(task_id, context):
@@ -163,45 +169,51 @@ class WorkflowHandler(ABC):
             return None
 
         # Load prompt template from external repository using prompt_id if available
-        prompt_id = task_template.get('prompt_id')
-        description_template = ''
+        prompt_id = task_template.get("prompt_id")
+        description_template = ""
         if prompt_id:
             try:
                 # parents[3] resolves to the 'core' directory; prompts live under 'core/prompts'
                 # So we must not append an extra 'core' here.
-                prompt_path = Path(__file__).resolve().parents[3] / 'prompts' / f'{prompt_id}.md'
-                description_template = prompt_path.read_text(encoding='utf-8')
+                prompt_path = (
+                    Path(__file__).resolve().parents[3] / "prompts" / f"{prompt_id}.md"
+                )
+                description_template = prompt_path.read_text(encoding="utf-8")
                 logger.debug(f"📝 Loaded prompt file for task {task_id}: {prompt_id}")
             except FileNotFoundError:
-                fallback_template = task_template.get('description_template', '')
+                fallback_template = task_template.get("description_template", "")
                 log_message = (
                     f"Prompt file not found for task {task_id}: {prompt_id}"
                     f" (expected at {prompt_path})"
                 )
                 if fallback_template:
-                    logger.warning(f"⚠️ {log_message} — using inline description template")
+                    logger.warning(
+                        f"⚠️ {log_message} — using inline description template"
+                    )
                     description_template = fallback_template
                 else:
                     logger.error(f"❌ {log_message}")
-                    description_template = ''
+                    description_template = ""
         else:
             # Fallback to inline description_template
-            description_template = task_template.get('description_template', '')
+            description_template = task_template.get("description_template", "")
 
         # Create task (store template as description)
         task = Task(
             id=task_id,
-            name=task_template.get('name', task_id),
+            name=task_template.get("name", task_id),
             description=description_template,
-            agent_name=task_template.get('agent'),
-            agent_role=task_template.get('agent_role'),
-            dependencies=task_template.get('dependencies', [])
+            agent_name=task_template.get("agent"),
+            agent_role=task_template.get("agent_role"),
+            dependencies=task_template.get("dependencies", []),
         )
 
         logger.debug(f"📝 Created task: {task_id}")
         return task
 
-    async def execute_tasks(self, workflow: Workflow, context: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute_tasks(
+        self, workflow: Workflow, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Execute all tasks in the workflow with dependency management."""
         execution_results = {}
         task_outputs = {}
@@ -220,7 +232,9 @@ class WorkflowHandler(ABC):
             execution_results[f"{task.id}_output"] = task_output
 
             # Post-process task (can be overridden)
-            enhanced_context = self.post_process_task(task.id, task_output, enhanced_context)
+            enhanced_context = self.post_process_task(
+                task.id, task_output, enhanced_context
+            )
             context.update(enhanced_context)
 
             logger.info(f"✅ Task completed: {task.name}")
@@ -243,46 +257,57 @@ class WorkflowHandler(ABC):
         """
         logger.info(f"🚀 Executing task directly: {task.name}")
         # Ensure workflow_tasks is in context for dependency resolution
-        if 'workflow_tasks' not in context:
+        if "workflow_tasks" not in context:
             import logging
-            logging.getLogger(__name__).warning("⚠️ workflow_tasks not in context - dependency resolution may fail")
-            context['workflow_tasks'] = []
 
+            logging.getLogger(__name__).warning(
+                "⚠️ workflow_tasks not in context - dependency resolution may fail"
+            )
+            context["workflow_tasks"] = []
 
         # Get agent executor from context
-        agent_executor = context.get('agent_executor')
+        agent_executor = context.get("agent_executor")
         if not agent_executor:
             logger.error("❌ CRITICAL: No agent_executor found in context")
-            raise Exception("No agent executor available - system cannot proceed without proper agent execution")
+            raise Exception(
+                "No agent executor available - system cannot proceed without proper agent execution"
+            )
 
         # Check if agent_repository is available
-        agent_repository = context.get('agent_repository')
+        agent_repository = context.get("agent_repository")
         logger.debug(f"🔍 Agent repository available: {agent_repository is not None}")
 
         try:
-            logger.debug(f"🔧 Direct execution for task: {task.name} with agent_name: {getattr(task, 'agent_name', None)} role: {getattr(task, 'agent_role', None)}")
+            logger.debug(
+                f"🔧 Direct execution for task: {task.name} with agent_name: {getattr(task, 'agent_name', None)} role: {getattr(task, 'agent_role', None)}"
+            )
 
             # Resolve the agent via AgentFactory (template-driven)
             from ...factories.agent_factory import AgentFactory
-            agent_factory = AgentFactory(context.get('agent_repository'))
+
+            agent_factory = AgentFactory(context.get("agent_repository"))
             agent = await agent_factory.get(
-                name=getattr(task, 'agent_name', None),
-                role=getattr(task, 'agent_role', None),
-                ctx=context
+                name=getattr(task, "agent_name", None),
+                role=getattr(task, "agent_role", None),
+                ctx=context,
             )
             if not agent:
                 logger.error(f"❌ CRITICAL: No agent found for task {task.name}")
-                raise Exception(f"No agent available for task {task.name} - system cannot proceed without proper agent")
+                raise Exception(
+                    f"No agent available for task {task.name} - system cannot proceed without proper agent"
+                )
 
-            logger.info(f"🧪 Executing task with agent: {agent.name} (role={getattr(agent.role, 'value', None)}) for client_profile={context.get('client_profile') or context.get('client_name')}")
+            logger.info(
+                f"🧪 Executing task with agent: {agent.name} (role={getattr(agent.role, 'value', None)}) for client_profile={context.get('client_profile') or context.get('client_name')}"
+            )
 
             # Execute task directly using agent executor
             # This bypasses the complex temporary workflow system completely
             enhanced_context = {
                 **context,
-                'task_id': str(task.id),
-                'task_name': task.name,
-                'workflow_id': context.get('workflow_id', 'unknown')
+                "task_id": str(task.id),
+                "task_name": task.name,
+                "workflow_id": context.get("workflow_id", "unknown"),
             }
 
             logger.info(f"🎯 Executing agent for task: {task.name}")
@@ -290,15 +315,18 @@ class WorkflowHandler(ABC):
             # Build final prompt using centralized prompt builder (with Jinja2 if available)
             try:
                 from ...orchestration import prompt_builder
-                final_prompt = prompt_builder.build(agent, task.description, enhanced_context)
+
+                final_prompt = prompt_builder.build(
+                    agent, task.description, enhanced_context
+                )
             except Exception as e:
-                logger.warning(f"⚠️ PromptBuilder unavailable, using raw description. Error: {e}")
+                logger.warning(
+                    f"⚠️ PromptBuilder unavailable, using raw description. Error: {e}"
+                )
                 final_prompt = task.description
 
             result = await agent_executor.execute_agent(
-                agent=agent,
-                task_description=final_prompt,
-                context=enhanced_context
+                agent=agent, task_description=final_prompt, context=enhanced_context
             )
 
             logger.info(f"✅ Task completed successfully: {task.name}")
@@ -306,14 +334,26 @@ class WorkflowHandler(ABC):
             return result
 
         except Exception as e:
-            logger.error(f"❌ CRITICAL: Direct task execution failed: {task.name} - {str(e)}")
-            logger.error("🚨 No fallback allowed - system must fail to prevent misinformation")
-            raise Exception(f"Task execution failed for {task.name}: {str(e)} - no fallback content allowed")
+            logger.error(
+                f"❌ CRITICAL: Direct task execution failed: {task.name} - {str(e)}"
+            )
+            logger.error(
+                "🚨 No fallback allowed - system must fail to prevent misinformation"
+            )
+            raise Exception(
+                f"Task execution failed for {task.name}: {str(e)} - no fallback content allowed"
+            )
 
-    async def _generate_fallback_content(self, task: Task, context: Dict[str, Any]) -> str:
+    async def _generate_fallback_content(
+        self, task: Task, context: Dict[str, Any]
+    ) -> str:
         """REMOVED: No fallback content allowed - system must fail to prevent misinformation."""
-        logger.error("❌ CRITICAL: Fallback content generation called - this should never happen")
-        raise Exception("Fallback content generation is disabled - system must use real agent execution only")
+        logger.error(
+            "❌ CRITICAL: Fallback content generation called - this should never happen"
+        )
+        raise Exception(
+            "Fallback content generation is disabled - system must use real agent execution only"
+        )
 
     # Methods that can be overridden by specific workflow handlers
 
@@ -329,15 +369,17 @@ class WorkflowHandler(ABC):
         """
         # Default validation based on template
         required_vars = []
-        for var in self.template.get('variables', []):
-            if var.get('required', False):
-                required_vars.append(var['name'])
+        for var in self.template.get("variables", []):
+            if var.get("required", False):
+                required_vars.append(var["name"])
 
         missing_vars = [var for var in required_vars if not context.get(var)]
         if missing_vars:
             raise ValueError(f"Missing required variables: {missing_vars}")
 
-        logger.debug(f"✅ Default validation passed for {len(required_vars)} required variables")
+        logger.debug(
+            f"✅ Default validation passed for {len(required_vars)} required variables"
+        )
 
     def prepare_context(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -350,17 +392,21 @@ class WorkflowHandler(ABC):
             Enhanced context
         """
         # Default: add template metadata to context
-        context['workflow_template'] = self.template.get('name', self.workflow_type)
-        context['workflow_version'] = self.template.get('version', '1.0')
+        context["workflow_template"] = self.template.get("name", self.workflow_type)
+        context["workflow_version"] = self.template.get("version", "1.0")
 
         # Ensure client identification consistency for agent resolution
         # If client_name is set but client_profile is not, sync them
-        if context.get('client_name') and not context.get('client_profile'):
-            context['client_profile'] = context['client_name']
-            logger.debug(f"🔧 Synced client_profile from client_name: {context['client_name']}")
-        elif context.get('client_profile') and not context.get('client_name'):
-            context['client_name'] = context['client_profile']
-            logger.debug(f"🔧 Synced client_name from client_profile: {context['client_profile']}")
+        if context.get("client_name") and not context.get("client_profile"):
+            context["client_profile"] = context["client_name"]
+            logger.debug(
+                f"🔧 Synced client_profile from client_name: {context['client_name']}"
+            )
+        elif context.get("client_profile") and not context.get("client_name"):
+            context["client_name"] = context["client_profile"]
+            logger.debug(
+                f"🔧 Synced client_name from client_profile: {context['client_profile']}"
+            )
 
         logger.debug("✅ Default context preparation completed")
         return context
@@ -378,7 +424,9 @@ class WorkflowHandler(ABC):
         """
         return False
 
-    def post_process_task(self, task_id: str, task_output: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    def post_process_task(
+        self, task_id: str, task_output: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Post-process task output. Override in specific handlers.
 

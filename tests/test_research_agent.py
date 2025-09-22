@@ -17,10 +17,14 @@ class DummyProvider(LLMProviderInterface):
             content=f"[{ToolNames.WEB_SEARCH_PERPLEXITY}]test query[/{ToolNames.WEB_SEARCH_PERPLEXITY}]"
         )
 
-    async def generate_content_detailed(self, prompt, config, system_message=None):  # pragma: no cover - unused
+    async def generate_content_detailed(
+        self, prompt, config, system_message=None
+    ):  # pragma: no cover - unused
         return LLMResponse(content="")
 
-    async def generate_content_stream(self, prompt, config, system_message=None):  # pragma: no cover - unused
+    async def generate_content_stream(
+        self, prompt, config, system_message=None
+    ):  # pragma: no cover - unused
         yield LLMStreamChunk(content="", is_final=True)
 
     async def chat_completion(self, messages, config):  # pragma: no cover - unused
@@ -54,13 +58,24 @@ async def test_research_agent_triggers_perplexity():
 
     async def fake_search(query: str, opts=None):
         calls["query"] = query
-        return {"provider": "perplexity", "model_used": "mock", "duration_ms": 0, "data": {"citations": []}}
+        return {
+            "provider": "perplexity",
+            "model_used": "mock",
+            "duration_ms": 0,
+            "data": {"citations": []},
+        }
 
-    executor.register_tools({
-        ToolNames.WEB_SEARCH_PERPLEXITY: {"function": fake_search, "description": "mock"}
-    })
+    executor.register_tools(
+        {
+            ToolNames.WEB_SEARCH_PERPLEXITY: {
+                "function": fake_search,
+                "description": "mock",
+            }
+        }
+    )
 
-    result = await executor.execute_agent(agent, "do research", context={"client_profile": "siebert"})
+    result = await executor.execute_agent(
+        agent, "do research", context={"client_profile": "siebert"}
+    )
     assert "citations" in result
     assert calls["query"] == "test query"
-

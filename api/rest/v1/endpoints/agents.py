@@ -13,6 +13,7 @@ router = APIRouter()
 
 class AgentListItem(BaseModel):
     """Agent list item model."""
+
     id: str
     name: str
     role: str
@@ -22,6 +23,7 @@ class AgentListItem(BaseModel):
 
 class AgentDetail(BaseModel):
     """Detailed agent model."""
+
     id: str
     name: str
     role: str
@@ -38,7 +40,7 @@ async def list_agents(
     offset: int = 0,
     role: Optional[str] = None,
     client_profile: Optional[str] = None,
-    active_only: bool = True
+    active_only: bool = True,
 ):
     """List available agents."""
     # TODO: Implement agent listing

@@ -6,6 +6,7 @@ import {
   RAGContent,
   GenerationRequest,
   GenerationResponse,
+  GeneratedImage,
   SystemInfo,
   ProvidersResponse
 } from '../types';
@@ -147,6 +148,17 @@ export const apiService = {
         knowledgeBasePath: 'data/knowledge_base/siebert'
       },
       {
+        id: 'reopla',
+        name: 'reopla',
+        displayName: 'Reopla',
+        description: 'Innovative real estate technology platform delivering data-driven property insights',
+        brandVoice: 'Professional yet approachable, data-driven, innovative, customer-centric',
+        targetAudience: 'Real estate professionals, property investors, homebuyers and sellers',
+        industry: 'Real Estate Technology',
+        ragEnabled: true,
+        knowledgeBasePath: 'data/profiles/reopla/knowledge_base'
+      },
+      {
         id: 'default',
         name: 'default',
         displayName: 'Default Profile',
@@ -207,6 +219,88 @@ export const apiService = {
             label: 'Include Statistics',
             type: 'boolean',
             required: false
+          }
+        ]
+      },
+      {
+        id: 'enhanced_article_with_image',
+        name: 'enhanced_article_with_image',
+        displayName: 'Enhanced Article + Image',
+        description: 'Enhanced article workflow with automated contextual image generation',
+        category: 'article',
+        requiredFields: [
+          {
+            id: 'topic',
+            name: 'topic',
+            label: 'Article Topic',
+            type: 'text',
+            required: true,
+            placeholder: 'Enter the main topic for your article'
+          },
+          {
+            id: 'target_word_count',
+            name: 'target_word_count',
+            label: 'Target Word Count',
+            type: 'number',
+            required: true,
+            validation: { min: 500, max: 3000 }
+          }
+        ],
+        optionalFields: [
+          {
+
+            id: 'context',
+            name: 'context',
+            label: 'Additional Context',
+            type: 'textarea',
+            required: false,
+            placeholder: 'Campaign goals, audience nuances, product focus, etc.'
+          },
+          {
+
+            id: 'tone',
+            name: 'tone',
+            label: 'Tone',
+            type: 'select',
+            required: false,
+            options: [
+              { value: 'professional', label: 'Professional' },
+              { value: 'conversational', label: 'Conversational' },
+              { value: 'academic', label: 'Academic' },
+              { value: 'casual', label: 'Casual' }
+            ]
+          },
+          {
+            id: 'include_case_studies',
+            name: 'include_case_studies',
+            label: 'Include Case Studies',
+            type: 'boolean',
+            required: false
+          },
+          {
+
+            id: 'image_style',
+            name: 'image_style',
+            label: 'Image Style',
+            type: 'select',
+            required: false,
+            options: [
+
+              { value: 'minimalist', label: 'Minimalist' },
+              { value: 'abstract', label: 'Abstract' },
+              { value: 'realistic', label: 'Realistic' }
+            ]
+          },
+          {
+            id: 'image_provider',
+            name: 'image_provider',
+            label: 'Image Provider',
+            type: 'select',
+            required: false,
+            options: [
+              { value: 'openai', label: 'OpenAI DALL·E' },
+              { value: 'gemini', label: 'Google Gemini (preview)' }
+            ]
           }
         ]
       },
@@ -595,6 +689,27 @@ export const apiService = {
       const htmlOutput = metadata.html_email_container || metadata.html_output;
       const markdownOutput = metadata.compliance_markdown || metadata.approved_markdown;
 
+      const rawImage: any =
+        response.data.generated_image ||
+        response.data.generatedImage ||
+        response.data.metadata?.generated_image;
+      const imageMetadata: Record<string, any> | undefined =
+        response.data.image_metadata ||
+        response.data.imageMetadata ||
+        response.data.metadata?.image_metadata;
+
+      const normalisedImage: GeneratedImage | undefined = rawImage
+        ? {
+            ...rawImage,
+            imageUrl: rawImage.image_url ?? rawImage.imageUrl ?? null,
+            imageData: rawImage.image_data ?? rawImage.imageData ?? null,
+            provider: rawImage.provider ?? imageMetadata?.provider,
+            style: rawImage.style,
+            size: rawImage.size,
+            quality: rawImage.quality,
+          }
+        : undefined;
+
       // Transform backend response to frontend format
       const result: GenerationResponse = {
         contentId: response.data.content_id || response.data.contentId || 'unknown',
@@ -605,7 +720,9 @@ export const apiService = {
         generationTime: response.data.generation_time_seconds || response.data.generationTime || 0,
         success: response.data.success !== false,
         workflowMetrics: backendMetrics,
-        metadata
+        metadata,
+        generatedImage: normalisedImage,
+        imageMetadata: imageMetadata || normalisedImage?.metadata || undefined,
       };
 
       if (isSiebertHtmlWorkflow && htmlOutput) {

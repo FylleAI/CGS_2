@@ -20,7 +20,9 @@ class WebSearchTool:
         self.base_url = "https://google.serper.dev/search"
         self.timeout = timeout
 
-    async def search(self, query: str, opts: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def search(
+        self, query: str, opts: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """Perform a web search and return the raw payload.
 
         Args:
@@ -48,7 +50,9 @@ class WebSearchTool:
         }
 
         start = time.time()
-        response = requests.post(self.base_url, headers=headers, json=payload, timeout=self.timeout)
+        response = requests.post(
+            self.base_url, headers=headers, json=payload, timeout=self.timeout
+        )
         data = response.json()
         if response.status_code != 200:
             raise Exception(f"API error {response.status_code}: {data}")
@@ -56,4 +60,3 @@ class WebSearchTool:
         duration_ms = (time.time() - start) * 1000
         logger.debug("Serper search completed in %sms", duration_ms)
         return {"provider": "serper", "duration_ms": duration_ms, "data": data}
-

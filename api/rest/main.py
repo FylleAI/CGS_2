@@ -23,14 +23,14 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting CGSRef API...")
     settings = get_settings()
-    
+
     # Validate configuration
     if not settings.has_any_provider():
         logger.warning("No AI providers configured. Some features may not work.")
-    
+
     # Initialize services here if needed
     yield
-    
+
     # Shutdown
     logger.info("Shutting down CGSRef API...")
 
@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     """Create and configure FastAPI application."""
     settings = get_settings()
-    
+
     if not settings.debug:
         logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
@@ -49,9 +49,9 @@ def create_app() -> FastAPI:
         version="1.0.0",
         docs_url="/docs" if not settings.is_production() else None,
         redoc_url="/redoc" if not settings.is_production() else None,
-        lifespan=lifespan
+        lifespan=lifespan,
     )
-    
+
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
@@ -60,54 +60,27 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    
+
     # Add custom middleware
     app.add_middleware(LoggingMiddleware)
-    
+
     # Setup exception handlers
     setup_exception_handlers(app)
-    
+
     # Include routers
-    app.include_router(
-        content.router,
-        prefix="/api/v1/content",
-        tags=["content"]
-    )
-    app.include_router(
-        workflows.router,
-        prefix="/api/v1/workflows",
-        tags=["workflows"]
-    )
-    app.include_router(
-        agents.router,
-        prefix="/api/v1/agents",
-        tags=["agents"]
-    )
-    app.include_router(
-        system.router,
-        prefix="/api/v1/system",
-        tags=["system"]
-    )
-    app.include_router(
-        knowledge_base.router,
-        prefix="/api/v1",
-        tags=["knowledge-base"]
-    )
-    app.include_router(
-        logging_endpoints.router,
-        tags=["logging"]
-    )
-    
+    app.include_router(content.router, prefix="/api/v1/content", tags=["content"])
+    app.include_router(workflows.router, prefix="/api/v1/workflows", tags=["workflows"])
+    app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])
+    app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
+    app.include_router(knowledge_base.router, prefix="/api/v1", tags=["knowledge-base"])
+    app.include_router(logging_endpoints.router, tags=["logging"])
+
     # Health check endpoint
     @app.get("/health")
     async def health_check():
         """Health check endpoint."""
-        return {
-            "status": "healthy",
-            "service": "cgsref-api",
-            "version": "1.0.0"
-        }
-    
+        return {"status": "healthy", "service": "cgsref-api", "version": "1.0.0"}
+
     # Root endpoint
     @app.get("/")
     async def root():
@@ -116,9 +89,9 @@ def create_app() -> FastAPI:
             "message": "CGSRef API",
             "version": "1.0.0",
             "docs": "/docs",
-            "health": "/health"
+            "health": "/health",
         }
-    
+
     return app
 
 
@@ -128,12 +101,12 @@ app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     settings = get_settings()
     uvicorn.run(
         "main:app",
         host=settings.api_host,
         port=settings.api_port,
         reload=settings.api_reload and settings.is_development(),
-        log_level=settings.log_level.lower()
+        log_level=settings.log_level.lower(),
     )

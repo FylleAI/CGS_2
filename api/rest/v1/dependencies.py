@@ -4,9 +4,13 @@ from functools import lru_cache
 from typing import Optional
 
 from core.application.use_cases.generate_content import GenerateContentUseCase
-from core.infrastructure.repositories.file_content_repository import FileContentRepository
+from core.infrastructure.repositories.file_content_repository import (
+    FileContentRepository,
+)
 from core.infrastructure.repositories.yaml_agent_repository import YamlAgentRepository
-from core.infrastructure.repositories.file_workflow_repository import FileWorkflowRepository
+from core.infrastructure.repositories.file_workflow_repository import (
+    FileWorkflowRepository,
+)
 from core.infrastructure.external_services.openai_adapter import OpenAIAdapter
 from core.infrastructure.factories.provider_factory import LLMProviderFactory
 from core.infrastructure.config.settings import get_settings
@@ -77,7 +81,9 @@ def get_content_use_case(
     llm_provider = LLMProviderFactory.create_provider(provider_enum, settings)
 
     # Use overrides when provided, otherwise fallback to settings/defaults
-    eff_temperature = temperature if temperature is not None else settings.default_temperature
+    eff_temperature = (
+        temperature if temperature is not None else settings.default_temperature
+    )
     provider_config = LLMProviderFactory.create_provider_config(
         provider_enum,
         settings,
@@ -94,5 +100,5 @@ def get_content_use_case(
         provider_config=provider_config,
         rag_service=None,  # Would be implemented later
         serper_api_key=settings.serper_api_key,
-        perplexity_api_key=settings.perplexity_api_key
+        perplexity_api_key=settings.perplexity_api_key,
     )

@@ -8,6 +8,7 @@ Centralize tool name constants to ensure consistent references across:
 Add aliases only for backward compatibility or minor naming variants.
 Avoid aliases that change semantics or parameter signatures.
 """
+
 from __future__ import annotations
 
 from typing import Dict
@@ -22,6 +23,10 @@ class ToolNames:
     RAG_GET_CLIENT_CONTENT = "rag_get_client_content"
     RAG_SEARCH_CONTENT = "rag_search_content"
 
+    # Creative / Image generation
+    IMAGE_GENERATION = "image_generation_tool"
+    BRAND_STYLE_GUIDE = "brand_style_guide"
+
 
 # Map legacy or variant names to canonical ToolNames values
 ALIASES: Dict[str, str] = {
@@ -32,6 +37,8 @@ ALIASES: Dict[str, str] = {
     "research_financial_premium": ToolNames.WEB_SEARCH_PERPLEXITY,
     # Legacy web search variant
     "web_search_financial": ToolNames.WEB_SEARCH_SERPER,
+    # Image generation variants
+    "image_generation": ToolNames.IMAGE_GENERATION,
+    "generate_image": ToolNames.IMAGE_GENERATION,
     # Add more only when encountered in the codebase or YAML
 }
-
