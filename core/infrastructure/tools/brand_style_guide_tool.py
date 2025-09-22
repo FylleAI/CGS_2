@@ -43,7 +43,10 @@ class BrandStyleGuideTool:
             Dictionary containing palette, typography, and imagery guidance.
         """
         normalized = (client_name or "").strip().lower()
-        logger.info("🎨 BrandStyleGuideTool.get_style requested for client=%s", normalized or "<unknown>")
+        logger.info(
+            "🎨 BrandStyleGuideTool.get_style requested for client=%s",
+            normalized or "<unknown>",
+        )
 
         guide = self._guides.get(normalized)
         if guide:
@@ -56,5 +59,5 @@ class BrandStyleGuideTool:
             "typography": {},
             "image_keywords": [],
             "tone": "neutral",
-            "notes": "No client-specific style guide available."
+            "notes": "No client-specific style guide available.",
         }

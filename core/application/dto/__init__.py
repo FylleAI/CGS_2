@@ -5,10 +5,10 @@ from .workflow_config import WorkflowConfigRequest, WorkflowConfigResponse
 from .generation_result import GenerationResult, TaskResult
 
 __all__ = [
-    "ContentGenerationRequest", 
+    "ContentGenerationRequest",
     "ContentGenerationResponse",
-    "WorkflowConfigRequest", 
+    "WorkflowConfigRequest",
     "WorkflowConfigResponse",
-    "GenerationResult", 
-    "TaskResult"
+    "GenerationResult",
+    "TaskResult",
 ]

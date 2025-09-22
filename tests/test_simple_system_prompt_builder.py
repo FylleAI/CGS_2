@@ -1,7 +1,9 @@
 """Tests for the SimpleSystemPromptBuilder."""
 
 from core.domain.entities.agent import Agent, AgentRole
-from core.infrastructure.orchestration.simple_system_prompt_builder import SimpleSystemPromptBuilder
+from core.infrastructure.orchestration.simple_system_prompt_builder import (
+    SimpleSystemPromptBuilder,
+)
 from core.infrastructure.tools.tool_names import ToolNames
 
 
@@ -21,8 +23,7 @@ def legacy_system_prompt(agent: Agent, context, tool_descriptions: str) -> str:
             AgentRole.COMPLIANCE_REVIEWER: "You are an expert compliance reviewer who ensures content meets regulatory standards and risk management requirements.",
         }
         system_message = role_messages.get(
-            agent.role,
-            "You are an AI assistant helping with content generation."
+            agent.role, "You are an AI assistant helping with content generation."
         )
 
     if agent.backstory:
@@ -31,14 +32,20 @@ def legacy_system_prompt(agent: Agent, context, tool_descriptions: str) -> str:
     if agent.goal:
         system_message += f"\n\nYour goal is: {agent.goal}"
 
-    if context.get('client_profile'):
-        system_message += f"\n\nYou are working for client: {context.get('client_profile')}"
+    if context.get("client_profile"):
+        system_message += (
+            f"\n\nYou are working for client: {context.get('client_profile')}"
+        )
 
-    if context.get('target_audience'):
-        system_message += f"\n\nThe target audience is: {context.get('target_audience')}"
+    if context.get("target_audience"):
+        system_message += (
+            f"\n\nThe target audience is: {context.get('target_audience')}"
+        )
 
     if tool_descriptions:
-        system_message += f"\n\nYou have access to the following tools:\n{tool_descriptions}"
+        system_message += (
+            f"\n\nYou have access to the following tools:\n{tool_descriptions}"
+        )
         system_message += "\n\nIMPORTANT: When you need to use a tool, format your response EXACTLY like this:"
         system_message += f"\n[{ToolNames.RAG_GET_CLIENT_CONTENT}] client_name [/{ToolNames.RAG_GET_CLIENT_CONTENT}]"
         system_message += f"\n[{ToolNames.RAG_GET_CLIENT_CONTENT}] client_name, document_name [/{ToolNames.RAG_GET_CLIENT_CONTENT}]"
@@ -53,8 +60,12 @@ def legacy_system_prompt(agent: Agent, context, tool_descriptions: str) -> str:
         )
         system_message += "\n\nCRITICAL RULES:"
         system_message += "\n- Use EXACT tool names from the list above"
-        system_message += "\n- For rag_search_content: ALWAYS provide a specific search query"
-        system_message += "\n- For multi-parameter tools: separate parameters with commas"
+        system_message += (
+            "\n- For rag_search_content: ALWAYS provide a specific search query"
+        )
+        system_message += (
+            "\n- For multi-parameter tools: separate parameters with commas"
+        )
         system_message += "\n- Do NOT use generic placeholders like 'TOOL_NAME'"
 
     return system_message
@@ -136,7 +147,7 @@ def test_builder_runtime_fields_order():
         "You are working for client: Atlas Advisors",
         "The target audience is: High-net-worth individuals",
         "You have access to the following tools:",
-        tool_description.split('\n')[0],
+        tool_description.split("\n")[0],
     ]
 
     for text in expected_order:

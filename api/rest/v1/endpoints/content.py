@@ -7,7 +7,10 @@ from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
 
 from core.application.use_cases.generate_content import GenerateContentUseCase
-from core.application.dto.content_request import ContentGenerationRequest, ContentGenerationResponse
+from core.application.dto.content_request import (
+    ContentGenerationRequest,
+    ContentGenerationResponse,
+)
 from core.domain.entities.content import ContentType, ContentFormat
 from core.domain.value_objects.provider_config import ProviderConfig, LLMProvider
 from core.domain.value_objects.generation_params import GenerationParams
@@ -24,6 +27,7 @@ router = APIRouter()
 # Pydantic models for API
 class ContentGenerationRequestModel(BaseModel):
     """API model for content generation request."""
+
     topic: str
     content_type: str = "article"
     content_format: str = "markdown"
@@ -66,6 +70,7 @@ class ContentGenerationRequestModel(BaseModel):
 
 class WorkflowMetricsModel(BaseModel):
     """Model for workflow execution metrics."""
+
     total_cost: float = 0.0
     total_tokens: int = 0
     duration_seconds: float = 0.0
@@ -79,6 +84,7 @@ class WorkflowMetricsModel(BaseModel):
 
 class ContentGenerationResponseModel(BaseModel):
     """API model for content generation response."""
+
     content_id: str
     title: str
     body: str
@@ -102,6 +108,7 @@ class ContentGenerationResponseModel(BaseModel):
 
 class ContentListResponseModel(BaseModel):
     """API model for content list response."""
+
     content_id: str
     title: str
     content_type: str
@@ -113,12 +120,11 @@ class ContentListResponseModel(BaseModel):
 
 @router.post("/generate", response_model=ContentGenerationResponseModel)
 async def generate_content(
-    request: ContentGenerationRequestModel,
-    background_tasks: BackgroundTasks
+    request: ContentGenerationRequestModel, background_tasks: BackgroundTasks
 ):
     """
     Generate content based on the provided parameters.
-    
+
     This endpoint orchestrates the entire content generation process,
     from workflow selection to final content creation.
     """
@@ -131,7 +137,7 @@ async def generate_content(
             provider_type=request.provider,
             model=request.model,
             temperature=request.temperature,
-            max_tokens=request.max_tokens
+            max_tokens=request.max_tokens,
         )
         logger.info(f"✅ Use case created with provider: {request.provider}")
 
@@ -141,41 +147,46 @@ async def generate_content(
                 provider=LLMProvider(request.provider),
                 model=request.model,
                 temperature=request.temperature,
-                max_tokens=request.max_tokens
+                max_tokens=request.max_tokens,
             )
             logger.info("Provider config created successfully")
         except Exception as e:
             logger.error(f"Error creating provider config: {str(e)}")
             raise
-        
+
         # Build generation params based on workflow type
         generation_params_dict = {
-            'topic': request.topic,
-            'content_type': ContentType(request.content_type),
-            'content_format': ContentFormat(request.content_format),
-            'target_word_count': request.target_word_count,
-            'custom_instructions': request.custom_instructions,
-            'target_audience': request.target_audience or request.target,  # Use target if available
-            'include_sources': request.include_sources,
-            'include_statistics': request.include_statistics,
-            'image_style': request.image_style,
-            'image_provider': request.image_provider
+            "topic": request.topic,
+            "content_type": ContentType(request.content_type),
+            "content_format": ContentFormat(request.content_format),
+            "target_word_count": request.target_word_count,
+            "custom_instructions": request.custom_instructions,
+            "target_audience": request.target_audience
+            or request.target,  # Use target if available
+            "include_sources": request.include_sources,
+            "include_statistics": request.include_statistics,
+            "image_style": request.image_style,
+            "image_provider": request.image_provider,
         }
 
         # Add workflow-specific parameters
         if request.workflow_type == "enhanced_article":
-            generation_params_dict.update({
-                'target': request.target,
-                'context': request.context,
-                'tone': request.tone,
-                'include_examples': request.include_examples
-            })
+            generation_params_dict.update(
+                {
+                    "target": request.target,
+                    "context": request.context,
+                    "tone": request.tone,
+                    "include_examples": request.include_examples,
+                }
+            )
         elif request.workflow_type == "newsletter_premium":
-            generation_params_dict.update({
-                'newsletter_topic': request.newsletter_topic,
-                'edition_number': request.edition_number,
-                'featured_sections': request.featured_sections
-            })
+            generation_params_dict.update(
+                {
+                    "newsletter_topic": request.newsletter_topic,
+                    "edition_number": request.edition_number,
+                    "featured_sections": request.featured_sections,
+                }
+            )
 
         try:
             generation_params = GenerationParams(**generation_params_dict)
@@ -195,23 +206,27 @@ async def generate_content(
                 provider_config=provider_config,
                 generation_params=generation_params,
                 custom_instructions=request.custom_instructions,
-                context=request.context
+                context=request.context,
             )
             logger.info("Content request created successfully")
         except Exception as e:
             logger.error(f"Error creating content request: {str(e)}")
             raise
-        
+
         # Pass selected documents (if any) to the RAG tool so agents restrict retrieval
         try:
             if hasattr(request, "selected_documents") and request.selected_documents:
-                logger.info(f"📎 Selected documents provided: {len(request.selected_documents)}")
+                logger.info(
+                    f"📎 Selected documents provided: {len(request.selected_documents)}"
+                )
                 try:
                     # Set selection on the use case's RAG tool
                     use_case.rag_tool.set_selected_documents(request.selected_documents)
                     logger.info("RAG tool selection set successfully")
                 except Exception as sel_err:  # pragma: no cover
-                    logger.warning(f"Failed to set selected documents on RAG tool: {sel_err}")
+                    logger.warning(
+                        f"Failed to set selected documents on RAG tool: {sel_err}"
+                    )
             else:
                 # Clear any previous selection
                 try:
@@ -242,7 +257,7 @@ async def generate_content(
                 tasks_completed=response.workflow_metrics.tasks_completed,
                 tasks_failed=response.workflow_metrics.tasks_failed,
                 tool_calls=response.workflow_metrics.tool_calls,
-                llm_calls=response.workflow_metrics.llm_calls
+                llm_calls=response.workflow_metrics.llm_calls,
             )
 
         # Convert application DTO to API model
@@ -265,9 +280,9 @@ async def generate_content(
             metadata=response.metadata,
             workflow_metrics=workflow_metrics,
             generated_image=response.generated_image,
-            image_metadata=response.image_metadata
+            image_metadata=response.image_metadata,
         )
-        
+
     except ValueError as e:
         logger.error(f"Validation error in content generation: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
@@ -282,7 +297,7 @@ async def list_content(
     offset: int = 0,
     content_type: Optional[str] = None,
     client_profile: Optional[str] = None,
-    use_case: GenerateContentUseCase = Depends(get_content_use_case)
+    use_case: GenerateContentUseCase = Depends(get_content_use_case),
 ):
     """
     List generated content with optional filtering.
@@ -291,7 +306,7 @@ async def list_content(
         # This would need to be implemented in the use case
         # For now, return empty list
         return []
-        
+
     except Exception as e:
         logger.error(f"Error listing content: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -299,6 +314,7 @@ async def list_content(
 
 class ProviderInfo(BaseModel):
     """Information about an LLM provider."""
+
     name: str
     available: bool
     # Models can be returned as strings (legacy) or as objects with metadata (name, max_tokens)
@@ -308,6 +324,7 @@ class ProviderInfo(BaseModel):
 
 class ProvidersResponse(BaseModel):
     """Response model for available providers."""
+
     providers: List[ProviderInfo]
     default_provider: str
 
@@ -340,42 +357,46 @@ async def get_available_providers():
                 provider_enum = LLMProvider(provider_name)
 
                 # Instantiate provider adapter
-                provider_adapter = LLMProviderFactory.create_provider(provider_enum, settings)
+                provider_adapter = LLMProviderFactory.create_provider(
+                    provider_enum, settings
+                )
 
                 # Create a config with API key to allow adapters to query provider models
                 dummy_config = ProviderConfig(
                     provider=provider_enum,
-                    api_key=settings.get_provider_api_key(provider_name)
+                    api_key=settings.get_provider_api_key(provider_name),
                 )
 
                 # Try to fetch models via adapter; fallback handled inside adapters
                 models = await provider_adapter.get_available_models(dummy_config)
                 default_model = dummy_config._get_default_model()
 
-                providers_info.append(ProviderInfo(
-                    name=provider_name,
-                    available=available_providers.get(provider_name, False),
-                    models=models,
-                    default_model=default_model
-                ))
+                providers_info.append(
+                    ProviderInfo(
+                        name=provider_name,
+                        available=available_providers.get(provider_name, False),
+                        models=models,
+                        default_model=default_model,
+                    )
+                )
             except ValueError:
                 # Skip invalid provider names
                 continue
 
         return ProvidersResponse(
-            providers=providers_info,
-            default_provider=default_provider_name
+            providers=providers_info, default_provider=default_provider_name
         )
 
     except Exception as e:
         logger.error(f"Error getting providers: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to get providers: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get providers: {str(e)}"
+        )
 
 
 @router.get("/{content_id}", response_model=ContentGenerationResponseModel)
 async def get_content(
-    content_id: UUID,
-    use_case: GenerateContentUseCase = Depends(get_content_use_case)
+    content_id: UUID, use_case: GenerateContentUseCase = Depends(get_content_use_case)
 ):
     """
     Get specific content by ID.
@@ -384,7 +405,7 @@ async def get_content(
         # This would need to be implemented in the use case
         # For now, raise not found
         raise HTTPException(status_code=404, detail="Content not found")
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -394,8 +415,7 @@ async def get_content(
 
 @router.delete("/{content_id}")
 async def delete_content(
-    content_id: UUID,
-    use_case: GenerateContentUseCase = Depends(get_content_use_case)
+    content_id: UUID, use_case: GenerateContentUseCase = Depends(get_content_use_case)
 ):
     """
     Delete content by ID.
@@ -404,7 +424,7 @@ async def delete_content(
         # This would need to be implemented in the use case
         # For now, return success
         return {"message": "Content deleted successfully"}
-        
+
     except Exception as e:
         logger.error(f"Error deleting content {content_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
@@ -414,7 +434,7 @@ async def delete_content(
 async def export_content(
     content_id: UUID,
     format: str = "markdown",
-    use_case: GenerateContentUseCase = Depends(get_content_use_case)
+    use_case: GenerateContentUseCase = Depends(get_content_use_case),
 ):
     """
     Export content in different formats.
@@ -422,7 +442,7 @@ async def export_content(
     try:
         # This would need to be implemented
         raise HTTPException(status_code=501, detail="Export not implemented yet")
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -440,7 +460,11 @@ async def invalidate_workflow_cache_endpoint(workflow_type: Optional[str] = None
     """
     try:
         invalidate_workflow_cache(workflow_type)
-        message = f"Cache invalidated for workflow: {workflow_type}" if workflow_type else "All workflow caches invalidated"
+        message = (
+            f"Cache invalidated for workflow: {workflow_type}"
+            if workflow_type
+            else "All workflow caches invalidated"
+        )
         logger.info(f"🔄 {message}")
         return {"message": message, "workflow_type": workflow_type}
     except Exception as e:

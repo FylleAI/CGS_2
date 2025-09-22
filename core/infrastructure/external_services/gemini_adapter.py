@@ -13,7 +13,7 @@ from google.generativeai.types import GenerateContentResponse
 from ...application.interfaces.llm_provider_interface import (
     LLMProviderInterface,
     LLMResponse,
-    LLMStreamChunk
+    LLMStreamChunk,
 )
 from ...domain.value_objects.provider_config import ProviderConfig, LLMProvider
 
@@ -95,7 +95,10 @@ class GeminiAdapter(LLMProviderInterface):
         Lazily imports google-auth to avoid hard dependency when not using SA.
         """
         try:
-            path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or self.sa_credentials_path
+            path = (
+                os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+                or self.sa_credentials_path
+            )
             if not path:
                 return None
             # Lazy import to avoid ImportError at startup if dependency not installed
@@ -110,32 +113,48 @@ class GeminiAdapter(LLMProviderInterface):
         except Exception as e:
             logger.warning(f"Service Account auth not available: {e}")
             return None
+
     def _init_vertex(self) -> None:
         """Initialize Vertex AI SDK once per process."""
         if getattr(self, "_vertex_initialized", False):
             return
         try:
             # Prefer explicit project_id if provided; fallback to env
-            project = self.project_id or os.environ.get("GCP_PROJECT_ID") or os.environ.get("GOOGLE_CLOUD_PROJECT")
+            project = (
+                self.project_id
+                or os.environ.get("GCP_PROJECT_ID")
+                or os.environ.get("GOOGLE_CLOUD_PROJECT")
+            )
             # Prefer environment region if set, otherwise fallback to self.location, then default
-            location = os.environ.get("GCP_LOCATION") or os.environ.get("GOOGLE_CLOUD_REGION") or self.location or "us-central1"
+            location = (
+                os.environ.get("GCP_LOCATION")
+                or os.environ.get("GOOGLE_CLOUD_REGION")
+                or self.location
+                or "us-central1"
+            )
             if not project:
-                raise ValueError("Vertex AI requires a GCP project_id. Set GCP_PROJECT_ID or GOOGLE_CLOUD_PROJECT.")
+                raise ValueError(
+                    "Vertex AI requires a GCP project_id. Set GCP_PROJECT_ID or GOOGLE_CLOUD_PROJECT."
+                )
 
             from google.cloud import aiplatform  # type: ignore
+
             aiplatform.init(project=project, location=location)
 
             # Normalize stored config after init
             self.project_id = project
             self.location = location
             self._vertex_initialized = True
-            logger.debug(f"Initialized Vertex AI SDK: project={project}, location={location}")
+            logger.debug(
+                f"Initialized Vertex AI SDK: project={project}, location={location}"
+            )
         except Exception as e:
             logger.error(f"Failed to initialize Vertex AI SDK: {e}")
             raise
 
-
-    async def _vertex_call(self, model: str, body: Dict[str, Any], stream: bool = False) -> Any:
+    async def _vertex_call(
+        self, model: str, body: Dict[str, Any], stream: bool = False
+    ) -> Any:
         timeout = httpx.Timeout(60.0)
 
         headers: Optional[Dict[str, str]] = None
@@ -147,7 +166,9 @@ class GeminiAdapter(LLMProviderInterface):
             # With OAuth2 bearer token we can call the project-scoped endpoint
             url = self._vertex_endpoint_url(model, stream=stream)
             headers = {"Authorization": f"Bearer {token}"}
-            logger.debug(f"Vertex call using SA bearer token, project_id={self.project_id}, location={self.location}")
+            logger.debug(
+                f"Vertex call using SA bearer token, project_id={self.project_id}, location={self.location}"
+            )
         else:
             # Fallback to API key authentication → use publisher-only path (no project binding)
             if not self.api_key:
@@ -156,7 +177,9 @@ class GeminiAdapter(LLMProviderInterface):
                 )
             url = self._publisher_endpoint_url(model, stream=stream)
             params = {"key": self.api_key}
-            logger.debug("Vertex call using API key on publisher-only endpoint (no project scope)")
+            logger.debug(
+                "Vertex call using API key on publisher-only endpoint (no project scope)"
+            )
 
         async with httpx.AsyncClient(timeout=timeout) as client:
             resp = await client.post(url, json=body, headers=headers, params=params)
@@ -166,7 +189,9 @@ class GeminiAdapter(LLMProviderInterface):
     def _build_contents_from_text(self, text: str) -> List[Dict[str, Any]]:
         return [{"role": "user", "parts": [{"text": text}]}]
 
-    def _build_system_instruction(self, system_message: Optional[str]) -> Optional[Dict[str, Any]]:
+    def _build_system_instruction(
+        self, system_message: Optional[str]
+    ) -> Optional[Dict[str, Any]]:
         if not system_message:
             return None
         return {"role": "system", "parts": [{"text": system_message}]}
@@ -183,22 +208,30 @@ class GeminiAdapter(LLMProviderInterface):
         except Exception:
             return ""
 
-    def _extract_usage_from_vertex_response(self, data: Dict[str, Any]) -> Dict[str, int]:
+    def _extract_usage_from_vertex_response(
+        self, data: Dict[str, Any]
+    ) -> Dict[str, int]:
         usage = {}
         meta = data.get("usageMetadata") or data.get("usage_metadata") or {}
         if isinstance(meta, dict):
             usage = {
-                "prompt_tokens": int(meta.get("promptTokenCount", meta.get("prompt_token_count", 0) or 0)),
-                "completion_tokens": int(meta.get("candidatesTokenCount", meta.get("candidates_token_count", 0) or 0)),
-                "total_tokens": int(meta.get("totalTokenCount", meta.get("total_token_count", 0) or 0)),
+                "prompt_tokens": int(
+                    meta.get("promptTokenCount", meta.get("prompt_token_count", 0) or 0)
+                ),
+                "completion_tokens": int(
+                    meta.get(
+                        "candidatesTokenCount",
+                        meta.get("candidates_token_count", 0) or 0,
+                    )
+                ),
+                "total_tokens": int(
+                    meta.get("totalTokenCount", meta.get("total_token_count", 0) or 0)
+                ),
             }
         return usage
 
     async def generate_content(
-        self,
-        prompt: str,
-        config: ProviderConfig,
-        system_message: Optional[str] = None
+        self, prompt: str, config: ProviderConfig, system_message: Optional[str] = None
     ) -> str:
         """Generate content using Gemini."""
         if config.provider != LLMProvider.GEMINI:
@@ -226,7 +259,9 @@ class GeminiAdapter(LLMProviderInterface):
                         inputs.append(str(prompt))
 
                         model = GenerativeModel(config.model)
-                        logger.debug(f"Vertex SDK generate_content model={config.model} project={self.project_id} location={self.location}")
+                        logger.debug(
+                            f"Vertex SDK generate_content model={config.model} project={self.project_id} location={self.location}"
+                        )
                         response = model.generate_content(inputs)
                         text = getattr(response, "text", None)
                         if not text:
@@ -235,26 +270,42 @@ class GeminiAdapter(LLMProviderInterface):
                     except Exception as ve:
                         msg = str(ve).lower()
                         adc_missing = (
-                            ('default credentials' in msg or 'adc' in msg) or
-                            ('could not automatically determine credentials' in msg) or
-                            (isinstance(ve, DefaultCredentialsError) if isinstance(DefaultCredentialsError, type) else False)
+                            ("default credentials" in msg or "adc" in msg)
+                            or ("could not automatically determine credentials" in msg)
+                            or (
+                                isinstance(ve, DefaultCredentialsError)
+                                if isinstance(DefaultCredentialsError, type)
+                                else False
+                            )
                         )
                         if adc_missing:
-                            logger.warning("Vertex SDK ADC not found -> falling back to AI Studio (API key)")
+                            logger.warning(
+                                "Vertex SDK ADC not found -> falling back to AI Studio (API key)"
+                            )
                             # Fallback: AI Studio SDK with API key
                             model = self._get_model(config)
-                            full_prompt = f"{system_message}\n\n{prompt}" if system_message else prompt
+                            full_prompt = (
+                                f"{system_message}\n\n{prompt}"
+                                if system_message
+                                else prompt
+                            )
                             response = model.generate_content(full_prompt)
                             if not response.text:
-                                raise ValueError("Gemini (AI Studio) returned empty response")
+                                raise ValueError(
+                                    "Gemini (AI Studio) returned empty response"
+                                )
                             return response.text
                         logger.error(f"Vertex SDK call failed: {ve}")
                         raise
                 except Exception as init_err:
                     # _init_vertex failed; fallback to AI Studio
-                    logger.warning(f"Vertex init failed: {init_err} -> falling back to AI Studio")
+                    logger.warning(
+                        f"Vertex init failed: {init_err} -> falling back to AI Studio"
+                    )
                     model = self._get_model(config)
-                    full_prompt = f"{system_message}\n\n{prompt}" if system_message else prompt
+                    full_prompt = (
+                        f"{system_message}\n\n{prompt}" if system_message else prompt
+                    )
                     response = model.generate_content(full_prompt)
                     if not response.text:
                         raise ValueError("Gemini (AI Studio) returned empty response")
@@ -274,10 +325,7 @@ class GeminiAdapter(LLMProviderInterface):
             raise
 
     async def generate_content_detailed(
-        self,
-        prompt: str,
-        config: ProviderConfig,
-        system_message: Optional[str] = None
+        self, prompt: str, config: ProviderConfig, system_message: Optional[str] = None
     ) -> LLMResponse:
         """Generate content with detailed response."""
         if config.provider != LLMProvider.GEMINI:
@@ -306,7 +354,9 @@ class GeminiAdapter(LLMProviderInterface):
                         inputs.append(str(prompt))
 
                         model = GenerativeModel(config.model)
-                        logger.debug(f"Vertex SDK generate_content_detailed model={config.model} project={self.project_id} location={self.location}")
+                        logger.debug(
+                            f"Vertex SDK generate_content_detailed model={config.model} project={self.project_id} location={self.location}"
+                        )
                         response = model.generate_content(inputs)
                         end_time = time.time()
                         text = getattr(response, "text", None)
@@ -314,14 +364,31 @@ class GeminiAdapter(LLMProviderInterface):
                             raise ValueError("Vertex Gemini returned empty response")
 
                         usage = {}
-                        if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                        if (
+                            hasattr(response, "usage_metadata")
+                            and response.usage_metadata
+                        ):
                             usage = {
-                                "prompt_tokens": getattr(response.usage_metadata, 'prompt_token_count', 0),
-                                "completion_tokens": getattr(response.usage_metadata, 'candidates_token_count', 0),
-                                "total_tokens": getattr(response.usage_metadata, 'total_token_count', 0),
+                                "prompt_tokens": getattr(
+                                    response.usage_metadata, "prompt_token_count", 0
+                                ),
+                                "completion_tokens": getattr(
+                                    response.usage_metadata, "candidates_token_count", 0
+                                ),
+                                "total_tokens": getattr(
+                                    response.usage_metadata, "total_token_count", 0
+                                ),
                             }
-                        finish_reason = (getattr(response.candidates[0], 'finish_reason', 'stop') if getattr(response, 'candidates', None) else 'stop')
-                        safety = getattr(response.candidates[0], 'safety_ratings', []) if getattr(response, 'candidates', None) else []
+                        finish_reason = (
+                            getattr(response.candidates[0], "finish_reason", "stop")
+                            if getattr(response, "candidates", None)
+                            else "stop"
+                        )
+                        safety = (
+                            getattr(response.candidates[0], "safety_ratings", [])
+                            if getattr(response, "candidates", None)
+                            else []
+                        )
 
                         return LLMResponse(
                             content=text,
@@ -339,64 +406,94 @@ class GeminiAdapter(LLMProviderInterface):
                         msg = str(ve).lower()
                         # Identify ADC missing
                         if (
-                            ('default credentials' in msg or 'adc' in msg) or
-                            ('could not automatically determine credentials' in msg) or
-                            (isinstance(ve, DefaultCredentialsError) if isinstance(DefaultCredentialsError, type) else False)
+                            ("default credentials" in msg or "adc" in msg)
+                            or ("could not automatically determine credentials" in msg)
+                            or (
+                                isinstance(ve, DefaultCredentialsError)
+                                if isinstance(DefaultCredentialsError, type)
+                                else False
+                            )
                         ):
                             vertex_failed_due_to_adc = True
-                            logger.warning("Vertex SDK ADC not found -> will fallback to AI Studio if API key is configured")
+                            logger.warning(
+                                "Vertex SDK ADC not found -> will fallback to AI Studio if API key is configured"
+                            )
                         else:
                             logger.error(f"Vertex SDK detailed call failed: {ve}")
                             raise
                 except Exception as init_err:
                     # _init_vertex failed; check if ADC related and allow fallback
-                    if 'default credentials' in str(init_err).lower() or 'adc' in str(init_err).lower():
+                    if (
+                        "default credentials" in str(init_err).lower()
+                        or "adc" in str(init_err).lower()
+                    ):
                         vertex_failed_due_to_adc = True
-                        logger.warning(f"Vertex init failed due to missing ADC; fallback allowed: {init_err}")
+                        logger.warning(
+                            f"Vertex init failed due to missing ADC; fallback allowed: {init_err}"
+                        )
                     else:
                         raise
 
             # Fallback to Google AI Studio SDK
             if not self.use_vertex or vertex_failed_due_to_adc:
                 model = self._get_model(config)
-                full_prompt = f"{system_message}\n\n{prompt}" if system_message else prompt
+                full_prompt = (
+                    f"{system_message}\n\n{prompt}" if system_message else prompt
+                )
                 logger.debug(f"AI Studio detailed request with model: {config.model}")
                 response = model.generate_content(full_prompt)
                 end_time = time.time()
                 if not response.text:
                     raise ValueError("Gemini returned empty response")
                 usage = {}
-                if hasattr(response, 'usage_metadata') and response.usage_metadata:
+                if hasattr(response, "usage_metadata") and response.usage_metadata:
                     usage = {
-                        "prompt_tokens": getattr(response.usage_metadata, 'prompt_token_count', 0),
-                        "completion_tokens": getattr(response.usage_metadata, 'candidates_token_count', 0),
-                        "total_tokens": getattr(response.usage_metadata, 'total_token_count', 0),
+                        "prompt_tokens": getattr(
+                            response.usage_metadata, "prompt_token_count", 0
+                        ),
+                        "completion_tokens": getattr(
+                            response.usage_metadata, "candidates_token_count", 0
+                        ),
+                        "total_tokens": getattr(
+                            response.usage_metadata, "total_token_count", 0
+                        ),
                     }
                 return LLMResponse(
                     content=response.text,
                     usage=usage,
                     model=config.model,
-                    finish_reason=(getattr(response.candidates[0], 'finish_reason', 'stop') if response.candidates else 'stop'),
+                    finish_reason=(
+                        getattr(response.candidates[0], "finish_reason", "stop")
+                        if response.candidates
+                        else "stop"
+                    ),
                     metadata={
                         "response_time": end_time - start_time,
                         "provider": "gemini",
-                        "safety_ratings": getattr(response.candidates[0], 'safety_ratings', []) if response.candidates else [],
-                        "backend": "ai_studio_fallback" if vertex_failed_due_to_adc else "ai_studio",
+                        "safety_ratings": (
+                            getattr(response.candidates[0], "safety_ratings", [])
+                            if response.candidates
+                            else []
+                        ),
+                        "backend": (
+                            "ai_studio_fallback"
+                            if vertex_failed_due_to_adc
+                            else "ai_studio"
+                        ),
                     },
                 )
 
             # If we reached here, Vertex was enabled but did not return nor fall back
-            raise RuntimeError("Gemini Vertex path did not return a response and no fallback was executed")
+            raise RuntimeError(
+                "Gemini Vertex path did not return a response and no fallback was executed"
+            )
 
         except Exception as e:
             logger.error(f"Gemini detailed content generation error: {str(e)}")
             raise
 
     async def generate_content_stream(
-        self,
-        prompt: str,
-        config: ProviderConfig,
-        system_message: Optional[str] = None
+        self, prompt: str, config: ProviderConfig, system_message: Optional[str] = None
     ) -> AsyncGenerator[LLMStreamChunk, None]:
         """Generate content with streaming response."""
         if config.provider != LLMProvider.GEMINI:
@@ -417,13 +514,21 @@ class GeminiAdapter(LLMProviderInterface):
                     inputs.append(str(prompt))
 
                     model = GenerativeModel(config.model)
-                    logger.debug(f"Vertex SDK streaming model={config.model} project={self.project_id} location={self.location}")
+                    logger.debug(
+                        f"Vertex SDK streaming model={config.model} project={self.project_id} location={self.location}"
+                    )
                     response = model.generate_content(inputs, stream=True)
                     for chunk in response:
                         text = getattr(chunk, "text", "")
                         if text:
-                            yield LLMStreamChunk(content=text, is_final=False, metadata={"provider": "gemini"})
-                    yield LLMStreamChunk(content="", is_final=True, metadata={"provider": "gemini"})
+                            yield LLMStreamChunk(
+                                content=text,
+                                is_final=False,
+                                metadata={"provider": "gemini"},
+                            )
+                    yield LLMStreamChunk(
+                        content="", is_final=True, metadata={"provider": "gemini"}
+                    )
                     return
                 except Exception as ve:
                     logger.error(f"Vertex SDK streaming failed: {ve}")
@@ -436,17 +541,21 @@ class GeminiAdapter(LLMProviderInterface):
             response = model.generate_content(full_prompt, stream=True)
             for chunk in response:
                 if chunk.text:
-                    yield LLMStreamChunk(content=chunk.text, is_final=False, metadata={"provider": "gemini"})
-            yield LLMStreamChunk(content="", is_final=True, metadata={"provider": "gemini"})
+                    yield LLMStreamChunk(
+                        content=chunk.text,
+                        is_final=False,
+                        metadata={"provider": "gemini"},
+                    )
+            yield LLMStreamChunk(
+                content="", is_final=True, metadata={"provider": "gemini"}
+            )
 
         except Exception as e:
             logger.error(f"Gemini streaming error: {str(e)}")
             raise
 
     async def chat_completion(
-        self,
-        messages: List[Dict[str, str]],
-        config: ProviderConfig
+        self, messages: List[Dict[str, str]], config: ProviderConfig
     ) -> LLMResponse:
         """Perform chat completion with message history."""
         if config.provider != LLMProvider.GEMINI:
@@ -486,8 +595,12 @@ class GeminiAdapter(LLMProviderInterface):
                     raise ValueError("Vertex Gemini returned empty response")
                 usage = self._extract_usage_from_vertex_response(data)
                 candidates = data.get("candidates", [])
-                finish_reason = (candidates[0].get("finishReason") if candidates else "stop") or "stop"
-                safety = (candidates[0].get("safetyRatings") if candidates else []) or []
+                finish_reason = (
+                    candidates[0].get("finishReason") if candidates else "stop"
+                ) or "stop"
+                safety = (
+                    candidates[0].get("safetyRatings") if candidates else []
+                ) or []
                 return LLMResponse(
                     content=text,
                     usage=usage,
@@ -512,21 +625,35 @@ class GeminiAdapter(LLMProviderInterface):
             if not response.text:
                 raise ValueError("Gemini returned empty response")
             usage = {}
-            if hasattr(response, 'usage_metadata') and response.usage_metadata:
+            if hasattr(response, "usage_metadata") and response.usage_metadata:
                 usage = {
-                    "prompt_tokens": getattr(response.usage_metadata, 'prompt_token_count', 0),
-                    "completion_tokens": getattr(response.usage_metadata, 'candidates_token_count', 0),
-                    "total_tokens": getattr(response.usage_metadata, 'total_token_count', 0),
+                    "prompt_tokens": getattr(
+                        response.usage_metadata, "prompt_token_count", 0
+                    ),
+                    "completion_tokens": getattr(
+                        response.usage_metadata, "candidates_token_count", 0
+                    ),
+                    "total_tokens": getattr(
+                        response.usage_metadata, "total_token_count", 0
+                    ),
                 }
             return LLMResponse(
                 content=response.text,
                 usage=usage,
                 model=config.model,
-                finish_reason=(getattr(response.candidates[0], 'finish_reason', 'stop') if response.candidates else 'stop'),
+                finish_reason=(
+                    getattr(response.candidates[0], "finish_reason", "stop")
+                    if response.candidates
+                    else "stop"
+                ),
                 metadata={
                     "response_time": end_time - start_time,
                     "provider": "gemini",
-                    "safety_ratings": getattr(response.candidates[0], 'safety_ratings', []) if response.candidates else [],
+                    "safety_ratings": (
+                        getattr(response.candidates[0], "safety_ratings", [])
+                        if response.candidates
+                        else []
+                    ),
                 },
             )
 
@@ -567,15 +694,17 @@ class GeminiAdapter(LLMProviderInterface):
             models = genai.list_models()
             available_models = [model.name for model in models]
             model_name = config.model
-            if not model_name.startswith('models/'):
-                model_name = f'models/{model_name}'
+            if not model_name.startswith("models/"):
+                model_name = f"models/{model_name}"
             return model_name in available_models
 
         except Exception as e:
             logger.warning(f"Gemini config validation failed: {str(e)}")
             return False
 
-    async def get_available_models(self, config: ProviderConfig) -> List[Dict[str, Any]]:
+    async def get_available_models(
+        self, config: ProviderConfig
+    ) -> List[Dict[str, Any]]:
         """Get available Gemini models with token limits."""
         try:
             api_key = config.api_key or self.api_key
@@ -588,8 +717,8 @@ class GeminiAdapter(LLMProviderInterface):
             text_models: List[Dict[str, Any]] = []
             config_models = {m["name"]: m for m in config.get_available_models()}
             for model in models:
-                if 'generateContent' in model.supported_generation_methods:
-                    model_name = model.name.replace('models/', '')
+                if "generateContent" in model.supported_generation_methods:
+                    model_name = model.name.replace("models/", "")
                     info = config_models.get(model_name)
                     if info:
                         text_models.append(info)
@@ -620,38 +749,52 @@ class GeminiAdapter(LLMProviderInterface):
                 if not sa_token:
                     api_key = config.api_key or self.api_key
                     if not api_key:
-                        return {"status": "unhealthy", "error": "No SA or API key configured", "provider": "gemini"}
+                        return {
+                            "status": "unhealthy",
+                            "error": "No SA or API key configured",
+                            "provider": "gemini",
+                        }
 
-                body = {"contents": self._build_contents_from_text("Hello"), "generation_config": {"temperature": 0, "max_output_tokens": 8}}
+                body = {
+                    "contents": self._build_contents_from_text("Hello"),
+                    "generation_config": {"temperature": 0, "max_output_tokens": 8},
+                }
                 data = await self._vertex_call(config.model, body)
                 text = self._extract_text_from_vertex_response(data)
-                return {"status": "healthy", "provider": "gemini", "model": config.model, "response_received": bool(text)}
+                return {
+                    "status": "healthy",
+                    "provider": "gemini",
+                    "model": config.model,
+                    "response_received": bool(text),
+                }
 
             # Fallback to AI Studio requires an API key
             api_key = config.api_key or self.api_key
             if not api_key:
-                return {"status": "unhealthy", "error": "API key not configured", "provider": "gemini"}
+                return {
+                    "status": "unhealthy",
+                    "error": "API key not configured",
+                    "provider": "gemini",
+                }
 
             # Fallback to AI Studio
             genai.configure(api_key=api_key)
 
             # Test with a simple request
-            model_name = config.model if config.model else 'gemini-pro'
+            model_name = config.model if config.model else "gemini-pro"
             response = genai.GenerativeModel(model_name).generate_content("Hello")
             return {
                 "status": "healthy",
                 "provider": "gemini",
                 "model": config.model,
-                "response_received": bool(response.text)
+                "response_received": bool(response.text),
             }
 
         except Exception as e:
             return {"status": "unhealthy", "error": str(e), "provider": "gemini"}
 
     async def generate_image(
-        self,
-        prompt: str,
-        config: ProviderConfig
+        self, prompt: str, config: ProviderConfig
     ) -> Dict[str, Any]:
         """Generate an image using Vertex AI (Imagen) or AI Studio fallback.
 
@@ -668,6 +811,7 @@ class GeminiAdapter(LLMProviderInterface):
                     return "1:1"
                 # reduce ratio
                 from math import gcd
+
                 g = gcd(w, h)
                 return f"{w//g}:{h//g}"
             except Exception:
@@ -684,9 +828,16 @@ class GeminiAdapter(LLMProviderInterface):
                 if ImageGenerationModel is not None:
                     aspect_ratio = _size_to_aspect_ratio(size)
                     # Prefer the latest imagegeneration@005
-                    for model_name in ("imagegeneration@005", "imagen-3.0-generate-001"):
+                    for model_name in (
+                        "imagegeneration@005",
+                        "imagen-3.0-generate-001",
+                    ):
                         try:
-                            logger.debug("Vertex SDK image generation model=%s aspect_ratio=%s", model_name, aspect_ratio)
+                            logger.debug(
+                                "Vertex SDK image generation model=%s aspect_ratio=%s",
+                                model_name,
+                                aspect_ratio,
+                            )
                             model = ImageGenerationModel.from_pretrained(model_name)
                             # Newer SDKs accept aspect_ratio; avoid unsupported 'size' kw
                             result = model.generate_images(
@@ -699,13 +850,21 @@ class GeminiAdapter(LLMProviderInterface):
                                 img = images[0]
                                 data_b64 = None
                                 # Try common attributes across SDK versions
-                                if hasattr(img, "base64_data") and getattr(img, "base64_data"):
+                                if hasattr(img, "base64_data") and getattr(
+                                    img, "base64_data"
+                                ):
                                     data_b64 = img.base64_data
-                                elif hasattr(img, "_image_bytes") and getattr(img, "_image_bytes"):
-                                    data_b64 = base64.b64encode(img._image_bytes).decode("ascii")
+                                elif hasattr(img, "_image_bytes") and getattr(
+                                    img, "_image_bytes"
+                                ):
+                                    data_b64 = base64.b64encode(
+                                        img._image_bytes
+                                    ).decode("ascii")
                                 elif hasattr(img, "as_bytes"):
                                     try:
-                                        data_b64 = base64.b64encode(img.as_bytes()).decode("ascii")
+                                        data_b64 = base64.b64encode(
+                                            img.as_bytes()
+                                        ).decode("ascii")
                                     except Exception:
                                         pass
                                 if data_b64:
@@ -717,22 +876,38 @@ class GeminiAdapter(LLMProviderInterface):
                                         "size": size,
                                         "style": style,
                                     }
-                                logger.warning("Vertex Imagen returned image object but no bytes/base64 could be extracted")
+                                logger.warning(
+                                    "Vertex Imagen returned image object but no bytes/base64 could be extracted"
+                                )
                         except TypeError as te:
                             # e.g. unexpected keyword 'aspect_ratio' on very old SDK; try without extra args
-                            logger.debug("Vertex generate_images TypeError on %s: %s; retrying without aspect_ratio", model_name, te)
-                            result = model.generate_images(prompt=prompt, number_of_images=1)
+                            logger.debug(
+                                "Vertex generate_images TypeError on %s: %s; retrying without aspect_ratio",
+                                model_name,
+                                te,
+                            )
+                            result = model.generate_images(
+                                prompt=prompt, number_of_images=1
+                            )
                             images = getattr(result, "images", None) or result
                             if images:
                                 img = images[0]
                                 data_b64 = None
-                                if hasattr(img, "base64_data") and getattr(img, "base64_data"):
+                                if hasattr(img, "base64_data") and getattr(
+                                    img, "base64_data"
+                                ):
                                     data_b64 = img.base64_data
-                                elif hasattr(img, "_image_bytes") and getattr(img, "_image_bytes"):
-                                    data_b64 = base64.b64encode(img._image_bytes).decode("ascii")
+                                elif hasattr(img, "_image_bytes") and getattr(
+                                    img, "_image_bytes"
+                                ):
+                                    data_b64 = base64.b64encode(
+                                        img._image_bytes
+                                    ).decode("ascii")
                                 elif hasattr(img, "as_bytes"):
                                     try:
-                                        data_b64 = base64.b64encode(img.as_bytes()).decode("ascii")
+                                        data_b64 = base64.b64encode(
+                                            img.as_bytes()
+                                        ).decode("ascii")
                                     except Exception:
                                         pass
                                 if data_b64:
@@ -745,18 +920,28 @@ class GeminiAdapter(LLMProviderInterface):
                                         "style": style,
                                     }
                         except Exception as e:
-                            logger.debug("Vertex image generation attempt with %s failed: %s", model_name, e)
+                            logger.debug(
+                                "Vertex image generation attempt with %s failed: %s",
+                                model_name,
+                                e,
+                            )
                     # If both model ids failed, fall through to AI Studio
                 else:
-                    logger.debug("Vertex SDK ImageGenerationModel not available; skipping Vertex image path")
+                    logger.debug(
+                        "Vertex SDK ImageGenerationModel not available; skipping Vertex image path"
+                    )
             except Exception as ve:
-                logger.warning(f"Vertex image generation failed, will try AI Studio fallback: {ve}")
+                logger.warning(
+                    f"Vertex image generation failed, will try AI Studio fallback: {ve}"
+                )
 
         # Fallback: AI Studio Images (imagen-3.0)
         try:
             api_key = config.api_key or self.api_key
             if not api_key:
-                raise ValueError("Gemini API key is required for AI Studio image generation fallback")
+                raise ValueError(
+                    "Gemini API key is required for AI Studio image generation fallback"
+                )
             genai.configure(api_key=api_key)
             logger.debug("AI Studio image generation model=imagen-3.0 size=%s", size)
             model = genai.GenerativeModel("imagen-3.0")
@@ -770,7 +955,11 @@ class GeminiAdapter(LLMProviderInterface):
             if images:
                 img = images[0]
                 data_b64 = getattr(img, "base64_data", None)
-                if not data_b64 and hasattr(img, "_image_bytes") and getattr(img, "_image_bytes"):
+                if (
+                    not data_b64
+                    and hasattr(img, "_image_bytes")
+                    and getattr(img, "_image_bytes")
+                ):
                     data_b64 = base64.b64encode(img._image_bytes).decode("ascii")
                 if not data_b64 and hasattr(img, "as_bytes"):
                     try:

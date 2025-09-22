@@ -14,6 +14,7 @@ router = APIRouter()
 
 class SystemHealth(BaseModel):
     """System health response model."""
+
     status: str
     version: str
     environment: str
@@ -24,6 +25,7 @@ class SystemHealth(BaseModel):
 
 class SystemInfo(BaseModel):
     """System information model."""
+
     app_name: str
     version: str
     environment: str
@@ -36,34 +38,34 @@ class SystemInfo(BaseModel):
 async def health_check():
     """System health check endpoint."""
     settings = get_settings()
-    
+
     try:
         # Check providers
         providers = settings.get_available_providers()
-        
+
         # Check database (simplified)
         database_status = {
             "status": "healthy",
             "url": settings.database_url,
-            "echo": settings.database_echo
+            "echo": settings.database_echo,
         }
-        
+
         # Check storage
         storage_status = {
             "data_dir": settings.data_dir,
             "output_dir": settings.output_dir,
-            "status": "healthy"
+            "status": "healthy",
         }
-        
+
         return SystemHealth(
             status="healthy",
             version=settings.app_version,
             environment=settings.environment,
             providers=providers,
             database=database_status,
-            storage=storage_status
+            storage=storage_status,
         )
-        
+
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
         raise HTTPException(status_code=503, detail="Service unavailable")
@@ -73,14 +75,14 @@ async def health_check():
 async def system_info():
     """Get system information."""
     settings = get_settings()
-    
+
     return SystemInfo(
         app_name=settings.app_name,
         version=settings.app_version,
         environment=settings.environment,
         debug=settings.debug,
         api_host=settings.api_host,
-        api_port=settings.api_port
+        api_port=settings.api_port,
     )
 
 
@@ -88,7 +90,7 @@ async def system_info():
 async def get_config():
     """Get system configuration (non-sensitive)."""
     settings = get_settings()
-    
+
     return {
         "app_name": settings.app_name,
         "version": settings.app_version,
@@ -97,5 +99,5 @@ async def get_config():
         "default_provider": settings.default_provider,
         "default_model": settings.default_model,
         "rag_enabled": settings.rag_enabled,
-        "websocket_enabled": settings.websocket_enabled
+        "websocket_enabled": settings.websocket_enabled,
     }

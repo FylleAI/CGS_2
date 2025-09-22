@@ -19,7 +19,7 @@ def test_log_rag_document_calls_supabase():
 
 def test_save_run_content_calls_supabase():
     tracker = _mock_tracker()
-    tracker.save_run_content("run1", "client", "workflow", "title", "body", {"a":1})
+    tracker.save_run_content("run1", "client", "workflow", "title", "body", {"a": 1})
     tracker.client.table.assert_called_with("content_generations")
     tracker.client.table.return_value.insert.assert_called()
 

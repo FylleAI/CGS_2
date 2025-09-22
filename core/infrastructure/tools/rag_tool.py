@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 class RAGTool:
     """RAG tool for retrieving and processing knowledge base content using Supabase."""
 
-    def __init__(self, tracker: Optional[SupabaseTracker] = None, run_id: Optional[str] = None):
+    def __init__(
+        self, tracker: Optional[SupabaseTracker] = None, run_id: Optional[str] = None
+    ):
         self.tracker = tracker
         self.run_id = run_id
         if tracker:
@@ -55,7 +57,9 @@ class RAGTool:
         """Restrict retrieval to a set of document IDs (strings). Pass None to clear."""
         if ids:
             self.selected_document_ids = set(ids)
-            logger.info(f"📌 RAG: Selection filter active for {len(self.selected_document_ids)} document(s)")
+            logger.info(
+                f"📌 RAG: Selection filter active for {len(self.selected_document_ids)} document(s)"
+            )
         else:
             self.selected_document_ids = None
             logger.info("📌 RAG: Selection filter cleared (all documents allowed)")
@@ -78,7 +82,9 @@ class RAGTool:
         """
         start_time = time.time()
 
-        logger.info(f"🔍 RAG RETRIEVAL: Accessing knowledge base for client '{client_name}'")
+        logger.info(
+            f"🔍 RAG RETRIEVAL: Accessing knowledge base for client '{client_name}'"
+        )
 
         if not client_name:
             error_msg = "No client specified for RAG content retrieval"
@@ -87,7 +93,9 @@ class RAGTool:
 
         if self.use_filesystem_fallback:
             logger.info("🔄 RAG: Using filesystem fallback (Supabase not available)")
-            return await self._get_content_from_filesystem(client_name, document_name, agent_name)
+            return await self._get_content_from_filesystem(
+                client_name, document_name, agent_name
+            )
 
         try:
             client_res = (
@@ -106,23 +114,39 @@ class RAGTool:
             client_id = client_data["id"]
 
             if document_name:
-                logger.info(f"📄 RAG: Retrieving specific document '{document_name}' for {client_name}")
-                result = await self._get_specific_document(client_id, client_name, document_name, agent_name)
+                logger.info(
+                    f"📄 RAG: Retrieving specific document '{document_name}' for {client_name}"
+                )
+                result = await self._get_specific_document(
+                    client_id, client_name, document_name, agent_name
+                )
             else:
                 logger.info(f"📚 RAG: Retrieving all content for {client_name}")
-                result = await self._get_all_client_content(client_id, client_name, agent_name)
+                result = await self._get_all_client_content(
+                    client_id, client_name, agent_name
+                )
 
             duration_ms = (time.time() - start_time) * 1000
             content_length = len(result)
-            logger.info(f"✅ RAG SUCCESS: Retrieved {content_length} characters in {duration_ms:.2f}ms")
+            logger.info(
+                f"✅ RAG SUCCESS: Retrieved {content_length} characters in {duration_ms:.2f}ms"
+            )
             return result
 
         except Exception as e:  # pragma: no cover
             duration_ms = (time.time() - start_time) * 1000
-            logger.error(f"❌ RAG ERROR: Failed to retrieve content for {client_name}: {str(e)} ({duration_ms:.2f}ms)")
+            logger.error(
+                f"❌ RAG ERROR: Failed to retrieve content for {client_name}: {str(e)} ({duration_ms:.2f}ms)"
+            )
             return f"Error retrieving content: {str(e)}"
 
-    async def _get_specific_document(self, client_id: str, client_name: str, document_name: str, agent_name: Optional[str] = None) -> str:
+    async def _get_specific_document(
+        self,
+        client_id: str,
+        client_name: str,
+        document_name: str,
+        agent_name: Optional[str] = None,
+    ) -> str:
         """Retrieve a specific document from Supabase."""
 
         if self.supabase is None:
@@ -153,7 +177,9 @@ class RAGTool:
             logger.error(f"Error retrieving document {document_name}: {e}")
             return f"Error retrieving document: {e}"
 
-    async def _get_all_client_content(self, client_id: str, client_name: str, agent_name: Optional[str] = None) -> str:
+    async def _get_all_client_content(
+        self, client_id: str, client_name: str, agent_name: Optional[str] = None
+    ) -> str:
         """Retrieve and categorize all documents for a client from Supabase."""
 
         if self.supabase is None:
@@ -167,11 +193,15 @@ class RAGTool:
             )
             if self.selected_document_ids:
                 ids_list = list(self.selected_document_ids)
-                logger.info(f"📌 RAG: Applying selection filter to documents (ids={ids_list})")
+                logger.info(
+                    f"📌 RAG: Applying selection filter to documents (ids={ids_list})"
+                )
                 query = query.in_("id", ids_list)
             docs_res = query.execute()
             docs = docs_res.data or []
-            logger.info(f"📚 RAG: Retrieved {len(docs)} document(s) for client '{client_name}'")
+            logger.info(
+                f"📚 RAG: Retrieved {len(docs)} document(s) for client '{client_name}'"
+            )
         except Exception as e:  # pragma: no cover
             logger.error(f"Error retrieving documents for {client_name}: {e}")
             return f"Error retrieving documents: {e}"
@@ -194,18 +224,28 @@ class RAGTool:
             doc_name = str(doc.get("title", "")).lower()
             content = doc.get("content", "")
 
-            if any(term in doc_name for term in [
-                "company", "about", "profile", "overview", "brand"
-            ]):
+            if any(
+                term in doc_name
+                for term in ["company", "about", "profile", "overview", "brand"]
+            ):
                 company_info.append((doc_name, content))
-            elif any(term in doc_name for term in [
-                "guideline", "guide", "best_practice", "best-practice",
-                "rule", "instruction", "style"
-            ]):
+            elif any(
+                term in doc_name
+                for term in [
+                    "guideline",
+                    "guide",
+                    "best_practice",
+                    "best-practice",
+                    "rule",
+                    "instruction",
+                    "style",
+                ]
+            ):
                 guidelines.append((doc_name, content))
-            elif any(term in doc_name for term in [
-                "knowledge", "kb", "reference", "detail", "info"
-            ]):
+            elif any(
+                term in doc_name
+                for term in ["knowledge", "kb", "reference", "detail", "info"]
+            ):
                 knowledge_base.append((doc_name, content))
             else:
                 other_docs.append((doc_name, content))
@@ -335,11 +375,17 @@ The following documents contain additional information that may be relevant to c
             # Apply selection filter if active
             if self.selected_document_ids:
                 before = len(matches)
-                matches = [m for m in matches if m.get("id") in self.selected_document_ids]
-                logger.info(f"[36mRAG: Filtered semantic matches by selection: {before} [0m[90m->[0m {len(matches)}")
+                matches = [
+                    m for m in matches if m.get("id") in self.selected_document_ids
+                ]
+                logger.info(
+                    f"[36mRAG: Filtered semantic matches by selection: {before} [0m[90m->[0m {len(matches)}"
+                )
 
             if not matches:
-                return await self._fallback_keyword_search_supabase(client_name, query, max_results, agent_name)
+                return await self._fallback_keyword_search_supabase(
+                    client_name, query, max_results, agent_name
+                )
 
             formatted_results = [f"# Search Results for '{query}'\n"]
             for match in matches:
@@ -362,9 +408,12 @@ The following documents contain additional information that may be relevant to c
                     )
             return "\n".join(formatted_results)
         except Exception as e:  # pragma: no cover
-            logger.warning(f"Supabase similarity search failed (falling back to keyword search): {e}")
-            return await self._fallback_keyword_search_supabase(client_name, query, max_results, agent_name)
-
+            logger.warning(
+                f"Supabase similarity search failed (falling back to keyword search): {e}"
+            )
+            return await self._fallback_keyword_search_supabase(
+                client_name, query, max_results, agent_name
+            )
 
     async def _fallback_keyword_search_supabase(
         self,
@@ -401,10 +450,11 @@ The following documents contain additional information that may be relevant to c
                 .eq("client_id", client_id)
             )
             if self.selected_document_ids:
-                query_builder = query_builder.in_("id", list(self.selected_document_ids))
+                query_builder = query_builder.in_(
+                    "id", list(self.selected_document_ids)
+                )
             docs_res = (
-                query_builder
-                .ilike("content", f"%{query}%")
+                query_builder.ilike("content", f"%{query}%")
                 .limit(max_results)
                 .execute()
             )
@@ -418,10 +468,11 @@ The following documents contain additional information that may be relevant to c
                     .eq("client_id", client_id)
                 )
                 if self.selected_document_ids:
-                    query_builder = query_builder.in_("id", list(self.selected_document_ids))
+                    query_builder = query_builder.in_(
+                        "id", list(self.selected_document_ids)
+                    )
                 docs_res2 = (
-                    query_builder
-                    .ilike("title", f"%{query}%")
+                    query_builder.ilike("title", f"%{query}%")
                     .limit(max_results)
                     .execute()
                 )
@@ -446,7 +497,9 @@ The following documents contain additional information that may be relevant to c
                         self.run_id, agent_name or "", match.get("id"), content, None
                     )
 
-            logger.info("RAG: Used keyword fallback for search (RPC `match_documents` unavailable or empty)")
+            logger.info(
+                "RAG: Used keyword fallback for search (RPC `match_documents` unavailable or empty)"
+            )
             return "\n".join(formatted_results)
         except Exception as e:  # pragma: no cover
             logger.warning(f"Keyword fallback search failed: {e}")
@@ -457,7 +510,9 @@ The following documents contain additional information that may be relevant to c
         if openai is None:  # pragma: no cover - optional dependency
             return [0.0] * 1536
         try:
-            response = openai.Embeddings.create(model="text-embedding-3-small", input=text)
+            response = openai.Embeddings.create(
+                model="text-embedding-3-small", input=text
+            )
             return response.data[0].embedding  # type: ignore
         except Exception as e:  # pragma: no cover
             logger.warning(f"Embedding generation failed: {e}")
@@ -479,7 +534,9 @@ The following documents contain additional information that may be relevant to c
                 storage_path, content.encode("utf-8"), {"content-type": "text/markdown"}
             )
         except Exception as e:  # pragma: no cover
-            logger.warning(f"Error uploading document to Supabase Storage (continuo con DB insert): {e}")
+            logger.warning(
+                f"Error uploading document to Supabase Storage (continuo con DB insert): {e}"
+            )
 
         # 2) Resolve client_id
         client_res = (
@@ -539,10 +596,7 @@ The following documents contain additional information that may be relevant to c
             return None
 
     async def add_content(
-        self,
-        client_name: str,
-        document_name: str,
-        content: str
+        self, client_name: str, document_name: str, content: str
     ) -> str:
         """
         Add new content to client's knowledge base.
@@ -574,7 +628,12 @@ The following documents contain additional information that may be relevant to c
 
     # ============= FILESYSTEM FALLBACK METHODS =============
 
-    async def _get_content_from_filesystem(self, client_name: str, document_name: Optional[str] = None, agent_name: Optional[str] = None) -> str:
+    async def _get_content_from_filesystem(
+        self,
+        client_name: str,
+        document_name: Optional[str] = None,
+        agent_name: Optional[str] = None,
+    ) -> str:
         """Fallback method to get content from filesystem when Supabase is not available."""
         client_dir = self.rag_base_dir / client_name
 
@@ -595,27 +654,43 @@ The following documents contain additional information that may be relevant to c
 
         try:
             if document_name:
-                logger.info(f"📄 RAG FILESYSTEM: Retrieving specific document '{document_name}' for {client_name}")
-                return await self._get_specific_document_filesystem(client_dir, document_name, agent_name)
+                logger.info(
+                    f"📄 RAG FILESYSTEM: Retrieving specific document '{document_name}' for {client_name}"
+                )
+                return await self._get_specific_document_filesystem(
+                    client_dir, document_name, agent_name
+                )
             else:
-                logger.info(f"📚 RAG FILESYSTEM: Retrieving all content for {client_name}")
+                logger.info(
+                    f"📚 RAG FILESYSTEM: Retrieving all content for {client_name}"
+                )
                 available_docs = [
                     str(f.relative_to(client_dir))
-                    for f in client_dir.rglob('*.md')
+                    for f in client_dir.rglob("*.md")
                     if f.is_file()
                 ]
-                logger.info(f"📚 RAG FILESYSTEM: Found {len(available_docs)} documents: {available_docs}")
-                result = await self._get_all_client_content_filesystem(client_dir, client_name, agent_name)
+                logger.info(
+                    f"📚 RAG FILESYSTEM: Found {len(available_docs)} documents: {available_docs}"
+                )
+                result = await self._get_all_client_content_filesystem(
+                    client_dir, client_name, agent_name
+                )
                 if self.tracker and self.run_id:
                     for doc in available_docs:
-                        self.tracker.log_rag_document(self.run_id, client_name, doc, agent_name=agent_name)
+                        self.tracker.log_rag_document(
+                            self.run_id, client_name, doc, agent_name=agent_name
+                        )
                 return result
 
         except Exception as e:
-            logger.error(f"❌ RAG FILESYSTEM ERROR: Failed to retrieve content for {client_name}: {str(e)}")
+            logger.error(
+                f"❌ RAG FILESYSTEM ERROR: Failed to retrieve content for {client_name}: {str(e)}"
+            )
             return f"Error retrieving content: {str(e)}"
 
-    async def _get_specific_document_filesystem(self, client_dir: Path, document_name: str, agent_name: Optional[str] = None) -> str:
+    async def _get_specific_document_filesystem(
+        self, client_dir: Path, document_name: str, agent_name: Optional[str] = None
+    ) -> str:
         """Retrieve a specific document from filesystem."""
         original_name = document_name
         doc_path = client_dir / document_name
@@ -629,11 +704,12 @@ The following documents contain additional information that may be relevant to c
             # Try fuzzy matching across nested directories
             available_docs = [
                 str(f.relative_to(client_dir))
-                for f in client_dir.rglob('*.md')
+                for f in client_dir.rglob("*.md")
                 if f.is_file()
             ]
 
             import difflib
+
             best_match = difflib.get_close_matches(
                 document_name,
                 available_docs,
@@ -650,21 +726,23 @@ The following documents contain additional information that may be relevant to c
                     f"Showing closest match: '{best_match[0]}'\\n\\n{content}"
                 )
             else:
-                return (
-                    f"Document '{original_name}' not found. Available documents: {available_docs}"
-                )
+                return f"Document '{original_name}' not found. Available documents: {available_docs}"
 
         try:
             with open(str(doc_path), "r", encoding="utf-8") as f:
                 content = f.read()
             if self.tracker and self.run_id:
-                self.tracker.log_rag_document(self.run_id, client_dir.name, doc_path.name, agent_name=agent_name)
+                self.tracker.log_rag_document(
+                    self.run_id, client_dir.name, doc_path.name, agent_name=agent_name
+                )
             return content
         except Exception as e:
             logger.error(f"Error reading document {doc_path}: {str(e)}")
             return f"Error reading document: {str(e)}"
 
-    async def _get_all_client_content_filesystem(self, client_dir: Path, client_name: str, agent_name: Optional[str] = None) -> str:
+    async def _get_all_client_content_filesystem(
+        self, client_dir: Path, client_name: str, agent_name: Optional[str] = None
+    ) -> str:
         """Retrieve and categorize all content for a client from filesystem."""
         # Categorize documents by type
         company_info = []
@@ -683,18 +761,28 @@ The following documents contain additional information that may be relevant to c
                     content = f.read()
 
                 # Categorize based on filename patterns
-                if any(term in doc_name for term in [
-                    "company", "about", "profile", "overview", "brand"
-                ]):
+                if any(
+                    term in doc_name
+                    for term in ["company", "about", "profile", "overview", "brand"]
+                ):
                     company_info.append((doc_name, content))
-                elif any(term in doc_name for term in [
-                    "guideline", "guide", "best_practice", "best-practice",
-                    "rule", "instruction", "style"
-                ]):
+                elif any(
+                    term in doc_name
+                    for term in [
+                        "guideline",
+                        "guide",
+                        "best_practice",
+                        "best-practice",
+                        "rule",
+                        "instruction",
+                        "style",
+                    ]
+                ):
                     guidelines.append((doc_name, content))
-                elif any(term in doc_name for term in [
-                    "knowledge", "kb", "reference", "detail", "info"
-                ]):
+                elif any(
+                    term in doc_name
+                    for term in ["knowledge", "kb", "reference", "detail", "info"]
+                ):
                     knowledge_base.append((doc_name, content))
                 else:
                     other_docs.append((doc_name, content))
@@ -707,37 +795,45 @@ The following documents contain additional information that may be relevant to c
         formatted_output = []
 
         if company_info:
-            formatted_output.append("""## COMPANY INFORMATION
+            formatted_output.append(
+                """## COMPANY INFORMATION
 
 The following documents contain essential information about the company, its brand, and positioning.
 This information should be reflected in all content creation.
-""")
+"""
+            )
             for doc_name, content in company_info:
                 formatted_output.append(f"### {doc_name}\\n\\n{content}\\n\\n")
 
         if guidelines:
-            formatted_output.append("""\\n## CONTENT GUIDELINES
+            formatted_output.append(
+                """\\n## CONTENT GUIDELINES
 
 The following documents contain guidelines and best practices for content creation.
 These should be strictly followed when generating content.
-""")
+"""
+            )
             for doc_name, content in guidelines:
                 formatted_output.append(f"### {doc_name}\\n\\n{content}\\n\\n")
 
         if knowledge_base:
-            formatted_output.append("""\\n## KNOWLEDGE BASE
+            formatted_output.append(
+                """\\n## KNOWLEDGE BASE
 
 The following documents contain detailed knowledge that can be referenced and incorporated into content.
 Use this information as needed to enhance content accuracy and depth.
-""")
+"""
+            )
             for doc_name, content in knowledge_base:
                 formatted_output.append(f"### {doc_name}\\n\\n{content}\\n\\n")
 
         if other_docs:
-            formatted_output.append("""\\n## OTHER DOCUMENTS
+            formatted_output.append(
+                """\\n## OTHER DOCUMENTS
 
 The following documents contain additional information that may be relevant to content creation.
-""")
+"""
+            )
             for doc_name, content in other_docs:
                 formatted_output.append(f"### {doc_name}\\n\\n{content}\\n\\n")
 

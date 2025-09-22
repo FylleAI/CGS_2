@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def setup_exception_handlers(app: FastAPI) -> None:
     """Setup custom exception handlers."""
-    
+
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         """Handle HTTP exceptions."""
@@ -21,12 +21,14 @@ def setup_exception_handlers(app: FastAPI) -> None:
             content={
                 "error": "HTTP Error",
                 "message": exc.detail,
-                "status_code": exc.status_code
-            }
+                "status_code": exc.status_code,
+            },
         )
-    
+
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ):
         """Handle request validation errors."""
         logger.error(f"Validation error: {exc.errors()}")
         return JSONResponse(
@@ -34,10 +36,10 @@ def setup_exception_handlers(app: FastAPI) -> None:
             content={
                 "error": "Validation Error",
                 "message": "Invalid request data",
-                "details": exc.errors()
-            }
+                "details": exc.errors(),
+            },
         )
-    
+
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
         """Handle general exceptions."""
@@ -46,6 +48,6 @@ def setup_exception_handlers(app: FastAPI) -> None:
             status_code=500,
             content={
                 "error": "Internal Server Error",
-                "message": "An unexpected error occurred"
-            }
+                "message": "An unexpected error occurred",
+            },
         )
