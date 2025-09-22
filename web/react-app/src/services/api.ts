@@ -147,6 +147,17 @@ export const apiService = {
         knowledgeBasePath: 'data/knowledge_base/siebert'
       },
       {
+        id: 'reopla',
+        name: 'reopla',
+        displayName: 'Reopla',
+        description: 'Innovative real estate technology platform delivering data-driven property insights',
+        brandVoice: 'Professional yet approachable, data-driven, innovative, customer-centric',
+        targetAudience: 'Real estate professionals, property investors, homebuyers and sellers',
+        industry: 'Real Estate Technology',
+        ragEnabled: true,
+        knowledgeBasePath: 'data/profiles/reopla/knowledge_base'
+      },
+      {
         id: 'default',
         name: 'default',
         displayName: 'Default Profile',
@@ -207,6 +218,91 @@ export const apiService = {
             label: 'Include Statistics',
             type: 'boolean',
             required: false
+          }
+        ]
+      },
+      {
+        id: 'enhanced_article_with_image',
+        name: 'enhanced_article_with_image',
+        displayName: 'Reopla Enhanced Article + Hero Image',
+        description: 'Multi-agent workflow producing a Reopla-branded article with a coordinated hero image brief',
+        category: 'article',
+        requiredFields: [
+          {
+            id: 'topic',
+            name: 'topic',
+            label: 'Article Topic',
+            type: 'text',
+            required: true,
+            placeholder: 'e.g. Sustainable redevelopment strategies in Milan'
+          },
+          {
+            id: 'target_word_count',
+            name: 'target_word_count',
+            label: 'Target Word Count',
+            type: 'number',
+            required: true,
+            validation: { min: 400, max: 2000 }
+          }
+        ],
+        optionalFields: [
+          {
+            id: 'context',
+            name: 'context',
+            label: 'Additional Context',
+            type: 'textarea',
+            required: false,
+            placeholder: 'Campaign goals, audience nuances, product focus, etc.'
+          },
+          {
+            id: 'tone',
+            name: 'tone',
+            label: 'Tone',
+            type: 'select',
+            required: false,
+            options: [
+              { value: 'professional_approachable', label: 'Professional & Approachable' },
+              { value: 'innovative', label: 'Innovative' },
+              { value: 'analytical', label: 'Analytical' }
+            ]
+          },
+          {
+            id: 'include_case_studies',
+            name: 'include_case_studies',
+            label: 'Include Case Studies',
+            type: 'boolean',
+            required: false
+          },
+          {
+            id: 'image_focus',
+            name: 'image_focus',
+            label: 'Hero Image Focus',
+            type: 'text',
+            required: false,
+            placeholder: 'Modern brokerage collaboration, adaptive reuse loft, etc.'
+          },
+          {
+            id: 'image_style',
+            name: 'image_style',
+            label: 'Image Style',
+            type: 'select',
+            required: false,
+            options: [
+              { value: 'professional', label: 'Professional Photography' },
+              { value: 'illustration', label: 'Illustration' },
+              { value: '3d_render', label: '3D Render' }
+            ]
+          },
+          {
+            id: 'image_provider',
+            name: 'image_provider',
+            label: 'Preferred Image Provider',
+            type: 'select',
+            required: false,
+            options: [
+              { value: 'openai', label: 'OpenAI DALL·E' },
+              { value: 'gemini', label: 'Google Gemini' }
+            ]
           }
         ]
       },

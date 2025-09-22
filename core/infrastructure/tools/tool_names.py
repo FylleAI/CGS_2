@@ -22,6 +22,10 @@ class ToolNames:
     RAG_GET_CLIENT_CONTENT = "rag_get_client_content"
     RAG_SEARCH_CONTENT = "rag_search_content"
 
+    # Creative
+    IMAGE_GENERATION = "image_generation"
+    BRAND_STYLE_GUIDE = "brand_style_guide"
+
 
 # Map legacy or variant names to canonical ToolNames values
 ALIASES: Dict[str, str] = {
