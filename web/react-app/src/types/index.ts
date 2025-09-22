@@ -91,6 +91,18 @@ export interface GenerationResponse {
   success: boolean;
   errorMessage?: string;
   workflowMetrics?: WorkflowMetrics;
+  generatedImage?: GeneratedImage;
+  imageMetadata?: Record<string, any>;
+}
+
+export interface GeneratedImage {
+  imageUrl?: string | null;
+  imageData?: string | null;
+  provider?: string;
+  style?: string;
+  size?: string;
+  quality?: string;
+  [key: string]: any;
 }
 
 export interface AppState {

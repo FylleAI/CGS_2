@@ -22,6 +22,9 @@ class ToolNames:
     RAG_GET_CLIENT_CONTENT = "rag_get_client_content"
     RAG_SEARCH_CONTENT = "rag_search_content"
 
+    # Image generation
+    IMAGE_GENERATION = "image_generation_tool"
+
 
 # Map legacy or variant names to canonical ToolNames values
 ALIASES: Dict[str, str] = {
@@ -32,6 +35,9 @@ ALIASES: Dict[str, str] = {
     "research_financial_premium": ToolNames.WEB_SEARCH_PERPLEXITY,
     # Legacy web search variant
     "web_search_financial": ToolNames.WEB_SEARCH_SERPER,
+    # Image generation variants
+    "image_generation": ToolNames.IMAGE_GENERATION,
+    "generate_image": ToolNames.IMAGE_GENERATION,
     # Add more only when encountered in the codebase or YAML
 }
 

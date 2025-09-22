@@ -323,11 +323,11 @@ class GeminiAdapter(LLMProviderInterface):
                 }
 
             genai.configure(api_key=api_key)
-            
+
             # Test with a simple request
             model = genai.GenerativeModel('gemini-pro')
             response = model.generate_content("Hello")
-            
+
             return {
                 "status": "healthy",
                 "provider": "gemini",
@@ -341,3 +341,17 @@ class GeminiAdapter(LLMProviderInterface):
                 "error": str(e),
                 "provider": "gemini"
             }
+
+    async def generate_image(
+        self,
+        prompt: str,
+        config: ProviderConfig
+    ) -> Dict[str, Any]:
+        """Placeholder Gemini image generation implementation."""
+
+        logger.warning("Gemini image generation not fully supported; returning stub response")
+        return {
+            "url": None,
+            "data": None,
+            "error": "Gemini image generation not implemented",
+        }

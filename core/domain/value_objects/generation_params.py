@@ -45,6 +45,8 @@ class GenerationParams:
     # Enhanced Article specific parameters
     target: Optional[str] = None
     context: Optional[str] = None
+    image_style: str = "professional"
+    image_provider: str = "openai"
 
     # Newsletter Premium specific parameters
     newsletter_topic: Optional[str] = None
@@ -214,9 +216,16 @@ class GenerationParams:
             "language": self.language,
             "seo_keywords": self.seo_keywords,
             "custom_instructions": self.custom_instructions,
-            "metadata": self.metadata
+            "metadata": self.metadata,
+            "target": self.target,
+            "context": self.context,
+            "image_style": self.image_style,
+            "image_provider": self.image_provider,
+            "newsletter_topic": self.newsletter_topic,
+            "edition_number": self.edition_number,
+            "featured_sections": self.featured_sections,
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "GenerationParams":
         """Create from dictionary representation."""
@@ -237,5 +246,12 @@ class GenerationParams:
             language=data.get("language", "en"),
             seo_keywords=data.get("seo_keywords", []),
             custom_instructions=data.get("custom_instructions", ""),
-            metadata=data.get("metadata", {})
+            metadata=data.get("metadata", {}),
+            target=data.get("target"),
+            context=data.get("context"),
+            image_style=data.get("image_style", "professional"),
+            image_provider=data.get("image_provider", "openai"),
+            newsletter_topic=data.get("newsletter_topic"),
+            edition_number=data.get("edition_number"),
+            featured_sections=data.get("featured_sections"),
         )
