@@ -125,3 +125,7 @@ content_debug_results.json
 # Temporary files
 *.tmp
 *.temp
+
+
+# Secrets
+.secrets/
