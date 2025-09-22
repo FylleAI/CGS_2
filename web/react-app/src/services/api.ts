@@ -6,6 +6,7 @@ import {
   RAGContent,
   GenerationRequest,
   GenerationResponse,
+  GeneratedImage,
   SystemInfo,
   ProvidersResponse
 } from '../types';
@@ -207,6 +208,71 @@ export const apiService = {
             label: 'Include Statistics',
             type: 'boolean',
             required: false
+          }
+        ]
+      },
+      {
+        id: 'enhanced_article_with_image',
+        name: 'enhanced_article_with_image',
+        displayName: 'Enhanced Article + Image',
+        description: 'Enhanced article workflow with automated contextual image generation',
+        category: 'article',
+        requiredFields: [
+          {
+            id: 'topic',
+            name: 'topic',
+            label: 'Article Topic',
+            type: 'text',
+            required: true,
+            placeholder: 'Enter the main topic for your article'
+          },
+          {
+            id: 'target_word_count',
+            name: 'target_word_count',
+            label: 'Target Word Count',
+            type: 'number',
+            required: true,
+            validation: { min: 500, max: 3000 }
+          }
+        ],
+        optionalFields: [
+          {
+            id: 'tone',
+            name: 'tone',
+            label: 'Tone',
+            type: 'select',
+            required: false,
+            options: [
+              { value: 'professional', label: 'Professional' },
+              { value: 'conversational', label: 'Conversational' },
+              { value: 'academic', label: 'Academic' },
+              { value: 'casual', label: 'Casual' }
+            ]
+          },
+          {
+            id: 'image_style',
+            name: 'image_style',
+            label: 'Image Style',
+            type: 'select',
+            required: false,
+            options: [
+              { value: 'professional', label: 'Professional' },
+              { value: 'creative', label: 'Creative' },
+              { value: 'minimalist', label: 'Minimalist' },
+              { value: 'abstract', label: 'Abstract' },
+              { value: 'realistic', label: 'Realistic' }
+            ]
+          },
+          {
+            id: 'image_provider',
+            name: 'image_provider',
+            label: 'Image Provider',
+            type: 'select',
+            required: false,
+            options: [
+              { value: 'openai', label: 'OpenAI DALL·E' },
+              { value: 'gemini', label: 'Google Gemini (preview)' }
+            ]
           }
         ]
       },
@@ -498,6 +564,26 @@ export const apiService = {
 
       // Extract workflow metrics from backend response
       const backendMetrics = response.data.workflow_metrics;
+      const rawImage: any =
+        response.data.generated_image ||
+        response.data.generatedImage ||
+        response.data.metadata?.generated_image;
+      const imageMetadata: Record<string, any> | undefined =
+        response.data.image_metadata ||
+        response.data.imageMetadata ||
+        response.data.metadata?.image_metadata;
+
+      const normalisedImage: GeneratedImage | undefined = rawImage
+        ? {
+            ...rawImage,
+            imageUrl: rawImage.image_url ?? rawImage.imageUrl ?? null,
+            imageData: rawImage.image_data ?? rawImage.imageData ?? null,
+            provider: rawImage.provider ?? imageMetadata?.provider,
+            style: rawImage.style,
+            size: rawImage.size,
+            quality: rawImage.quality,
+          }
+        : undefined;
 
       // Transform backend response to frontend format
       const result: GenerationResponse = {
@@ -508,7 +594,9 @@ export const apiService = {
         wordCount: response.data.word_count || response.data.wordCount || 0,
         generationTime: response.data.generation_time_seconds || response.data.generationTime || 0,
         success: true,
-        workflowMetrics: backendMetrics // Include backend metrics in response
+        workflowMetrics: backendMetrics, // Include backend metrics in response
+        generatedImage: normalisedImage,
+        imageMetadata: imageMetadata || normalisedImage?.metadata || undefined,
       };
 
       // Log workflow completion

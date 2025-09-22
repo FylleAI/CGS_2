@@ -187,8 +187,12 @@ class GenerateContentUseCase:
                     "client_profile": request.client_profile,
                     "provider": request.provider_config.provider.value if request.provider_config else None,
                     "dynamic_workflow": True,
-                    "workflow_summary": workflow_result.get('workflow_summary', {})
-                }
+                    "workflow_summary": workflow_result.get('workflow_summary', {}),
+                    "generated_image": workflow_result.get('generated_image'),
+                    "image_metadata": workflow_result.get('image_metadata')
+                },
+                generated_image=workflow_result.get('generated_image'),
+                image_metadata=workflow_result.get('image_metadata')
             )
 
             # Complete tracking (success)
@@ -252,6 +256,7 @@ class GenerateContentUseCase:
         context = {
             'topic': request.topic,
             'client_name': request.client_profile or 'default',
+            'client_profile': request.client_profile or 'default',
             'context': request.context or '',
             'workflow_type': request.workflow_type,
             'workflow_id': str(uuid4()),
@@ -373,7 +378,7 @@ class GenerateContentUseCase:
 
     async def _create_legacy_workflow(self, workflow_type: str, context: Dict[str, Any]) -> Workflow:
         """Create workflow using legacy hardcoded approach."""
-        if workflow_type == "enhanced_article":
+        if workflow_type in {"enhanced_article", "enhanced_article_with_image"}:
             return await self._create_enhanced_article_workflow(context)
         else:
             # Default workflow - create a simple workflow with basic tasks
@@ -514,7 +519,9 @@ LENGTH: {context.get('length', 'medium')} length article
                 'workflow_type': request.workflow_type,
                 'generation_params': request.generation_params.to_dict() if request.generation_params else {},
                 'workflow_summary': workflow_result.get('workflow_summary', {}),
-                'dynamic_workflow': True
+                'dynamic_workflow': True,
+                'generated_image': workflow_result.get('generated_image'),
+                'image_metadata': workflow_result.get('image_metadata')
             }
         )
 
@@ -550,6 +557,7 @@ LENGTH: {context.get('length', 'medium')} length article
     def _register_tools(self) -> None:
         """Register tools with the agent executor."""
         from ...infrastructure.tools.tool_names import ToolNames
+        from ...infrastructure.tools.image_generation_tool import image_generation_tool
         self.agent_executor.register_tools({
             ToolNames.WEB_SEARCH_SERPER: {
                 'function': self.web_search_tool.search,
@@ -566,13 +574,17 @@ LENGTH: {context.get('length', 'medium')} length article
             ToolNames.WEB_SEARCH_PERPLEXITY: {
                 'function': self.perplexity_tool.search,
                 'description': 'Search using Perplexity AI'
+            },
+            ToolNames.IMAGE_GENERATION: {
+                'function': image_generation_tool,
+                'description': 'Generate contextual images for enhanced articles'
             }
         })
 
     async def _configure_workflow_agents(self, workflow: Workflow, request: ContentGenerationRequest) -> None:
         """Configure agents for the workflow."""
         # Load or create agents based on workflow type
-        if request.workflow_type == "enhanced_article":
+        if request.workflow_type in {"enhanced_article", "enhanced_article_with_image"}:
             await self._setup_enhanced_article_agents(workflow, request)
         elif request.workflow_type == "newsletter_premium":
             await self._setup_newsletter_premium_agents(workflow, request)
@@ -605,6 +617,8 @@ LENGTH: {context.get('length', 'medium')} length article
                     'include_examples': getattr(params, 'include_examples', False),
                     'include_sources': getattr(params, 'include_sources', False),
                     'custom_instructions': getattr(params, 'custom_instructions', ''),
+                    'image_style': getattr(params, 'image_style', ''),
+                    'image_provider': getattr(params, 'image_provider', ''),
                 })
 
                 # Newsletter specific parameters

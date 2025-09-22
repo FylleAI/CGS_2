@@ -157,6 +157,7 @@ async def execute_dynamic_workflow(workflow_type: str, context: Dict[str, Any]) 
         from ..tools.web_search_tool import WebSearchTool
         from ..tools.rag_tool import RAGTool
         from ..tools.perplexity_research_tool import PerplexityResearchTool
+        from ..tools.image_generation_tool import image_generation_tool
 
         # Initialize with default settings
         settings = Settings()
@@ -195,6 +196,10 @@ async def execute_dynamic_workflow(workflow_type: str, context: Dict[str, Any]) 
             ToolNames.WEB_SEARCH_PERPLEXITY: {
                 'function': perplexity_tool.search,
                 'description': 'Search using Perplexity AI'
+            },
+            ToolNames.IMAGE_GENERATION: {
+                'function': image_generation_tool,
+                'description': 'Generate contextual images for the final article'
             }
         })
 

@@ -51,6 +51,22 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [filename, setFilename] = useState('');
 
+  const imageSource = React.useMemo(() => {
+    if (!result?.generatedImage) return null;
+    const { imageUrl, imageData } = result.generatedImage;
+    if (imageUrl) {
+      return imageUrl;
+    }
+    if (imageData) {
+      const trimmed = imageData.trim();
+      if (trimmed.startsWith('data:')) {
+        return trimmed;
+      }
+      return `data:image/png;base64,${trimmed}`;
+    }
+    return null;
+  }, [result]);
+
   React.useEffect(() => {
     if (result) {
       setIsExpanded(true);
@@ -173,6 +189,37 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
                       variant="outlined"
                     />
                   </Box>
+
+                  {imageSource && (
+                    <Box
+                      sx={{
+                        mb: 2,
+                        p: 2,
+                        border: 1,
+                        borderColor: 'grey.200',
+                        borderRadius: 2,
+                        backgroundColor: 'grey.50',
+                      }}
+                    >
+                      <Typography variant="subtitle2" gutterBottom>
+                        Generated Image
+                      </Typography>
+                      <Box
+                        component="img"
+                        src={imageSource}
+                        alt="AI generated visual"
+                        sx={{
+                          maxWidth: '100%',
+                          borderRadius: 1,
+                          border: 1,
+                          borderColor: 'grey.200',
+                        }}
+                      />
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                        Provider: {result.generatedImage?.provider || result.imageMetadata?.provider || 'unknown'}
+                      </Typography>
+                    </Box>
+                  )}
 
                   {/* Actions */}
                   <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>

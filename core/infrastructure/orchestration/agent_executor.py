@@ -239,6 +239,10 @@ class AgentExecutor:
                     tools_reminder += f"- {tool}: Use [{ToolNames.WEB_SEARCH_SERPER}] your search query [/{ToolNames.WEB_SEARCH_SERPER}] to search the web for current information\n"
                 elif tool == ToolNames.WEB_SEARCH_PERPLEXITY:
                     tools_reminder += f"- {tool}: Use [{ToolNames.WEB_SEARCH_PERPLEXITY}] your search query [/{ToolNames.WEB_SEARCH_PERPLEXITY}] for Perplexity research with citations\n"
+                elif tool == ToolNames.IMAGE_GENERATION:
+                    tools_reminder += (
+                        f"- {tool}: Provide article_content, image_style, and image_provider lines inside the tool block to generate contextual visuals\n"
+                    )
                 else:
                     tools_reminder += f"- {tool}: Use [{tool}] your input [/{tool}]\n"
 
@@ -446,7 +450,9 @@ class AgentExecutor:
 
             elif tool_name == "perplexity_search":
                 # Parse a structured input like: "topic=..., exclude_topics=[...], premium_sources=...|..., research_timeframe=last 7 days"
-                raw = tool_input
+                raw = tool_input.strip()
+                if '=' not in raw and ',' not in raw and '\n' not in raw:
+                    return await tool_function(raw)
                 parts = [p.strip() for p in raw.split(',') if p.strip()]
                 params = {}
                 for p in parts:
@@ -502,6 +508,30 @@ class AgentExecutor:
 
                 query = f"{topic}{site_filter}{url_excludes}{tf_hint}{ex_hint}".strip()
                 return await tool_function(query)
+
+            elif tool_name == "image_generation_tool":
+                params: Dict[str, str] = {}
+                current_key: Optional[str] = None
+                for line in tool_input.splitlines():
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    if ':' in stripped:
+                        key, value = stripped.split(':', 1)
+                        current_key = key.strip().lower()
+                        params[current_key] = value.strip()
+                    elif current_key:
+                        params[current_key] = (params[current_key] + f"\n{stripped}").strip()
+
+                article_content = params.get('article_content', tool_input)
+                image_style = params.get('image_style', 'professional')
+                image_provider = params.get('image_provider', 'openai')
+
+                return await tool_function(
+                    article_content=article_content,
+                    image_style=image_style,
+                    image_provider=image_provider,
+                )
 
             else:
                 # Default behavior for other tools (single parameter)
@@ -575,6 +605,10 @@ class AgentExecutor:
 
                 return True, ""
 
+            elif tool_name == "image_generation_tool":
+                if not tool_input.strip():
+                    return False, "image_generation_tool requires article_content"
+                return True, ""
             else:
                 # Basic validation for other tools
                 if not tool_input.strip():
