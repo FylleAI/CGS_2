@@ -1,7 +1,7 @@
 """Content generation endpoints."""
 
 import logging
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel
@@ -46,6 +46,10 @@ class ContentGenerationRequestModel(BaseModel):
     newsletter_topic: Optional[str] = None
     edition_number: Optional[int] = None
     featured_sections: Optional[List[str]] = None
+
+    # Image generation parameters
+    image_style: Optional[str] = "professional"
+    image_provider: Optional[str] = "openai"
 
     # General parameters
     custom_instructions: str = ""
@@ -92,6 +96,8 @@ class ContentGenerationResponseModel(BaseModel):
     warnings: List[str] = []
     metadata: dict = {}
     workflow_metrics: Optional[WorkflowMetricsModel] = None
+    generated_image: Optional[Dict[str, Any]] = None
+    image_metadata: Optional[Dict[str, Any]] = None
 
 
 class ContentListResponseModel(BaseModel):
@@ -151,7 +157,9 @@ async def generate_content(
             'custom_instructions': request.custom_instructions,
             'target_audience': request.target_audience or request.target,  # Use target if available
             'include_sources': request.include_sources,
-            'include_statistics': request.include_statistics
+            'include_statistics': request.include_statistics,
+            'image_style': request.image_style,
+            'image_provider': request.image_provider
         }
 
         # Add workflow-specific parameters
@@ -179,16 +187,16 @@ async def generate_content(
 
         try:
             content_request = ContentGenerationRequest(
-            topic=request.topic,
-            content_type=ContentType(request.content_type),
-            content_format=ContentFormat(request.content_format),
-            client_profile=request.client_profile,
-            workflow_type=request.workflow_type,
-            provider_config=provider_config,
-            generation_params=generation_params,
-            custom_instructions=request.custom_instructions,
-            context=request.context
-        )
+                topic=request.topic,
+                content_type=ContentType(request.content_type),
+                content_format=ContentFormat(request.content_format),
+                client_profile=request.client_profile,
+                workflow_type=request.workflow_type,
+                provider_config=provider_config,
+                generation_params=generation_params,
+                custom_instructions=request.custom_instructions,
+                context=request.context
+            )
             logger.info("Content request created successfully")
         except Exception as e:
             logger.error(f"Error creating content request: {str(e)}")
@@ -255,7 +263,9 @@ async def generate_content(
             error_message=response.error_message,
             warnings=response.warnings,
             metadata=response.metadata,
-            workflow_metrics=workflow_metrics
+            workflow_metrics=workflow_metrics,
+            generated_image=response.generated_image,
+            image_metadata=response.image_metadata
         )
         
     except ValueError as e:

@@ -25,6 +25,7 @@ class WorkflowType(Enum):
     SIEBERT_NEWSLETTER = "siebert_newsletter"
     SIEBERT_ARTICLE = "siebert_article"
     ENHANCED_ARTICLE = "enhanced_article"
+    ENHANCED_ARTICLE_WITH_IMAGE = "enhanced_article_with_image"
     SUMMARY_RAG = "summary_rag"
     CUSTOM = "custom"
 

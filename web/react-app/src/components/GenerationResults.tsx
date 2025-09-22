@@ -56,6 +56,23 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
   const isHtmlWorkflow = result?.metadata?.workflow_type === 'siebert_newsletter_html';
   const htmlOutput = result?.htmlOutput || (isHtmlWorkflow ? result?.body : undefined);
   const markdownArchive = result?.markdownOutput;
+  const isImageWorkflow = result?.metadata?.workflow_type === 'enhanced_article_with_image';
+
+  const imageSource = React.useMemo(() => {
+    if (!result?.generatedImage) return null;
+    const { imageUrl, imageData } = result.generatedImage;
+    if (imageUrl) {
+      return imageUrl;
+    }
+    if (imageData) {
+      const trimmed = imageData.trim();
+      if (trimmed.startsWith('data:')) {
+        return trimmed;
+      }
+      return `data:image/png;base64,${trimmed}`;
+    }
+    return null;
+  }, [result]);
 
   React.useEffect(() => {
     if (result) {
@@ -193,6 +210,48 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
                       variant="outlined"
                     />
                   </Box>
+
+                  {imageSource && (
+                    <Box
+                      sx={{
+                        mb: 2,
+                        p: 2,
+                        border: 1,
+                        borderColor: 'grey.200',
+                        borderRadius: 2,
+                        backgroundColor: 'grey.50',
+                      }}
+                    >
+                      <Typography variant="subtitle2" gutterBottom>
+                        Generated Image
+                      </Typography>
+                      <Box
+                        component="img"
+                        src={imageSource}
+                        alt="AI generated visual"
+                        sx={{
+                          maxWidth: '100%',
+                          borderRadius: 1,
+                          border: 1,
+                          borderColor: 'grey.200',
+                        }}
+                      />
+                      <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>
+                        Provider: {result.generatedImage?.provider || result.imageMetadata?.provider || 'unknown'}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {!imageSource && isImageWorkflow && (
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                      Nessuna immagine è stata generata per questo run. Verifica il provider selezionato e riprova.
+                      {result?.metadata?.image_generation_warning && (
+                        <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                          Dettagli: {result.metadata.image_generation_warning}
+                        </Typography>
+                      )}
+                    </Alert>
+                  )}
 
                   {/* Actions */}
                   <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>

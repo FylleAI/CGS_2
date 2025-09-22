@@ -248,6 +248,38 @@ class OpenAIAdapter(LLMProviderInterface):
             finish_reason=choice.finish_reason or ""
         )
 
+    async def generate_image(
+        self,
+        prompt: str,
+        config: ProviderConfig
+    ) -> Dict[str, Any]:
+        """Generate an image using OpenAI's Images API."""
+
+        if config.provider != LLMProvider.OPENAI:
+            raise ValueError(f"Expected OpenAI provider, got {config.provider}")
+
+        client = self._get_client(config)
+
+        try:
+            response = await client.images.generate(
+                model=config.model or "dall-e-3",
+                prompt=prompt,
+                size=config.additional_params.get("size", "1024x1024"),
+                quality=config.additional_params.get("quality", "standard"),
+                style=config.additional_params.get("style"),
+                response_format=config.additional_params.get("response_format", "b64_json"),
+            )
+
+            data = response.data[0] if response.data else {}
+            return {
+                "url": getattr(data, "url", None),
+                "b64_json": getattr(data, "b64_json", None),
+                "revised_prompt": getattr(data, "revised_prompt", None),
+            }
+        except Exception as e:  # pragma: no cover - depends on provider availability
+            logger.error(f"OpenAI image generation error: {str(e)}")
+            raise
+
     async def validate_config(self, config: ProviderConfig) -> bool:
         """Validate OpenAI configuration."""
         try:

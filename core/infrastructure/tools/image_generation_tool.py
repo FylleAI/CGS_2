@@ -1,74 +1,158 @@
-"""Lightweight image generation helper for prompt-centric workflows."""
+"""Image generation tool supporting multiple providers."""
 
 from __future__ import annotations
 
-import hashlib
+import json
 import logging
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any
+import os
+from typing import Any, Dict, Optional
+
+from ..config.settings import Settings
+from ..external_services.openai_adapter import OpenAIAdapter
+from ..external_services.gemini_adapter import GeminiAdapter
+from ...domain.value_objects.provider_config import ProviderConfig, LLMProvider
 
 logger = logging.getLogger(__name__)
 
 
 class ImageGenerationTool:
-    """Utility that prepares deterministic image payloads for downstream services.
+    """High-level helper that orchestrates image generation across providers."""
 
-    The goal is to provide agents with a stable interface that mimics an
-    image-generation API. Actual rendering can be handled by a separate
-    service once prompts and parameters are approved.
-    """
+    def __init__(self, settings: Optional[Settings] = None) -> None:
+        self.settings = settings
+        self._openai_api_key = (settings.openai_api_key if settings else os.getenv("OPENAI_API_KEY"))
+        self._gemini_api_key = (settings.gemini_api_key if settings else os.getenv("GEMINI_API_KEY"))
+        self._openai_adapter: Optional[OpenAIAdapter] = None
+        self._gemini_adapter: Optional[GeminiAdapter] = None
 
-    def __init__(self, default_provider: str = "openai") -> None:
-        self.default_provider = default_provider
+    def _get_openai_adapter(self) -> OpenAIAdapter:
+        if self._openai_adapter is None:
+            self._openai_adapter = OpenAIAdapter(self._openai_api_key)
+        return self._openai_adapter
 
-    async def generate(
+    def _get_gemini_adapter(self) -> GeminiAdapter:
+        if self._gemini_adapter is None:
+            self._gemini_adapter = GeminiAdapter(self._gemini_api_key)
+        return self._gemini_adapter
+
+    async def generate_image(
         self,
         prompt: str,
-        *,
-        provider: Optional[str] = None,
-        style: Optional[str] = None,
-        aspect_ratio: str = "16:9",
-        negative_prompt: Optional[str] = None,
-        brand_notes: Optional[str] = None,
+        provider: str = "openai",
+        style: str = "professional",
+        size: str = "1024x1024",
+        quality: str = "standard",
     ) -> Dict[str, Any]:
-        """Return a structured payload describing the desired image.
+        """Generate an image using the requested provider."""
 
-        Args:
-            prompt: Descriptive prompt to send to the image model.
-            provider: Preferred provider ("openai", "gemini", etc.).
-            style: Short label describing the visual style.
-            aspect_ratio: Desired aspect ratio string (e.g. "16:9").
-            negative_prompt: Optional negative prompt guidance.
-            brand_notes: Additional brand alignment notes.
+        provider_normalized = (provider or "openai").lower()
+        logger.info("🖼️ Generating image with provider=%s style=%s size=%s", provider_normalized, style, size)
 
-        Returns:
-            Dictionary with prompt metadata and a deterministic placeholder URL.
-        """
-        selected_provider = (provider or self.default_provider).lower()
-        style_label = style or "photoreal"
-        negative = negative_prompt or ""
+        try:
+            if provider_normalized == "openai":
+                return await self._generate_with_openai(prompt, style, size, quality)
+            if provider_normalized == "gemini":
+                return await self._generate_with_gemini(prompt, style, size)
 
-        logger.info(
-            "🎨 ImageGenerationTool.generate called with provider=%s, style=%s",
-            selected_provider,
-            style_label,
+            raise ValueError(f"Unsupported image provider: {provider}")
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.error("❌ Image generation failed: %s", exc)
+            return {
+                "success": False,
+                "error": str(exc),
+                "provider": provider_normalized,
+            }
+
+    async def _generate_with_openai(
+        self,
+        prompt: str,
+        style: str,
+        size: str,
+        quality: str,
+    ) -> Dict[str, Any]:
+        adapter = self._get_openai_adapter()
+        config = ProviderConfig(
+            provider=LLMProvider.OPENAI,
+            model="dall-e-3",
+            api_key=self._openai_api_key,
+            additional_params={
+                "size": size,
+                "quality": quality,
+                "style": "vivid" if style == "creative" else "natural",
+            },
         )
 
-        timestamp = datetime.now(timezone.utc).isoformat()
-        digest_source = f"{selected_provider}|{prompt}|{style_label}|{aspect_ratio}|{negative}".encode("utf-8")
-        prompt_hash = hashlib.sha256(digest_source).hexdigest()[:16]
-        placeholder_url = f"prompt://{selected_provider}/{prompt_hash}"
-
-        payload: Dict[str, Any] = {
-            "provider": selected_provider,
+        result = await adapter.generate_image(prompt, config)
+        return {
+            "success": True,
+            "provider": "openai",
+            "model": "dall-e-3",
+            "image_url": result.get("url"),
+            "image_data": result.get("b64_json"),
+            "revised_prompt": result.get("revised_prompt"),
             "prompt": prompt,
-            "style": style_label,
-            "aspect_ratio": aspect_ratio,
-            "negative_prompt": negative,
-            "brand_notes": brand_notes or "",
-            "generated_at": timestamp,
-            "image_url": placeholder_url,
+            "style": style,
+            "size": size,
+            "quality": quality,
         }
 
-        logger.debug("🎨 Image payload prepared: %s", payload)
-        return payload
+    async def _generate_with_gemini(
+        self,
+        prompt: str,
+        style: str,
+        size: str,
+    ) -> Dict[str, Any]:
+        adapter = self._get_gemini_adapter()
+        config = ProviderConfig(
+            provider=LLMProvider.GEMINI,
+            model="gemini-pro-vision",
+            api_key=self._gemini_api_key,
+            additional_params={
+                "size": size,
+                "style": style,
+            },
+        )
+
+        result = await adapter.generate_image(prompt, config)
+        return {
+            "success": True,
+            "provider": "gemini",
+            "model": "gemini-pro-vision",
+            "image_url": result.get("url"),
+            "image_data": result.get("data"),
+            "prompt": prompt,
+            "style": style,
+            "size": size,
+        }
+
+
+async def image_generation_tool(
+    article_content: str,
+    image_style: str = "professional",
+    image_provider: str = "openai",
+) -> str:
+    """Agent-facing wrapper that builds an image prompt from article content."""
+
+    tool = ImageGenerationTool()
+
+    excerpt = (article_content or "").strip()
+    if len(excerpt) > 500:
+        excerpt = excerpt[:500] + "..."
+
+    prompt = (
+        "Create an illustrative, brand-safe image that captures the main ideas of this compliance-approved "
+        f"article. Style should be {image_style}.\n\nArticle summary:\n{excerpt}"
+    )
+
+    result = await tool.generate_image(
+        prompt=prompt,
+        provider=image_provider,
+        style=image_style,
+    )
+
+    payload = {
+        "prompt": prompt,
+        **result,
+    }
+
+    return json.dumps(payload, indent=2)

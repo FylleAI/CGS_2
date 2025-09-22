@@ -114,12 +114,14 @@ class ContentGenerationResponse:
     warnings: List[str] = None
     metadata: Dict[str, Any] = None
     workflow_metrics: Optional[WorkflowMetrics] = None
-    
+    generated_image: Optional[Dict[str, Any]] = None
+    image_metadata: Optional[Dict[str, Any]] = None
+
     def __post_init__(self) -> None:
         """Initialize default values."""
         if self.warnings is None:
             self.warnings = []
-        
+
         if self.metadata is None:
             self.metadata = {}
     
@@ -160,9 +162,11 @@ class ContentGenerationResponse:
             "success": self.success,
             "error_message": self.error_message,
             "warnings": self.warnings,
-            "metadata": self.metadata
+            "metadata": self.metadata,
+            "generated_image": self.generated_image,
+            "image_metadata": self.image_metadata
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ContentGenerationResponse":
         """Create from dictionary representation."""
@@ -182,5 +186,7 @@ class ContentGenerationResponse:
             success=data.get("success", True),
             error_message=data.get("error_message"),
             warnings=data.get("warnings", []),
-            metadata=data.get("metadata", {})
+            metadata=data.get("metadata", {}),
+            generated_image=data.get("generated_image"),
+            image_metadata=data.get("image_metadata"),
         )

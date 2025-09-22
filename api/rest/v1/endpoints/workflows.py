@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from core.infrastructure.workflows.registry import execute_dynamic_workflow, list_available_workflows
+from core.infrastructure.workflows import execute_dynamic_workflow, list_available_workflows
 
 logger = logging.getLogger(__name__)
 

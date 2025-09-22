@@ -46,6 +46,11 @@ def legacy_system_prompt(agent: Agent, context, tool_descriptions: str) -> str:
         system_message += f"\n[{ToolNames.RAG_SEARCH_CONTENT}] search_query [/{ToolNames.RAG_SEARCH_CONTENT}] (defaults to 'siebert' client)"
         system_message += f"\n[{ToolNames.WEB_SEARCH_SERPER}] your search query [/{ToolNames.WEB_SEARCH_SERPER}]"
         system_message += f"\n[{ToolNames.WEB_SEARCH_PERPLEXITY}] your search query [/{ToolNames.WEB_SEARCH_PERPLEXITY}]"
+        system_message += (
+            f"\n[{ToolNames.IMAGE_GENERATION}] article_content: <approved article text>\\n"
+            f"image_style: professional\\n"
+            f"image_provider: openai [/{ToolNames.IMAGE_GENERATION}]"
+        )
         system_message += "\n\nCRITICAL RULES:"
         system_message += "\n- Use EXACT tool names from the list above"
         system_message += "\n- For rag_search_content: ALWAYS provide a specific search query"
