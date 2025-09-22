@@ -22,6 +22,7 @@ class AgentRole(Enum):
     COMPLIANCE_REVIEWER = "compliance_reviewer"
     ENHANCED_ARTICLE_WRITER = "enhanced_article_writer"
     ENHANCED_ARTICLE_COMPLIANCE_SPECIALIST = "enhanced_article_compliance_specialist"
+    IMAGE_SPECIALIST = "image_specialist"
 
 
 @dataclass
@@ -64,7 +65,8 @@ class Agent:
             AgentRole.PREMIUM_ANALYZER: "Analyze premium sources and financial data",
             AgentRole.COMPLIANCE_REVIEWER: "Review content for regulatory compliance and risk management",
             AgentRole.ENHANCED_ARTICLE_WRITER: "Create comprehensive educational articles with Gen Z voice and research integration",
-            AgentRole.ENHANCED_ARTICLE_COMPLIANCE_SPECIALIST: "Review Enhanced Articles for FINRA/SEC compliance while preserving Gen Z voice and blog structure"
+            AgentRole.ENHANCED_ARTICLE_COMPLIANCE_SPECIALIST: "Review Enhanced Articles for FINRA/SEC compliance while preserving Gen Z voice and blog structure",
+            AgentRole.IMAGE_SPECIALIST: "Design brand-aligned visual concepts and prompts for image generation"
         }
         return default_goals.get(self.role, "Perform specialized tasks in content generation")
     

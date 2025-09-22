@@ -579,9 +579,19 @@ The following documents contain additional information that may be relevant to c
         client_dir = self.rag_base_dir / client_name
 
         if not client_dir.exists():
-            error_msg = f"Knowledge base not found for client '{client_name}'"
-            logger.warning(f"⚠️ RAG WARNING: {error_msg}")
-            return error_msg
+            # Fallback: allow knowledge bases stored inside profile directories
+            settings = get_settings()
+            profiles_dir = Path(settings.profiles_dir) / client_name / "knowledge_base"
+            if profiles_dir.exists():
+                logger.info(
+                    "📂 RAG FILESYSTEM: Using profile-scoped knowledge base for %s",
+                    client_name,
+                )
+                client_dir = profiles_dir
+            else:
+                error_msg = f"Knowledge base not found for client '{client_name}'"
+                logger.warning(f"⚠️ RAG WARNING: {error_msg}")
+                return error_msg
 
         try:
             if document_name:
@@ -589,7 +599,11 @@ The following documents contain additional information that may be relevant to c
                 return await self._get_specific_document_filesystem(client_dir, document_name, agent_name)
             else:
                 logger.info(f"📚 RAG FILESYSTEM: Retrieving all content for {client_name}")
-                available_docs = [f.name for f in client_dir.glob('*.md') if f.is_file()]
+                available_docs = [
+                    str(f.relative_to(client_dir))
+                    for f in client_dir.rglob('*.md')
+                    if f.is_file()
+                ]
                 logger.info(f"📚 RAG FILESYSTEM: Found {len(available_docs)} documents: {available_docs}")
                 result = await self._get_all_client_content_filesystem(client_dir, client_name, agent_name)
                 if self.tracker and self.run_id:
@@ -603,28 +617,42 @@ The following documents contain additional information that may be relevant to c
 
     async def _get_specific_document_filesystem(self, client_dir: Path, document_name: str, agent_name: Optional[str] = None) -> str:
         """Retrieve a specific document from filesystem."""
-        # Add .md extension if not present
-        if not Path(document_name).suffix:
-            document_name = f"{document_name}.md"
-
+        original_name = document_name
         doc_path = client_dir / document_name
 
         if not doc_path.exists() or not doc_path.is_file():
-            # Try fuzzy matching
-            available_docs = [f.name for f in client_dir.glob('*.md') if f.is_file()]
+            if not Path(document_name).suffix:
+                document_name = f"{document_name}.md"
+            doc_path = client_dir / document_name
+
+        if not doc_path.exists() or not doc_path.is_file():
+            # Try fuzzy matching across nested directories
+            available_docs = [
+                str(f.relative_to(client_dir))
+                for f in client_dir.rglob('*.md')
+                if f.is_file()
+            ]
 
             import difflib
             best_match = difflib.get_close_matches(
-                document_name, available_docs, n=1, cutoff=0.6
+                document_name,
+                available_docs,
+                n=1,
+                cutoff=0.6,
             )
 
             if best_match:
                 doc_path = client_dir / best_match[0]
                 with open(str(doc_path), "r", encoding="utf-8") as f:
                     content = f.read()
-                return f"[FUZZY MATCH] Document '{document_name}' not found. Showing closest match: '{best_match[0]}'\\n\\n{content}"
+                return (
+                    f"[FUZZY MATCH] Document '{original_name}' not found. "
+                    f"Showing closest match: '{best_match[0]}'\\n\\n{content}"
+                )
             else:
-                return f"Document '{document_name}' not found. Available documents: {available_docs}"
+                return (
+                    f"Document '{original_name}' not found. Available documents: {available_docs}"
+                )
 
         try:
             with open(str(doc_path), "r", encoding="utf-8") as f:
@@ -644,8 +672,11 @@ The following documents contain additional information that may be relevant to c
         knowledge_base = []
         other_docs = []
 
-        for doc_path in client_dir.glob("*.md"):
-            doc_name = doc_path.name.lower()
+        for doc_path in client_dir.rglob("*.md"):
+            if not doc_path.is_file():
+                continue
+
+            doc_name = str(doc_path.relative_to(client_dir)).lower()
 
             try:
                 with open(str(doc_path), "r", encoding="utf-8") as f:
