@@ -8,7 +8,7 @@ from openai import AsyncOpenAI
 from ...application.interfaces.llm_provider_interface import (
     LLMProviderInterface,
     LLMResponse,
-    LLMStreamChunk
+    LLMStreamChunk,
 )
 from ...domain.value_objects.provider_config import ProviderConfig, LLMProvider
 
@@ -50,22 +50,15 @@ class OpenAIAdapter(LLMProviderInterface):
         m = (model or "").lower()
         return m.startswith("o1") or m.startswith("o3") or m.startswith("gpt-5")
 
-
     async def generate_content(
-        self,
-        prompt: str,
-        config: ProviderConfig,
-        system_message: Optional[str] = None
+        self, prompt: str, config: ProviderConfig, system_message: Optional[str] = None
     ) -> str:
         """Generate content using OpenAI."""
         response = await self.generate_content_detailed(prompt, config, system_message)
         return response.content
 
     async def generate_content_detailed(
-        self,
-        prompt: str,
-        config: ProviderConfig,
-        system_message: Optional[str] = None
+        self, prompt: str, config: ProviderConfig, system_message: Optional[str] = None
     ) -> LLMResponse:
         """Generate content with detailed response."""
         if config.provider != LLMProvider.OPENAI:
@@ -103,7 +96,9 @@ class OpenAIAdapter(LLMProviderInterface):
             # Auto-retry without temperature if API rejects it
             es = str(e)
             if ("param" in es and "temperature" in es) or ("'temperature'" in es):
-                logger.warning("Retrying OpenAI request without temperature due to API rejection")
+                logger.warning(
+                    "Retrying OpenAI request without temperature due to API rejection"
+                )
                 request_params.pop("temperature", None)
                 response = await client.chat.completions.create(**request_params)
             else:
@@ -117,22 +112,18 @@ class OpenAIAdapter(LLMProviderInterface):
             content=content,
             usage={
                 "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-                "completion_tokens": response.usage.completion_tokens if response.usage else 0,
-                "total_tokens": response.usage.total_tokens if response.usage else 0
+                "completion_tokens": (
+                    response.usage.completion_tokens if response.usage else 0
+                ),
+                "total_tokens": response.usage.total_tokens if response.usage else 0,
             },
             model=response.model,
             finish_reason=choice.finish_reason or "",
-            metadata={
-                "response_id": response.id,
-                "created": response.created
-            }
+            metadata={"response_id": response.id, "created": response.created},
         )
 
     async def generate_content_stream(
-        self,
-        prompt: str,
-        config: ProviderConfig,
-        system_message: Optional[str] = None
+        self, prompt: str, config: ProviderConfig, system_message: Optional[str] = None
     ) -> AsyncGenerator[LLMStreamChunk, None]:
         """Generate content with streaming response."""
         if config.provider != LLMProvider.OPENAI:
@@ -153,7 +144,7 @@ class OpenAIAdapter(LLMProviderInterface):
             "top_p": config.top_p,
             "frequency_penalty": config.frequency_penalty,
             "presence_penalty": config.presence_penalty,
-            "stream": True
+            "stream": True,
         }
         if not self._should_omit_temperature(config.model):
             request_params["temperature"] = config.temperature
@@ -168,7 +159,9 @@ class OpenAIAdapter(LLMProviderInterface):
         except Exception as e:
             es = str(e)
             if ("param" in es and "temperature" in es) or ("'temperature'" in es):
-                logger.warning("Retrying OpenAI streaming without temperature due to API rejection")
+                logger.warning(
+                    "Retrying OpenAI streaming without temperature due to API rejection"
+                )
                 request_params.pop("temperature", None)
                 stream = await client.chat.completions.create(**request_params)
             else:
@@ -184,22 +177,20 @@ class OpenAIAdapter(LLMProviderInterface):
                         is_final=choice.finish_reason is not None,
                         metadata={
                             "chunk_id": chunk.id,
-                            "finish_reason": choice.finish_reason
-                        }
+                            "finish_reason": choice.finish_reason,
+                        },
                     )
 
                 if choice.finish_reason:
                     yield LLMStreamChunk(
                         content="",
                         is_final=True,
-                        metadata={"finish_reason": choice.finish_reason}
+                        metadata={"finish_reason": choice.finish_reason},
                     )
                     break
 
     async def chat_completion(
-        self,
-        messages: List[Dict[str, str]],
-        config: ProviderConfig
+        self, messages: List[Dict[str, str]], config: ProviderConfig
     ) -> LLMResponse:
         """Perform chat completion."""
         if config.provider != LLMProvider.OPENAI:
@@ -227,7 +218,9 @@ class OpenAIAdapter(LLMProviderInterface):
         except Exception as e:
             es = str(e)
             if ("param" in es and "temperature" in es) or ("'temperature'" in es):
-                logger.warning("Retrying OpenAI chat completion without temperature due to API rejection")
+                logger.warning(
+                    "Retrying OpenAI chat completion without temperature due to API rejection"
+                )
                 request_params.pop("temperature", None)
                 response = await client.chat.completions.create(**request_params)
             else:
@@ -241,12 +234,46 @@ class OpenAIAdapter(LLMProviderInterface):
             content=content,
             usage={
                 "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-                "completion_tokens": response.usage.completion_tokens if response.usage else 0,
-                "total_tokens": response.usage.total_tokens if response.usage else 0
+                "completion_tokens": (
+                    response.usage.completion_tokens if response.usage else 0
+                ),
+                "total_tokens": response.usage.total_tokens if response.usage else 0,
             },
             model=response.model,
-            finish_reason=choice.finish_reason or ""
+            finish_reason=choice.finish_reason or "",
         )
+
+    async def generate_image(
+        self, prompt: str, config: ProviderConfig
+    ) -> Dict[str, Any]:
+        """Generate an image using OpenAI's Images API."""
+
+        if config.provider != LLMProvider.OPENAI:
+            raise ValueError(f"Expected OpenAI provider, got {config.provider}")
+
+        client = self._get_client(config)
+
+        try:
+            response = await client.images.generate(
+                model=config.model or "dall-e-3",
+                prompt=prompt,
+                size=config.additional_params.get("size", "1024x1024"),
+                quality=config.additional_params.get("quality", "standard"),
+                style=config.additional_params.get("style"),
+                response_format=config.additional_params.get(
+                    "response_format", "b64_json"
+                ),
+            )
+
+            data = response.data[0] if response.data else {}
+            return {
+                "url": getattr(data, "url", None),
+                "b64_json": getattr(data, "b64_json", None),
+                "revised_prompt": getattr(data, "revised_prompt", None),
+            }
+        except Exception as e:  # pragma: no cover - depends on provider availability
+            logger.error(f"OpenAI image generation error: {str(e)}")
+            raise
 
     async def validate_config(self, config: ProviderConfig) -> bool:
         """Validate OpenAI configuration."""
@@ -264,7 +291,9 @@ class OpenAIAdapter(LLMProviderInterface):
         except Exception:
             return False
 
-    async def get_available_models(self, config: ProviderConfig) -> List[Dict[str, Any]]:
+    async def get_available_models(
+        self, config: ProviderConfig
+    ) -> List[Dict[str, Any]]:
         """Get available OpenAI models with token limits."""
         try:
             client = self._get_client(config)
@@ -295,12 +324,12 @@ class OpenAIAdapter(LLMProviderInterface):
                 "status": "healthy",
                 "provider": "openai",
                 "models_available": len(models.data),
-                "api_key_valid": True
+                "api_key_valid": True,
             }
         except Exception as e:
             return {
                 "status": "unhealthy",
                 "provider": "openai",
                 "error": str(e),
-                "api_key_valid": False
+                "api_key_valid": False,
             }

@@ -29,10 +29,18 @@ class Settings(BaseSettings):
 
     # Security settings
     secret_key: str = Field(..., env="SECRET_KEY")
-    access_token_expire_minutes: int = Field(default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES")
+    access_token_expire_minutes: int = Field(
+        default=30, env="ACCESS_TOKEN_EXPIRE_MINUTES"
+    )
 
     # CORS settings
-    cors_allowed_origins: List[str] = Field(default=["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"])
+    cors_allowed_origins: List[str] = Field(
+        default=[
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:3002",
+        ]
+    )
 
     # AI Provider API Keys
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
@@ -42,17 +50,19 @@ class Settings(BaseSettings):
     serper_api_key: Optional[str] = Field(default=None, env="SERPER_API_KEY")
     perplexity_api_key: Optional[str] = Field(default=None, env="PERPLEXITY_API_KEY")
 
-
     # Vertex AI (Gemini) settings
     use_vertex_gemini: bool = Field(default=True, env="USE_VERTEX_GEMINI")
     gcp_project_id: Optional[str] = Field(default=None, env="GCP_PROJECT_ID")
     gcp_location: str = Field(default="global", env="GCP_LOCATION")
-    vertex_api_endpoint: str = Field(default="aiplatform.googleapis.com", env="VERTEX_API_ENDPOINT")
+    vertex_api_endpoint: str = Field(
+        default="aiplatform.googleapis.com", env="VERTEX_API_ENDPOINT"
+    )
     vertex_api_version: str = Field(default="v1", env="VERTEX_API_VERSION")
 
-
     # Service Account path (optional, for Vertex AI OAuth2)
-    google_application_credentials: Optional[str] = Field(default=None, env="GOOGLE_APPLICATION_CREDENTIALS")
+    google_application_credentials: Optional[str] = Field(
+        default=None, env="GOOGLE_APPLICATION_CREDENTIALS"
+    )
 
     # External API settings (optional)
     external_api_key: Optional[str] = Field(default=None, env="EXTERNAL_API_KEY")
@@ -66,7 +76,9 @@ class Settings(BaseSettings):
     output_dir: str = Field(default="data/output", env="OUTPUT_DIR")
     profiles_dir: str = Field(default="data/profiles", env="PROFILES_DIR")
     workflows_dir: str = Field(default="data/workflows", env="WORKFLOWS_DIR")
-    knowledge_base_dir: str = Field(default="data/knowledge_base", env="KNOWLEDGE_BASE_DIR")
+    knowledge_base_dir: str = Field(
+        default="data/knowledge_base", env="KNOWLEDGE_BASE_DIR"
+    )
     cache_dir: str = Field(default="data/cache", env="CACHE_DIR")
 
     # Workflow handler defaults
@@ -88,13 +100,14 @@ class Settings(BaseSettings):
     # ChromaDB settings
     chroma_host: str = Field(default="localhost", env="CHROMA_HOST")
     chroma_port: int = Field(default=8000, env="CHROMA_PORT")
-    chroma_persist_directory: str = Field(default="data/chroma", env="CHROMA_PERSIST_DIRECTORY")
+    chroma_persist_directory: str = Field(
+        default="data/chroma", env="CHROMA_PERSIST_DIRECTORY"
+    )
 
     # Logging settings
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
     log_format: str = Field(
-        default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        env="LOG_FORMAT"
+        default="%(asctime)s - %(name)s - %(levelname)s - %(message)s", env="LOG_FORMAT"
     )
 
     # Content generation settings
@@ -104,7 +117,9 @@ class Settings(BaseSettings):
     max_tokens: Optional[int] = Field(default=None, env="MAX_TOKENS")
 
     # Workflow settings
-    workflow_timeout_seconds: int = Field(default=600, env="WORKFLOW_TIMEOUT_SECONDS")  # 10 minutes for complex workflows
+    workflow_timeout_seconds: int = Field(
+        default=600, env="WORKFLOW_TIMEOUT_SECONDS"
+    )  # 10 minutes for complex workflows
     max_retries: int = Field(default=3, env="MAX_RETRIES")
 
     # WebSocket settings
@@ -127,11 +142,15 @@ class Settings(BaseSettings):
         # Handle CORS origins from environment
         cors_env = os.getenv("CORS_ALLOWED_ORIGINS")
         if cors_env and isinstance(cors_env, str):
-            self.cors_allowed_origins = [item.strip() for item in cors_env.split(",") if item.strip()]
+            self.cors_allowed_origins = [
+                item.strip() for item in cors_env.split(",") if item.strip()
+            ]
 
         # Fallbacks for common Google env var names
         if not self.gcp_project_id:
-            alt_project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCLOUD_PROJECT")
+            alt_project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv(
+                "GCLOUD_PROJECT"
+            )
             if alt_project:
                 self.gcp_project_id = alt_project
         if not self.gcp_location:
@@ -143,7 +162,9 @@ class Settings(BaseSettings):
         premium_env = os.getenv("PREMIUM_DEFAULT_SOURCES")
         if premium_env:
             if isinstance(premium_env, str):
-                self.premium_default_sources = [item.strip() for item in premium_env.split(",") if item.strip()]
+                self.premium_default_sources = [
+                    item.strip() for item in premium_env.split(",") if item.strip()
+                ]
 
         self._ensure_directories()
 
@@ -156,7 +177,7 @@ class Settings(BaseSettings):
             self.workflows_dir,
             self.knowledge_base_dir,
             self.cache_dir,
-            self.chroma_persist_directory
+            self.chroma_persist_directory,
         ]
 
         for directory in directories:
@@ -168,7 +189,7 @@ class Settings(BaseSettings):
             "openai": bool(self.openai_api_key),
             "anthropic": bool(self.anthropic_api_key),
             "deepseek": bool(self.deepseek_api_key),
-            "gemini": bool(self.gemini_api_key)
+            "gemini": bool(self.gemini_api_key),
         }
 
     def has_any_provider(self) -> bool:
@@ -181,7 +202,7 @@ class Settings(BaseSettings):
             "openai": self.openai_api_key,
             "anthropic": self.anthropic_api_key,
             "deepseek": self.deepseek_api_key,
-            "gemini": self.gemini_api_key
+            "gemini": self.gemini_api_key,
         }
         return provider_keys.get(provider.lower())
 
@@ -202,7 +223,7 @@ class Settings(BaseSettings):
         return {
             "host": self.chroma_host,
             "port": self.chroma_port,
-            "persist_directory": self.chroma_persist_directory
+            "persist_directory": self.chroma_persist_directory,
         }
 
     def get_logging_config(self) -> Dict[str, Any]:

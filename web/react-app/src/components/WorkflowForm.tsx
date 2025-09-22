@@ -56,6 +56,14 @@ const enhancedArticleSchema = yup.object({
   include_statistics: yup.boolean().optional(),
   include_examples: yup.boolean().optional(),
   context: yup.string().optional(),
+  image_style: yup
+    .string()
+    .oneOf(['professional', 'creative', 'minimalist', 'abstract', 'realistic'], 'Select a valid image style')
+    .optional(),
+  image_provider: yup
+    .string()
+    .oneOf(['openai', 'gemini'], 'Select a valid image provider')
+    .optional(),
 });
 
 // Newsletter Premium Schema
@@ -260,7 +268,7 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
       max_tokens: selectedTokens,
     };
 
-    if (selectedWorkflow?.id === 'enhanced_article') {
+    if (selectedWorkflow?.id === 'enhanced_article' || selectedWorkflow?.id === 'enhanced_article_with_image') {
       return {
         ...baseDefaults,
         topic: '',
@@ -270,6 +278,8 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
         include_statistics: true,
         include_examples: true,
         context: '',
+        image_style: 'professional',
+        image_provider: 'openai',
       };
     } else if (selectedWorkflow?.id === 'newsletter_premium') {
       return {
@@ -383,7 +393,7 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
     );
   }
 
-  const renderEnhancedArticleForm = () => (
+  const renderEnhancedArticleForm = (withImageOptions = false) => (
     <Box>
       {/* Workflow Info */}
       <Paper sx={{ p: 2, mb: 3, backgroundColor: 'primary.50' }}>
@@ -526,6 +536,44 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
             />
           </Box>
         </Grid>
+
+        {withImageOptions && (
+          <>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name="image_style"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Image Style</InputLabel>
+                    <Select {...field} label="Image Style">
+                      <MenuItem value="professional">Professional</MenuItem>
+                      <MenuItem value="creative">Creative</MenuItem>
+                      <MenuItem value="minimalist">Minimalist</MenuItem>
+                      <MenuItem value="abstract">Abstract</MenuItem>
+                      <MenuItem value="realistic">Realistic</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Controller
+                name="image_provider"
+                control={control}
+                render={({ field }) => (
+                  <FormControl fullWidth>
+                    <InputLabel>Image Provider</InputLabel>
+                    <Select {...field} label="Image Provider">
+                      <MenuItem value="openai">OpenAI</MenuItem>
+                      <MenuItem value="gemini">Gemini</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              />
+            </Grid>
+          </>
+        )}
       </Grid>
     </Box>
   );
@@ -1038,7 +1086,8 @@ const WorkflowForm: React.FC<WorkflowFormProps> = ({
   return (
     <Box component="form" onSubmit={handleSubmit(onSubmit)}>
       {/* Workflow-specific form */}
-      {selectedWorkflow.id === 'enhanced_article' && renderEnhancedArticleForm()}
+      {selectedWorkflow.id === 'enhanced_article' && renderEnhancedArticleForm(false)}
+      {selectedWorkflow.id === 'enhanced_article_with_image' && renderEnhancedArticleForm(true)}
       {selectedWorkflow.id === 'newsletter_premium' && renderNewsletterPremiumForm()}
       {selectedWorkflow.id === 'siebert_premium_newsletter' && renderSiebertPremiumNewsletterForm()}
       {selectedWorkflow.id === 'siebert_newsletter_html' && renderSiebertNewsletterHtmlForm()}

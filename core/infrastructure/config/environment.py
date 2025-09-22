@@ -7,6 +7,7 @@ from typing import Optional
 
 class Environment(Enum):
     """Application environments."""
+
     DEVELOPMENT = "development"
     TESTING = "testing"
     STAGING = "staging"

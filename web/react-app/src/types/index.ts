@@ -94,6 +94,18 @@ export interface GenerationResponse {
   metadata?: Record<string, any>;
   htmlOutput?: string;
   markdownOutput?: string;
+  generatedImage?: GeneratedImage;
+  imageMetadata?: Record<string, any>;
+}
+
+export interface GeneratedImage {
+  imageUrl?: string | null;
+  imageData?: string | null;
+  provider?: string;
+  style?: string;
+  size?: string;
+  quality?: string;
+  [key: string]: any;
 }
 
 export interface AppState {

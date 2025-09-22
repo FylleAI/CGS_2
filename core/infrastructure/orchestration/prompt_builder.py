@@ -3,6 +3,7 @@
 - Uses Jinja2 if available to support expressions (e.g., arithmetic, indexing)
 - Falls back to simple variable substitution otherwise
 """
+
 from typing import Any, Dict
 import logging
 
@@ -42,11 +43,10 @@ def build(agent: Any, prompt_template: str, context: Dict[str, Any]) -> str:
 
     # Client specific overrides (disclaimers, extra instructions)
     client_overrides = context.get("client_overrides") or {}
-    extra_instructions = client_overrides.get("additional_instructions") or client_overrides.get(
-        "disclaimer"
-    )
+    extra_instructions = client_overrides.get(
+        "additional_instructions"
+    ) or client_overrides.get("disclaimer")
     if extra_instructions:
         prompt += f"\n\n{extra_instructions}"
 
     return prompt
-

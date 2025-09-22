@@ -17,6 +17,7 @@ def get_supabase_client():
         logger.error(f"Supabase not configured: {e}")
         raise HTTPException(status_code=500, detail="Supabase not configured")
 
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/knowledge-base", tags=["knowledge-base"])
@@ -24,6 +25,7 @@ router = APIRouter(prefix="/knowledge-base", tags=["knowledge-base"])
 
 class DocumentInfo(BaseModel):
     """Document information model."""
+
     id: str
     title: str
     filename: str
@@ -37,6 +39,7 @@ class DocumentInfo(BaseModel):
 
 class ClientDocumentsResponse(BaseModel):
     """Response model for client documents."""
+
     client_name: str
     total_documents: int
     documents: List[DocumentInfo]
@@ -44,6 +47,7 @@ class ClientDocumentsResponse(BaseModel):
 
 class DocumentContentResponse(BaseModel):
     """Response model for document content."""
+
     document_id: str
     title: str
     content: str
@@ -53,14 +57,16 @@ class DocumentContentResponse(BaseModel):
 def get_rag_tool():
     """Get RAG tool instance with fallback support."""
     from core.infrastructure.tools.rag_tool import RAGTool
+
     return RAGTool()
+
 
 @router.get("/clients/{client_name}/documents", response_model=ClientDocumentsResponse)
 async def get_client_documents(
     client_name: str,
     search: Optional[str] = Query(None, description="Search query to filter documents"),
     tags: Optional[List[str]] = Query(None, description="Filter by tags"),
-    rag_tool: RAGTool = Depends(get_rag_tool)
+    rag_tool: RAGTool = Depends(get_rag_tool),
 ) -> ClientDocumentsResponse:
     """
     Get all documents for a specific client.
@@ -79,17 +85,25 @@ async def get_client_documents(
     try:
         # Get client from Supabase
         client_res = (
-            rag_tool.supabase.table("clients").select("id").eq("name", client_name).single().execute()
+            rag_tool.supabase.table("clients")
+            .select("id")
+            .eq("name", client_name)
+            .single()
+            .execute()
         )
         client_data = client_res.data
         if not client_data:
             logger.warning(f"Client not found: {client_name}")
-            return ClientDocumentsResponse(client_name=client_name, total_documents=0, documents=[])
+            return ClientDocumentsResponse(
+                client_name=client_name, total_documents=0, documents=[]
+            )
 
         # Get documents from Supabase
         docs_res = (
             rag_tool.supabase.table("documents")
-            .select("id,title,description,content,tags,updated_at,file_path,file_size,file_type")
+            .select(
+                "id,title,description,content,tags,updated_at,file_path,file_size,file_type"
+            )
             .eq("client_id", client_data["id"])
             .execute()
         )
@@ -98,7 +112,11 @@ async def get_client_documents(
         documents: List[DocumentInfo] = []
         for doc in docs:
             content = doc.get("content", "")
-            if search and search.lower() not in doc.get("title", "").lower() and search.lower() not in content.lower():
+            if (
+                search
+                and search.lower() not in doc.get("title", "").lower()
+                and search.lower() not in content.lower()
+            ):
                 continue
             if tags and not any(tag in (doc.get("tags") or []) for tag in tags):
                 continue
@@ -118,8 +136,12 @@ async def get_client_documents(
             )
 
         documents.sort(key=lambda x: x.last_modified, reverse=True)
-        logger.info(f"✅ Found {len(documents)} documents for {client_name} from Supabase")
-        return ClientDocumentsResponse(client_name=client_name, total_documents=len(documents), documents=documents)
+        logger.info(
+            f"✅ Found {len(documents)} documents for {client_name} from Supabase"
+        )
+        return ClientDocumentsResponse(
+            client_name=client_name, total_documents=len(documents), documents=documents
+        )
 
     except HTTPException:
         raise
@@ -128,11 +150,12 @@ async def get_client_documents(
         raise HTTPException(status_code=500, detail=f"Error retrieving documents: {e}")
 
 
-@router.get("/clients/{client_name}/documents/{document_id}", response_model=DocumentContentResponse)
+@router.get(
+    "/clients/{client_name}/documents/{document_id}",
+    response_model=DocumentContentResponse,
+)
 async def get_document_content(
-    client_name: str,
-    document_id: str,
-    supabase=Depends(get_supabase_client)
+    client_name: str, document_id: str, supabase=Depends(get_supabase_client)
 ) -> DocumentContentResponse:
     """
     Get full content of a specific document.
@@ -149,15 +172,23 @@ async def get_document_content(
 
     try:
         client_res = (
-            supabase.table("clients").select("id").eq("name", client_name).single().execute()
+            supabase.table("clients")
+            .select("id")
+            .eq("name", client_name)
+            .single()
+            .execute()
         )
         client_data = client_res.data
         if not client_data:
-            raise HTTPException(status_code=404, detail=f"Client {client_name} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Client {client_name} not found"
+            )
 
         doc_res = (
             supabase.table("documents")
-            .select("id,title,content,tags,updated_at,file_path,file_size,file_type,description")
+            .select(
+                "id,title,content,tags,updated_at,file_path,file_size,file_type,description"
+            )
             .eq("client_id", client_data["id"])
             .eq("id", document_id)
             .single()
@@ -165,7 +196,9 @@ async def get_document_content(
         )
         doc = doc_res.data
         if not doc:
-            raise HTTPException(status_code=404, detail=f"Document {document_id} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Document {document_id} not found"
+            )
 
         content = doc.get("content", "")
         metadata = {
@@ -189,7 +222,6 @@ async def get_document_content(
         raise HTTPException(status_code=500, detail=f"Error retrieving document: {e}")
 
 
-
 class UploadDocumentRequest(BaseModel):
     title: str
     content: str
@@ -209,27 +241,41 @@ async def upload_document(
         document_name = payload.title if "." in payload.title else f"{payload.title}.md"
 
         # Upload content via RAG tool (handles storage + insert)
-        result_msg = await rag_tool.add_content(client_name, document_name, payload.content)
+        result_msg = await rag_tool.add_content(
+            client_name, document_name, payload.content
+        )
 
         # Optionally update description/tags metadata
         try:
             supabase = rag_tool.supabase
             client_res = (
-                supabase.table("clients").select("id").eq("name", client_name).single().execute()
+                supabase.table("clients")
+                .select("id")
+                .eq("name", client_name)
+                .single()
+                .execute()
             )
             client_id = client_res.data["id"]
             update_data: Dict[str, Any] = {}
             update_data["description"] = (
-                payload.description if payload.description is not None else payload.content[:200]
+                payload.description
+                if payload.description is not None
+                else payload.content[:200]
             )
             if payload.tags is not None:
                 update_data["tags"] = payload.tags
             if update_data:
-                supabase.table("documents").update(update_data).eq("client_id", client_id).eq("title", document_name).execute()
+                supabase.table("documents").update(update_data).eq(
+                    "client_id", client_id
+                ).eq("title", document_name).execute()
         except Exception as meta_e:  # pragma: no cover
             logger.warning(f"Upload succeeded but metadata update failed: {meta_e}")
 
-        return {"status": "ok", "message": result_msg, "document": {"client": client_name, "title": document_name}}
+        return {
+            "status": "ok",
+            "message": result_msg,
+            "document": {"client": client_name, "title": document_name},
+        }
 
     except HTTPException:
         raise
@@ -238,24 +284,26 @@ async def upload_document(
         raise HTTPException(status_code=500, detail=f"Error uploading document: {e}")
 
 
-
-
 @router.post("/clients/{client_name}/backfill-embeddings")
 async def backfill_embeddings(
-    client_name: str,
-    limit: int = 100,
-    rag_tool: RAGTool = Depends(get_rag_tool)
+    client_name: str, limit: int = 100, rag_tool: RAGTool = Depends(get_rag_tool)
 ) -> Dict[str, Any]:
     """Backfill missing embeddings for a client's documents (no scripts required)."""
     try:
         supabase = rag_tool.supabase
         # Resolve client id
         client_res = (
-            supabase.table("clients").select("id").eq("name", client_name).single().execute()
+            supabase.table("clients")
+            .select("id")
+            .eq("name", client_name)
+            .single()
+            .execute()
         )
         client_data = client_res.data
         if not client_data:
-            raise HTTPException(status_code=404, detail=f"Client {client_name} not found")
+            raise HTTPException(
+                status_code=404, detail=f"Client {client_name} not found"
+            )
         client_id = client_data["id"]
 
         # Fetch docs with null embeddings
@@ -273,24 +321,32 @@ async def backfill_embeddings(
         for doc in docs:
             emb = rag_tool._embed_text(doc.get("content", ""))
             try:
-                supabase.table("documents").update({"embedding": emb}).eq("id", doc["id"]).execute()
+                supabase.table("documents").update({"embedding": emb}).eq(
+                    "id", doc["id"]
+                ).execute()
                 updated += 1
             except Exception as ue:  # pragma: no cover
                 logger.warning(f"Failed to update embedding for {doc.get('id')}: {ue}")
                 continue
 
-        return {"status": "ok", "client": client_name, "updated": updated, "total_candidates": len(docs)}
+        return {
+            "status": "ok",
+            "client": client_name,
+            "updated": updated,
+            "total_candidates": len(docs),
+        }
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error backfilling embeddings for {client_name}: {e}")
-        raise HTTPException(status_code=500, detail=f"Error backfilling embeddings: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Error backfilling embeddings: {e}"
+        )
+
 
 @router.get("/clients", response_model=List[str])
-async def get_available_clients(
-    supabase=Depends(get_supabase_client)
-) -> List[str]:
+async def get_available_clients(supabase=Depends(get_supabase_client)) -> List[str]:
     """Get list of available clients with knowledge bases."""
     logger.info("📋 Getting available clients from Supabase")
 
@@ -306,6 +362,7 @@ async def get_available_clients(
 
 class FrontendDocument(BaseModel):
     """Frontend-compatible document model."""
+
     id: str
     title: str
     description: str
@@ -315,19 +372,25 @@ class FrontendDocument(BaseModel):
     selected: bool = False
 
 
-@router.get("/frontend/clients/{client_name}/documents", response_model=List[FrontendDocument])
+@router.get(
+    "/frontend/clients/{client_name}/documents", response_model=List[FrontendDocument]
+)
 async def get_frontend_documents(
     client_name: str,
     search: Optional[str] = Query(None, description="Search query to filter documents"),
     tags: Optional[List[str]] = Query(None, description="Filter by tags"),
-    supabase=Depends(get_supabase_client)
+    supabase=Depends(get_supabase_client),
 ) -> List[FrontendDocument]:
     """Get documents in frontend-compatible format."""
     logger.info(f"🎨 Getting frontend documents for client: {client_name}")
 
     try:
         client_res = (
-            supabase.table("clients").select("id").eq("name", client_name).single().execute()
+            supabase.table("clients")
+            .select("id")
+            .eq("name", client_name)
+            .single()
+            .execute()
         )
         client_data = client_res.data
         if not client_data:
@@ -345,7 +408,11 @@ async def get_frontend_documents(
         documents: List[FrontendDocument] = []
         for doc in docs:
             content = doc.get("content", "")
-            if search and search.lower() not in doc.get("title", "").lower() and search.lower() not in content.lower():
+            if (
+                search
+                and search.lower() not in doc.get("title", "").lower()
+                and search.lower() not in content.lower()
+            ):
                 continue
             if tags and not any(tag in (doc.get("tags") or []) for tag in tags):
                 continue
@@ -363,11 +430,11 @@ async def get_frontend_documents(
             )
 
         documents.sort(key=lambda x: x.date, reverse=True)
-        logger.info(f"✅ Returning {len(documents)} frontend documents for {client_name}")
+        logger.info(
+            f"✅ Returning {len(documents)} frontend documents for {client_name}"
+        )
         return documents
 
     except Exception as e:
         logger.error(f"Error getting frontend documents for {client_name}: {e}")
         raise HTTPException(status_code=500, detail=f"Error retrieving documents: {e}")
-
-

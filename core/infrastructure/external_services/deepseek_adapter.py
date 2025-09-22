@@ -10,7 +10,7 @@ from openai import AsyncOpenAI
 from ...application.interfaces.llm_provider_interface import (
     LLMProviderInterface,
     LLMResponse,
-    LLMStreamChunk
+    LLMStreamChunk,
 )
 from ...domain.value_objects.provider_config import ProviderConfig, LLMProvider
 
@@ -36,18 +36,13 @@ class DeepSeekAdapter(LLMProviderInterface):
                 raise ValueError("DeepSeek API key is required")
 
             self.client = AsyncOpenAI(
-                api_key=self.api_key,
-                base_url=self.base_url,
-                timeout=600.0
+                api_key=self.api_key, base_url=self.base_url, timeout=600.0
             )
             logger.debug("Created new DeepSeek client")
         return self.client
-    
+
     async def generate_content(
-        self,
-        prompt: str,
-        config: ProviderConfig,
-        system_message: Optional[str] = None
+        self, prompt: str, config: ProviderConfig, system_message: Optional[str] = None
     ) -> str:
         """Generate content using DeepSeek."""
         try:
@@ -69,7 +64,7 @@ class DeepSeekAdapter(LLMProviderInterface):
                 max_tokens=config.max_tokens,
                 top_p=config.top_p,
                 frequency_penalty=config.frequency_penalty,
-                presence_penalty=config.presence_penalty
+                presence_penalty=config.presence_penalty,
             )
 
             content = response.choices[0].message.content
@@ -80,12 +75,9 @@ class DeepSeekAdapter(LLMProviderInterface):
         except Exception as e:
             logger.error(f"DeepSeek API error: {str(e)}")
             raise RuntimeError(f"DeepSeek generation failed: {str(e)}")
-    
+
     async def generate_content_detailed(
-        self,
-        prompt: str,
-        config: ProviderConfig,
-        system_message: Optional[str] = None
+        self, prompt: str, config: ProviderConfig, system_message: Optional[str] = None
     ) -> LLMResponse:
         """Generate content with detailed response."""
         try:
@@ -108,7 +100,7 @@ class DeepSeekAdapter(LLMProviderInterface):
                 max_tokens=config.max_tokens,
                 top_p=config.top_p,
                 frequency_penalty=config.frequency_penalty,
-                presence_penalty=config.presence_penalty
+                presence_penalty=config.presence_penalty,
             )
             duration = time.time() - start_time
 
@@ -119,26 +111,31 @@ class DeepSeekAdapter(LLMProviderInterface):
                 model=config.model,
                 finish_reason=response.choices[0].finish_reason or "completed",
                 usage={
-                    "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-                    "completion_tokens": response.usage.completion_tokens if response.usage else 0,
-                    "total_tokens": response.usage.total_tokens if response.usage else 0
+                    "prompt_tokens": (
+                        response.usage.prompt_tokens if response.usage else 0
+                    ),
+                    "completion_tokens": (
+                        response.usage.completion_tokens if response.usage else 0
+                    ),
+                    "total_tokens": (
+                        response.usage.total_tokens if response.usage else 0
+                    ),
                 },
-                response_time=duration
+                response_time=duration,
             )
 
         except Exception as e:
             logger.error(f"DeepSeek detailed API error: {str(e)}")
             raise RuntimeError(f"DeepSeek detailed generation failed: {str(e)}")
-    
+
     async def generate_content_stream(
-        self,
-        prompt: str,
-        config: ProviderConfig,
-        system_message: Optional[str] = None
+        self, prompt: str, config: ProviderConfig, system_message: Optional[str] = None
     ) -> AsyncGenerator[LLMStreamChunk, None]:
         """Generate content with streaming response."""
         try:
-            logger.debug(f"Making streaming DeepSeek request with model: {config.model}")
+            logger.debug(
+                f"Making streaming DeepSeek request with model: {config.model}"
+            )
 
             client = self._get_client()
 
@@ -157,14 +154,13 @@ class DeepSeekAdapter(LLMProviderInterface):
                 top_p=config.top_p,
                 frequency_penalty=config.frequency_penalty,
                 presence_penalty=config.presence_penalty,
-                stream=True
+                stream=True,
             )
 
             async for chunk in stream:
                 if chunk.choices and chunk.choices[0].delta.content:
                     yield LLMStreamChunk(
-                        content=chunk.choices[0].delta.content,
-                        is_final=False
+                        content=chunk.choices[0].delta.content, is_final=False
                     )
 
             # Final chunk
@@ -173,11 +169,9 @@ class DeepSeekAdapter(LLMProviderInterface):
         except Exception as e:
             logger.error(f"DeepSeek streaming API error: {str(e)}")
             yield LLMStreamChunk(content=f"Error: {str(e)}", is_final=True)
-    
+
     async def chat_completion(
-        self,
-        messages: List[Dict[str, str]],
-        config: ProviderConfig
+        self, messages: List[Dict[str, str]], config: ProviderConfig
     ) -> LLMResponse:
         """Perform chat completion."""
         try:
@@ -194,7 +188,7 @@ class DeepSeekAdapter(LLMProviderInterface):
                 max_tokens=config.max_tokens,
                 top_p=config.top_p,
                 frequency_penalty=config.frequency_penalty,
-                presence_penalty=config.presence_penalty
+                presence_penalty=config.presence_penalty,
             )
             duration = time.time() - start_time
 
@@ -205,17 +199,23 @@ class DeepSeekAdapter(LLMProviderInterface):
                 model=config.model,
                 finish_reason=response.choices[0].finish_reason or "completed",
                 usage={
-                    "prompt_tokens": response.usage.prompt_tokens if response.usage else 0,
-                    "completion_tokens": response.usage.completion_tokens if response.usage else 0,
-                    "total_tokens": response.usage.total_tokens if response.usage else 0
+                    "prompt_tokens": (
+                        response.usage.prompt_tokens if response.usage else 0
+                    ),
+                    "completion_tokens": (
+                        response.usage.completion_tokens if response.usage else 0
+                    ),
+                    "total_tokens": (
+                        response.usage.total_tokens if response.usage else 0
+                    ),
                 },
-                response_time=duration
+                response_time=duration,
             )
 
         except Exception as e:
             logger.error(f"DeepSeek chat completion error: {str(e)}")
             raise RuntimeError(f"DeepSeek chat completion failed: {str(e)}")
-    
+
     async def validate_config(self, config: ProviderConfig) -> bool:
         """Validate DeepSeek configuration."""
         if config.provider != LLMProvider.DEEPSEEK:
@@ -235,7 +235,9 @@ class DeepSeekAdapter(LLMProviderInterface):
             logger.error(f"DeepSeek config validation failed: {str(e)}")
             return False
 
-    async def get_available_models(self, config: ProviderConfig) -> List[Dict[str, Any]]:
+    async def get_available_models(
+        self, config: ProviderConfig
+    ) -> List[Dict[str, Any]]:
         """Get available DeepSeek models with token limits."""
         try:
             client = self._get_client()
@@ -266,7 +268,7 @@ class DeepSeekAdapter(LLMProviderInterface):
                 return {
                     "status": "unhealthy",
                     "provider": "deepseek",
-                    "error": "API key not provided"
+                    "error": "API key not provided",
                 }
 
             client = self._get_client()
@@ -280,7 +282,7 @@ class DeepSeekAdapter(LLMProviderInterface):
                 "provider": "deepseek",
                 "api_key_valid": True,
                 "response_time_ms": round(response_time * 1000, 2),
-                "base_url": self.base_url
+                "base_url": self.base_url,
             }
 
         except Exception as e:
@@ -288,5 +290,5 @@ class DeepSeekAdapter(LLMProviderInterface):
                 "status": "unhealthy",
                 "provider": "deepseek",
                 "error": str(e),
-                "api_key_valid": bool(self.api_key)
+                "api_key_valid": bool(self.api_key),
             }
