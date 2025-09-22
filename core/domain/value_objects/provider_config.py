@@ -7,6 +7,7 @@ from enum import Enum
 
 class LLMProvider(Enum):
     """Supported LLM providers."""
+
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     DEEPSEEK = "deepseek"
@@ -36,7 +37,7 @@ class ProviderConfig:
     def __post_init__(self) -> None:
         """Validate configuration after initialization."""
         if self.additional_params is None:
-            object.__setattr__(self, 'additional_params', {})
+            object.__setattr__(self, "additional_params", {})
 
         # Validate temperature
         if not 0.0 <= self.temperature <= 2.0:
@@ -59,15 +60,21 @@ class ProviderConfig:
 
         # Set default model for provider if not specified
         if not self.model:
-            object.__setattr__(self, 'model', self._get_default_model())
-
+            object.__setattr__(self, "model", self._get_default_model())
 
         # Cap max_tokens to the model's limit when provided
         try:
-            model_info = next((m for m in self.get_available_models() if m.get("name") == self.model), None)
-            if self.max_tokens is not None and model_info and isinstance(model_info.get("max_tokens"), int):
+            model_info = next(
+                (m for m in self.get_available_models() if m.get("name") == self.model),
+                None,
+            )
+            if (
+                self.max_tokens is not None
+                and model_info
+                and isinstance(model_info.get("max_tokens"), int)
+            ):
                 if self.max_tokens > model_info["max_tokens"]:
-                    object.__setattr__(self, 'max_tokens', model_info["max_tokens"])
+                    object.__setattr__(self, "max_tokens", model_info["max_tokens"])
         except Exception:
             # Be conservative: if anything goes wrong, keep provided max_tokens
             pass
@@ -78,7 +85,7 @@ class ProviderConfig:
             LLMProvider.OPENAI: "gpt-4o",
             LLMProvider.ANTHROPIC: "claude-3-7-sonnet-latest",
             LLMProvider.DEEPSEEK: "deepseek-chat",
-            LLMProvider.GEMINI: "gemini-2.5-pro"
+            LLMProvider.GEMINI: "gemini-2.5-pro",
         }
         return defaults.get(self.provider, "gpt-4o")
 
@@ -109,29 +116,101 @@ class ProviderConfig:
                 {"name": "gpt-4-turbo", "max_tokens": 4096, "context_window": 128000},
             ],
             LLMProvider.ANTHROPIC: [
-                {"name": "claude-opus-4-1-20250805", "max_tokens": 64000, "context_window": 200000},
-                {"name": "claude-opus-4-20250514", "max_tokens": 64000, "context_window": 200000},
-                {"name": "claude-sonnet-4-20250514", "max_tokens": 64000, "context_window": 200000},  # 1,000,000 in beta
-                {"name": "claude-3-7-sonnet-20250219", "max_tokens": 64000, "context_window": 200000},
-                {"name": "claude-3-5-haiku-20241022", "max_tokens": 8192, "context_window": 200000},
-                {"name": "claude-3-haiku-20240307", "max_tokens": 8192, "context_window": 200000},
-                {"name": "claude-3-5-haiku-latest", "max_tokens": 8192, "context_window": 200000},
-                {"name": "claude-3-7-sonnet-latest", "max_tokens": 64000, "context_window": 200000},
+                {
+                    "name": "claude-opus-4-1-20250805",
+                    "max_tokens": 64000,
+                    "context_window": 200000,
+                },
+                {
+                    "name": "claude-opus-4-20250514",
+                    "max_tokens": 64000,
+                    "context_window": 200000,
+                },
+                {
+                    "name": "claude-sonnet-4-20250514",
+                    "max_tokens": 64000,
+                    "context_window": 200000,
+                },  # 1,000,000 in beta
+                {
+                    "name": "claude-3-7-sonnet-20250219",
+                    "max_tokens": 64000,
+                    "context_window": 200000,
+                },
+                {
+                    "name": "claude-3-5-haiku-20241022",
+                    "max_tokens": 8192,
+                    "context_window": 200000,
+                },
+                {
+                    "name": "claude-3-haiku-20240307",
+                    "max_tokens": 8192,
+                    "context_window": 200000,
+                },
+                {
+                    "name": "claude-3-5-haiku-latest",
+                    "max_tokens": 8192,
+                    "context_window": 200000,
+                },
+                {
+                    "name": "claude-3-7-sonnet-latest",
+                    "max_tokens": 64000,
+                    "context_window": 200000,
+                },
             ],
             LLMProvider.DEEPSEEK: [
                 {"name": "deepseek-chat", "max_tokens": 8192, "context_window": 128000},
-                {"name": "deepseek-reasoner", "max_tokens": 8192, "context_window": 128000},
+                {
+                    "name": "deepseek-reasoner",
+                    "max_tokens": 8192,
+                    "context_window": 128000,
+                },
             ],
             LLMProvider.GEMINI: [
-                {"name": "gemini-2.5-pro", "max_tokens": 8192, "context_window": 1048576},
-                {"name": "gemini-2.5-flash", "max_tokens": 8192, "context_window": 1048576},
-                {"name": "gemini-2.5-flash-lite", "max_tokens": 8192, "context_window": 1048576},
-                {"name": "gemini-live-2.5-flash-preview", "max_tokens": 8192, "context_window": 1048576},
-                {"name": "gemini-2.5-flash-preview-native-audio-dialog", "max_tokens": 8192, "context_window": 128000},
-                {"name": "gemini-2.5-flash-exp-native-audio-thinking-dialog", "max_tokens": 8192, "context_window": 128000},
-                {"name": "gemini-2.5-flash-image-preview", "max_tokens": 8192, "context_window": 32768},
-                {"name": "gemini-2.5-flash-preview-tts", "max_tokens": 8000, "context_window": 8000},
-                {"name": "gemini-2.5-pro-preview-tts", "max_tokens": 8000, "context_window": 8000},
+                {
+                    "name": "gemini-2.5-pro",
+                    "max_tokens": 8192,
+                    "context_window": 1048576,
+                },
+                {
+                    "name": "gemini-2.5-flash",
+                    "max_tokens": 8192,
+                    "context_window": 1048576,
+                },
+                {
+                    "name": "gemini-2.5-flash-lite",
+                    "max_tokens": 8192,
+                    "context_window": 1048576,
+                },
+                {
+                    "name": "gemini-live-2.5-flash-preview",
+                    "max_tokens": 8192,
+                    "context_window": 1048576,
+                },
+                {
+                    "name": "gemini-2.5-flash-preview-native-audio-dialog",
+                    "max_tokens": 8192,
+                    "context_window": 128000,
+                },
+                {
+                    "name": "gemini-2.5-flash-exp-native-audio-thinking-dialog",
+                    "max_tokens": 8192,
+                    "context_window": 128000,
+                },
+                {
+                    "name": "gemini-2.5-flash-image-preview",
+                    "max_tokens": 8192,
+                    "context_window": 32768,
+                },
+                {
+                    "name": "gemini-2.5-flash-preview-tts",
+                    "max_tokens": 8000,
+                    "context_window": 8000,
+                },
+                {
+                    "name": "gemini-2.5-pro-preview-tts",
+                    "max_tokens": 8000,
+                    "context_window": 8000,
+                },
             ],
         }
         return models.get(self.provider, [])
@@ -152,7 +231,7 @@ class ProviderConfig:
             presence_penalty=self.presence_penalty,
             api_key=self.api_key,
             base_url=self.base_url,
-            additional_params=self.additional_params
+            additional_params=self.additional_params,
         )
 
     def with_model(self, model: str) -> "ProviderConfig":
@@ -167,7 +246,7 @@ class ProviderConfig:
             presence_penalty=self.presence_penalty,
             api_key=self.api_key,
             base_url=self.base_url,
-            additional_params=self.additional_params
+            additional_params=self.additional_params,
         )
 
     def with_provider(self, provider: LLMProvider) -> "ProviderConfig":
@@ -182,7 +261,7 @@ class ProviderConfig:
             presence_penalty=self.presence_penalty,
             api_key=self.api_key,
             base_url=self.base_url,
-            additional_params=self.additional_params
+            additional_params=self.additional_params,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -197,7 +276,7 @@ class ProviderConfig:
             "presence_penalty": self.presence_penalty,
             "api_key": self.api_key,
             "base_url": self.base_url,
-            "additional_params": self.additional_params
+            "additional_params": self.additional_params,
         }
 
     @classmethod
@@ -213,41 +292,33 @@ class ProviderConfig:
             presence_penalty=data.get("presence_penalty", 0.0),
             api_key=data.get("api_key"),
             base_url=data.get("base_url"),
-            additional_params=data.get("additional_params", {})
+            additional_params=data.get("additional_params", {}),
         )
 
     @classmethod
-    def create_openai_config(cls, model: str = "gpt-4o", temperature: float = 0.7) -> "ProviderConfig":
+    def create_openai_config(
+        cls, model: str = "gpt-4o", temperature: float = 0.7
+    ) -> "ProviderConfig":
         """Create OpenAI configuration."""
-        return cls(
-            provider=LLMProvider.OPENAI,
-            model=model,
-            temperature=temperature
-        )
+        return cls(provider=LLMProvider.OPENAI, model=model, temperature=temperature)
 
     @classmethod
-    def create_anthropic_config(cls, model: str = "claude-3-7-sonnet-latest", temperature: float = 0.7) -> "ProviderConfig":
+    def create_anthropic_config(
+        cls, model: str = "claude-3-7-sonnet-latest", temperature: float = 0.7
+    ) -> "ProviderConfig":
         """Create Anthropic configuration."""
-        return cls(
-            provider=LLMProvider.ANTHROPIC,
-            model=model,
-            temperature=temperature
-        )
+        return cls(provider=LLMProvider.ANTHROPIC, model=model, temperature=temperature)
 
     @classmethod
-    def create_deepseek_config(cls, model: str = "deepseek-chat", temperature: float = 0.7) -> "ProviderConfig":
+    def create_deepseek_config(
+        cls, model: str = "deepseek-chat", temperature: float = 0.7
+    ) -> "ProviderConfig":
         """Create DeepSeek configuration."""
-        return cls(
-            provider=LLMProvider.DEEPSEEK,
-            model=model,
-            temperature=temperature
-        )
+        return cls(provider=LLMProvider.DEEPSEEK, model=model, temperature=temperature)
 
     @classmethod
-    def create_gemini_config(cls, model: str = "gemini-2.5-pro", temperature: float = 0.7) -> "ProviderConfig":
+    def create_gemini_config(
+        cls, model: str = "gemini-2.5-pro", temperature: float = 0.7
+    ) -> "ProviderConfig":
         """Create Google Gemini configuration."""
-        return cls(
-            provider=LLMProvider.GEMINI,
-            model=model,
-            temperature=temperature
-        )
+        return cls(provider=LLMProvider.GEMINI, model=model, temperature=temperature)

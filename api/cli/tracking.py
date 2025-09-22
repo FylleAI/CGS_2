@@ -5,6 +5,7 @@ Comandi:
 - details: dettagli di una run specifica
 - stats: statistiche aggregate
 """
+
 from __future__ import annotations
 
 import typer
@@ -30,7 +31,9 @@ def show_history(
         console.print("[red]❌ Tracking not available[/red]")
         raise typer.Exit(code=1)
 
-    runs = tracker.get_run_history(client_name=client, workflow_name=workflow, limit=limit)
+    runs = tracker.get_run_history(
+        client_name=client, workflow_name=workflow, limit=limit
+    )
     if not runs:
         console.print("[yellow]No runs found[/yellow]")
         return
@@ -56,7 +59,9 @@ def show_history(
         started_raw = run.get("started_at") or run.get("created_at")
         if started_raw:
             try:
-                started = datetime.fromisoformat(str(started_raw).replace("Z", "+00:00"))
+                started = datetime.fromisoformat(
+                    str(started_raw).replace("Z", "+00:00")
+                )
                 started_str = started.strftime("%m/%d %H:%M")
             except Exception:
                 started_str = str(started_raw)
@@ -72,7 +77,7 @@ def show_history(
         short_topic = topic[:30] + "..." if len(topic) > 30 else topic
 
         table.add_row(
-            str(run.get("id", "-") )[:8],
+            str(run.get("id", "-"))[:8],
             str(run.get("client_name", "-")),
             str(run.get("workflow_name", "-")),
             short_topic,
@@ -116,7 +121,13 @@ def show_details(run_id: str):
     if run.get("error_message"):
         run_info += f"\n[bold red]Error:[/bold red] {run.get('error_message')}"
 
-    console.print(Panel(run_info, title=f"Run Details - {str(run.get('id',''))[:8]}", border_style="blue"))
+    console.print(
+        Panel(
+            run_info,
+            title=f"Run Details - {str(run.get('id',''))[:8]}",
+            border_style="blue",
+        )
+    )
 
     if agents:
         table = Table(title="Agent Executions")
@@ -146,14 +157,24 @@ def show_details(run_id: str):
         table.add_column("Path")
         table.add_column("Source")
         for d in documents:
-            table.add_row(d.get("client_name", "-"), d.get("document_path", "-"), d.get("source_url") or "-")
+            table.add_row(
+                d.get("client_name", "-"),
+                d.get("document_path", "-"),
+                d.get("source_url") or "-",
+            )
         console.print(table)
 
     if content:
         preview = content.get("content", "")
         if len(preview) > 200:
             preview = preview[:197] + "..."
-        console.print(Panel(preview, title=f"Content - {content.get('title','')}", border_style="green"))
+        console.print(
+            Panel(
+                preview,
+                title=f"Content - {content.get('title','')}",
+                border_style="green",
+            )
+        )
 
     if logs:
         console.print(f"\n[bold]Recent Logs ({len(logs)} total):[/bold]")
@@ -172,21 +193,27 @@ def show_details(run_id: str):
                 "DEBUG": "[dim]DEBUG[/dim]",
             }.get(level, level)
             agent_str = f"[{log.get('agent_name')}] " if log.get("agent_name") else ""
-            console.print(f"  {ts_str} {level_style} {agent_str}{log.get('message','')}")
+            console.print(
+                f"  {ts_str} {level_style} {agent_str}{log.get('message','')}"
+            )
 
 
 @app.command("stats")
 def show_stats(
     client: str = typer.Option(None, "--client", "-c", help="Filter by client"),
     workflow: str = typer.Option(None, "--workflow", "-w", help="Filter by workflow"),
-    days: int = typer.Option(7, "--days", "-d", help="Days window (not enforced here, filtered client-side)"),
+    days: int = typer.Option(
+        7, "--days", "-d", help="Days window (not enforced here, filtered client-side)"
+    ),
 ):
     tracker = get_tracker()
     if not tracker:
         console.print("[red]❌ Tracking not available[/red]")
         raise typer.Exit(code=1)
 
-    runs = tracker.get_run_history(client_name=client, workflow_name=workflow, limit=1000)
+    runs = tracker.get_run_history(
+        client_name=client, workflow_name=workflow, limit=1000
+    )
     if not runs:
         console.print("[yellow]No runs found[/yellow]")
         return
@@ -211,9 +238,14 @@ def show_stats(
 [bold]Total Tokens:[/bold] {total_tokens}
 [bold]Avg Duration:[/bold] {avg_duration:.1f}s
 """
-    console.print(Panel(stats_text, title=f"Statistics{' - ' + client if client else ''}", border_style="green"))
+    console.print(
+        Panel(
+            stats_text,
+            title=f"Statistics{' - ' + client if client else ''}",
+            border_style="green",
+        )
+    )
 
 
 if __name__ == "__main__":
     app()
-

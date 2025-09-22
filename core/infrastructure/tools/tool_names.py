@@ -8,6 +8,7 @@ Centralize tool name constants to ensure consistent references across:
 Add aliases only for backward compatibility or minor naming variants.
 Avoid aliases that change semantics or parameter signatures.
 """
+
 from __future__ import annotations
 
 from typing import Dict
@@ -41,4 +42,3 @@ ALIASES: Dict[str, str] = {
     "generate_image": ToolNames.IMAGE_GENERATION,
     # Add more only when encountered in the codebase or YAML
 }
-

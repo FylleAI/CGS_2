@@ -6,7 +6,10 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from core.infrastructure.workflows import execute_dynamic_workflow, list_available_workflows
+from core.infrastructure.workflows import (
+    execute_dynamic_workflow,
+    list_available_workflows,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +18,7 @@ router = APIRouter()
 
 class WorkflowListItem(BaseModel):
     """Workflow list item model."""
+
     id: str
     name: str
     workflow_type: str
@@ -25,6 +29,7 @@ class WorkflowListItem(BaseModel):
 
 class WorkflowDetail(BaseModel):
     """Detailed workflow model."""
+
     id: str
     name: str
     description: str
@@ -37,12 +42,14 @@ class WorkflowDetail(BaseModel):
 
 class WorkflowExecutionRequest(BaseModel):
     """Workflow execution request model."""
+
     workflow_id: str
     parameters: Dict[str, Any] = {}
 
 
 class WorkflowExecutionResponse(BaseModel):
     """Workflow execution response model."""
+
     workflow_id: str
     status: str
     outputs: Dict[str, Any] = {}
@@ -56,7 +63,7 @@ async def list_workflows(
     limit: int = 10,
     offset: int = 0,
     workflow_type: Optional[str] = None,
-    status: Optional[str] = None
+    status: Optional[str] = None,
 ):
     """List available workflows."""
     try:
@@ -64,14 +71,16 @@ async def list_workflows(
         workflow_list = []
 
         for workflow_id, workflow_handler_name in available_workflows.items():
-            workflow_list.append(WorkflowListItem(
-                id=workflow_id,
-                name=workflow_id.replace('_', ' ').title(),
-                workflow_type=workflow_id,
-                status="available",
-                created_at="2025-01-01T00:00:00Z",
-                client_profile=None
-            ))
+            workflow_list.append(
+                WorkflowListItem(
+                    id=workflow_id,
+                    name=workflow_id.replace("_", " ").title(),
+                    workflow_type=workflow_id,
+                    status="available",
+                    created_at="2025-01-01T00:00:00Z",
+                    client_profile=None,
+                )
+            )
 
         return workflow_list[:limit]
     except Exception as e:
@@ -119,11 +128,12 @@ async def execute_workflow(request: WorkflowExecutionRequest):
         if request.workflow_id not in available_workflows:
             raise HTTPException(
                 status_code=404,
-                detail=f"Workflow '{request.workflow_id}' not found. Available: {list(available_workflows.keys())}"
+                detail=f"Workflow '{request.workflow_id}' not found. Available: {list(available_workflows.keys())}",
             )
 
         # Execute the workflow
         import time
+
         start_time = time.time()
 
         result = await execute_dynamic_workflow(request.workflow_id, request.parameters)
@@ -137,7 +147,7 @@ async def execute_workflow(request: WorkflowExecutionRequest):
             status="completed",
             outputs=result,
             execution_time=execution_time,
-            success=True
+            success=True,
         )
 
     except HTTPException:
@@ -149,5 +159,5 @@ async def execute_workflow(request: WorkflowExecutionRequest):
             status="failed",
             outputs={},
             success=False,
-            error_message=str(e)
+            error_message=str(e),
         )

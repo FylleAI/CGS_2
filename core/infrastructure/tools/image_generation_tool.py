@@ -20,8 +20,12 @@ class ImageGenerationTool:
 
     def __init__(self, settings: Optional[Settings] = None) -> None:
         self.settings = settings
-        self._openai_api_key = (settings.openai_api_key if settings else os.getenv("OPENAI_API_KEY"))
-        self._gemini_api_key = (settings.gemini_api_key if settings else os.getenv("GEMINI_API_KEY"))
+        self._openai_api_key = (
+            settings.openai_api_key if settings else os.getenv("OPENAI_API_KEY")
+        )
+        self._gemini_api_key = (
+            settings.gemini_api_key if settings else os.getenv("GEMINI_API_KEY")
+        )
         self._openai_adapter: Optional[OpenAIAdapter] = None
         self._gemini_adapter: Optional[GeminiAdapter] = None
 
@@ -46,7 +50,12 @@ class ImageGenerationTool:
         """Generate an image using the requested provider."""
 
         provider_normalized = (provider or "openai").lower()
-        logger.info("🖼️ Generating image with provider=%s style=%s size=%s", provider_normalized, style, size)
+        logger.info(
+            "🖼️ Generating image with provider=%s style=%s size=%s",
+            provider_normalized,
+            style,
+            size,
+        )
 
         try:
             if provider_normalized == "openai":

@@ -21,13 +21,20 @@ class PerplexityResearchTool:
     or policy enforcement.
     """
 
-    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None, timeout: int = 30) -> None:
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+        timeout: int = 30,
+    ) -> None:
         self.api_key = api_key or os.getenv("PERPLEXITY_API_KEY")
         self.base_url = "https://api.perplexity.ai/chat/completions"
         self.model = model or "sonar-pro"
         self.timeout = timeout
 
-    async def search(self, query: str, opts: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    async def search(
+        self, query: str, opts: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """Execute a Perplexity search.
 
         Args:
@@ -66,7 +73,13 @@ class PerplexityResearchTool:
 
         start = time.time()
         async with aiohttp.ClientSession() as session:
-            async with session.post(self.base_url, json=payload, headers=headers, timeout=self.timeout, ssl=False) as resp:
+            async with session.post(
+                self.base_url,
+                json=payload,
+                headers=headers,
+                timeout=self.timeout,
+                ssl=False,
+            ) as resp:
                 data = await resp.json()
                 if resp.status != 200:
                     raise Exception(f"API error {resp.status}: {data}")
@@ -79,4 +92,3 @@ class PerplexityResearchTool:
             "duration_ms": duration_ms,
             "data": data,
         }
-

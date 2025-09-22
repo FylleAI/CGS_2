@@ -22,44 +22,41 @@ logger = logging.getLogger(__name__)
 class AgentExecutor:
     """
     Executor for AI agents.
-    
+
     This class handles the execution of AI agents with appropriate tools
     and LLM backends.
     """
-    
+
     def __init__(
-        self, 
+        self,
         agent_repository: AgentRepository,
         llm_provider: LLMProviderInterface,
-        provider_config: ProviderConfig
+        provider_config: ProviderConfig,
     ):
         self.agent_repository = agent_repository
         self.llm_provider = llm_provider
         self.provider_config = provider_config
         self.tools_registry = {}
         self.system_prompt_builder = SimpleSystemPromptBuilder()
-    
+
     def register_tool(self, tool_name: str, tool_function: callable, description: str):
         """Register a tool for agent use."""
         self.tools_registry[tool_name] = {
-            'function': tool_function,
-            'description': description
+            "function": tool_function,
+            "description": description,
         }
-    
+
     def register_tools(self, tools: Dict[str, Dict[str, Any]]):
         """Register multiple tools at once."""
         for tool_name, tool_info in tools.items():
             self.register_tool(
-                tool_name, 
-                tool_info['function'], 
-                tool_info.get('description', f"Tool: {tool_name}")
+                tool_name,
+                tool_info["function"],
+                tool_info.get("description", f"Tool: {tool_name}"),
             )
-    
+
     async def execute_agent(
-        self,
-        agent: Agent,
-        task_description: str,
-        context: Dict[str, Any] = None
+        self, agent: Agent, task_description: str, context: Dict[str, Any] = None
     ) -> str:
         """
         Execute an agent with a specific task.
@@ -78,9 +75,9 @@ class AgentExecutor:
         session_id = agent_logger.start_agent_session(
             agent_id=str(agent.id),
             agent_name=agent.name,
-            task_id=context.get('task_id', 'unknown'),
-            workflow_id=context.get('workflow_id', 'unknown'),
-            task_description=task_description
+            task_id=context.get("task_id", "unknown"),
+            workflow_id=context.get("workflow_id", "unknown"),
+            task_description=task_description,
         )
 
         try:
@@ -89,7 +86,7 @@ class AgentExecutor:
                 session_id=session_id,
                 thought=f"Starting task execution for: {task_description[:100]}...",
                 reasoning=f"Agent role: {agent.role.value}, Available tools: {len(agent.tools)}",
-                next_action="Preparing system message and prompt"
+                next_action="Preparing system message and prompt",
             )
 
             # Prepare system message
@@ -104,7 +101,7 @@ class AgentExecutor:
                     session_id=session_id,
                     thought=f"Tools available: {', '.join(agent_tools)}",
                     reasoning="These tools can be used to enhance the response",
-                    next_action="Preparing prompt with tool instructions"
+                    next_action="Preparing prompt with tool instructions",
                 )
 
             # Prepare prompt
@@ -119,21 +116,25 @@ class AgentExecutor:
                 provider=dynamic_config.provider.value,
                 model=dynamic_config.model,
                 prompt=prompt,
-                system_message=system_message
+                system_message=system_message,
             )
 
             # Execute LLM call with timing
             start_time = time.time()
-            logger.debug(f"system_prompt_source=builder_v1, length={len(system_message)}")
+            logger.debug(
+                f"system_prompt_source=builder_v1, length={len(system_message)}"
+            )
             llm_response = await self.llm_provider.generate_content(
-                prompt=prompt,
-                config=dynamic_config,
-                system_message=system_message
+                prompt=prompt, config=dynamic_config, system_message=system_message
             )
             duration_ms = (time.time() - start_time) * 1000
 
             # Extract actual response content
-            response = llm_response.content if hasattr(llm_response, 'content') else str(llm_response)
+            response = (
+                llm_response.content
+                if hasattr(llm_response, "content")
+                else str(llm_response)
+            )
 
             # Get real token usage from API response
             token_usage = self._extract_token_usage(llm_response)
@@ -142,7 +143,7 @@ class AgentExecutor:
             cost_breakdown = cost_calculator.calculate_cost(
                 provider=dynamic_config.provider.value,
                 model=dynamic_config.model,
-                token_usage=token_usage
+                token_usage=token_usage,
             )
 
             # Log LLM response with real usage data
@@ -154,22 +155,22 @@ class AgentExecutor:
                 response=response,
                 tokens_used=token_usage.total_tokens,
                 cost_usd=cost_breakdown.total_cost,
-                duration_ms=duration_ms
+                duration_ms=duration_ms,
             )
 
             # Process tool calls if any
-            final_response = await self.process_tool_calls(response, session_id, agent.name)
+            final_response = await self.process_tool_calls(
+                response, session_id, agent.name
+            )
 
             # End agent session successfully
             agent_logger.end_agent_session(
-                session_id=session_id,
-                success=True,
-                final_output=final_response
+                session_id=session_id, success=True, final_output=final_response
             )
 
-            tracker = context.get('tracker')
-            run_id = context.get('run_id')
-            step_number = context.get('step_number')
+            tracker = context.get("tracker")
+            run_id = context.get("run_id")
+            step_number = context.get("step_number")
             if tracker and run_id:
                 try:
                     tracker.log_agent_execution(
@@ -192,41 +193,42 @@ class AgentExecutor:
         except Exception as e:
             # End agent session with error
             agent_logger.end_agent_session(
-                session_id=session_id,
-                success=False,
-                error_message=str(e)
+                session_id=session_id, success=False, error_message=str(e)
             )
             raise
-    
-    def _prepare_system_message(self, agent: Agent, context: Dict[str, Any] = None) -> str:
+
+    def _prepare_system_message(
+        self, agent: Agent, context: Dict[str, Any] = None
+    ) -> str:
         """Prepare system message for the agent using the simple builder."""
         context = context or {}
         tools_info = self._get_agent_tools_descriptions(agent)
         return self.system_prompt_builder.build(agent, context, tools_info)
-    
+
     def _prepare_prompt(
-        self, 
-        task_description: str, 
+        self,
+        task_description: str,
         context: Dict[str, Any] = None,
-        tools: List[str] = None
+        tools: List[str] = None,
     ) -> str:
         """Prepare the prompt for the agent."""
         context = context or {}
         prompt_parts = [task_description]
-        
+
         # Add context information
         if context:
             context_str = "\n\n## Context Information\n"
             for key, value in context.items():
-                if key not in ['client_profile', 'target_audience'] and value:
+                if key not in ["client_profile", "target_audience"] and value:
                     context_str += f"\n- {key}: {value}"
             prompt_parts.append(context_str)
-        
+
         # Add tools reminder if tools are available
         if tools:
             tools_reminder = "\n\n## Available Tools\n"
             tools_reminder += "You can use these tools to enhance your response:\n"
             from ..tools.tool_names import ToolNames
+
             for tool in tools:
                 if tool == ToolNames.RAG_GET_CLIENT_CONTENT:
                     tools_reminder += f"- {tool}: Use [{ToolNames.RAG_GET_CLIENT_CONTENT}] client_name [/{ToolNames.RAG_GET_CLIENT_CONTENT}] to retrieve all content for a client\n"
@@ -240,9 +242,7 @@ class AgentExecutor:
                 elif tool == ToolNames.WEB_SEARCH_PERPLEXITY:
                     tools_reminder += f"- {tool}: Use [{ToolNames.WEB_SEARCH_PERPLEXITY}] your search query [/{ToolNames.WEB_SEARCH_PERPLEXITY}] for Perplexity research with citations\n"
                 elif tool == ToolNames.IMAGE_GENERATION:
-                    tools_reminder += (
-                        f"- {tool}: Provide article_content, image_style, and image_provider lines inside the tool block to generate contextual visuals\n"
-                    )
+                    tools_reminder += f"- {tool}: Provide article_content, image_style, and image_provider lines inside the tool block to generate contextual visuals\n"
                 else:
                     tools_reminder += f"- {tool}: Use [{tool}] your input [/{tool}]\n"
 
@@ -251,14 +251,15 @@ class AgentExecutor:
 
         # Add final instructions
         prompt_parts.append("\n\nPlease provide a comprehensive response to the task.")
-        
+
         return "\n".join(prompt_parts)
-    
+
     def _get_agent_tools(self, agent: Agent) -> List[str]:
         """Get the list of tools available to this agent."""
         available_tools = []
-        
+
         from ..tools.tool_names import ALIASES
+
         for tool_name in agent.tools:
             canonical = ALIASES.get(tool_name, tool_name)
             if canonical in self.tools_registry:
@@ -269,17 +270,23 @@ class AgentExecutor:
     def _get_agent_tools_descriptions(self, agent: Agent) -> str:
         """Get descriptions of tools available to this agent."""
         tool_descriptions = []
-        
+
         from ..tools.tool_names import ALIASES
+
         for tool_name in agent.tools:
             canonical = ALIASES.get(tool_name, tool_name)
             if canonical in self.tools_registry:
-                description = self.tools_registry[canonical]['description']
+                description = self.tools_registry[canonical]["description"]
                 tool_descriptions.append(f"- {canonical}: {description}")
 
         return "\n".join(tool_descriptions)
 
-    async def process_tool_calls(self, agent_response: str, session_id: str = None, agent_name: Optional[str] = None) -> str:
+    async def process_tool_calls(
+        self,
+        agent_response: str,
+        session_id: str = None,
+        agent_name: Optional[str] = None,
+    ) -> str:
         """
         Process tool calls in the agent's response.
 
@@ -294,7 +301,7 @@ class AgentExecutor:
             Updated response with tool results
         """
         # Find all tool calls
-        tool_pattern = r'\[(\w+)\](.*?)\[/\1\]'
+        tool_pattern = r"\[(\w+)\](.*?)\[/\1\]"
         tool_calls = re.findall(tool_pattern, agent_response, re.DOTALL)
 
         if not tool_calls:
@@ -303,7 +310,7 @@ class AgentExecutor:
                     session_id=session_id,
                     thought="No tool calls detected in response",
                     reasoning="Agent provided direct response without using tools",
-                    next_action="Returning response as-is"
+                    next_action="Returning response as-is",
                 )
             return agent_response
 
@@ -312,12 +319,13 @@ class AgentExecutor:
                 session_id=session_id,
                 thought=f"Detected {len(tool_calls)} tool calls",
                 reasoning=f"Tools to execute: {[call[0] for call in tool_calls]}",
-                next_action="Processing tool calls sequentially"
+                next_action="Processing tool calls sequentially",
             )
 
         # Process each tool call
         for tool_name, tool_input in tool_calls:
             from ..tools.tool_names import ALIASES
+
             original_tool_name = tool_name
             canonical_tool_name = ALIASES.get(original_tool_name, original_tool_name)
 
@@ -329,16 +337,23 @@ class AgentExecutor:
                         session_id=session_id,
                         tool_name=original_tool_name,
                         tool_input=tool_input.strip(),
-                        tool_description=self.tools_registry[canonical_tool_name]['description']
+                        tool_description=self.tools_registry[canonical_tool_name][
+                            "description"
+                        ],
                     )
 
                 try:
                     # Execute the tool with timing
                     start_time = time.time()
-                    tool_function = self.tools_registry[canonical_tool_name]['function']
+                    tool_function = self.tools_registry[canonical_tool_name]["function"]
 
                     # Parse tool input based on tool type
-                    tool_result = await self._execute_tool_with_params(canonical_tool_name, tool_function, tool_input.strip(), agent_name)
+                    tool_result = await self._execute_tool_with_params(
+                        canonical_tool_name,
+                        tool_function,
+                        tool_input.strip(),
+                        agent_name,
+                    )
                     duration_ms = (time.time() - start_time) * 1000
 
                     # Log successful tool response
@@ -349,16 +364,22 @@ class AgentExecutor:
                             tool_name=original_tool_name,
                             tool_output=tool_result,
                             duration_ms=duration_ms,
-                            success=True
+                            success=True,
                         )
 
                     # Replace the tool call with the result
-                    tool_call = f"[{original_tool_name}]{tool_input}[/{original_tool_name}]"
+                    tool_call = (
+                        f"[{original_tool_name}]{tool_input}[/{original_tool_name}]"
+                    )
                     tool_result_text = f"[{original_tool_name} RESULT]\n{tool_result}\n[/{original_tool_name} RESULT]"
                     agent_response = agent_response.replace(tool_call, tool_result_text)
 
                 except Exception as e:
-                    duration_ms = (time.time() - start_time) * 1000 if 'start_time' in locals() else 0
+                    duration_ms = (
+                        (time.time() - start_time) * 1000
+                        if "start_time" in locals()
+                        else 0
+                    )
 
                     # Log tool error
                     if session_id and call_id:
@@ -367,7 +388,7 @@ class AgentExecutor:
                             call_id=call_id,
                             tool_name=tool_name,
                             error=e,
-                            duration_ms=duration_ms
+                            duration_ms=duration_ms,
                         )
 
                     # Replace with error message
@@ -381,7 +402,7 @@ class AgentExecutor:
                         session_id=session_id,
                         tool_name=tool_name,
                         tool_input=tool_input.strip(),
-                        tool_description="Tool not found"
+                        tool_description="Tool not found",
                     )
 
                     agent_logger.log_tool_error(
@@ -389,7 +410,7 @@ class AgentExecutor:
                         call_id=call_id,
                         tool_name=tool_name,
                         error=Exception(f"Tool '{tool_name}' not found in registry"),
-                        duration_ms=0
+                        duration_ms=0,
                     )
 
                 tool_call = f"[{tool_name}]{tool_input}[/{tool_name}]"
@@ -398,7 +419,13 @@ class AgentExecutor:
 
         return agent_response
 
-    async def _execute_tool_with_params(self, tool_name: str, tool_function: callable, tool_input: str, agent_name: Optional[str] = None) -> str:
+    async def _execute_tool_with_params(
+        self,
+        tool_name: str,
+        tool_function: callable,
+        tool_input: str,
+        agent_name: Optional[str] = None,
+    ) -> str:
         """
         Execute tool with proper parameter parsing and validation.
 
@@ -419,7 +446,7 @@ class AgentExecutor:
             # Handle different tool signatures
             if tool_name == "rag_search_content":
                 # Parse: "client_name, search_query" or just "search_query"
-                parts = [part.strip() for part in tool_input.split(',', 1)]
+                parts = [part.strip() for part in tool_input.split(",", 1)]
 
                 if len(parts) == 2:
                     client_name, query = parts
@@ -428,7 +455,9 @@ class AgentExecutor:
                     client_name = "siebert"
                     query = parts[0]
                 else:
-                    raise ValueError("rag_search_content requires format: 'client_name, search_query' or just 'search_query'")
+                    raise ValueError(
+                        "rag_search_content requires format: 'client_name, search_query' or just 'search_query'"
+                    )
 
                 if not query.strip():
                     raise ValueError("Search query cannot be empty")
@@ -437,49 +466,55 @@ class AgentExecutor:
 
             elif tool_name == "rag_get_client_content":
                 # Parse: "client_name" or "client_name, document_name"
-                parts = [part.strip() for part in tool_input.split(',', 1)]
+                parts = [part.strip() for part in tool_input.split(",", 1)]
 
                 if len(parts) == 2:
                     client_name, document_name = parts
-                    return await tool_function(client_name, document_name, agent_name=agent_name)
+                    return await tool_function(
+                        client_name, document_name, agent_name=agent_name
+                    )
                 elif len(parts) == 1:
                     client_name = parts[0]
                     return await tool_function(client_name, agent_name=agent_name)
                 else:
-                    raise ValueError("rag_get_client_content requires format: 'client_name' or 'client_name, document_name'")
+                    raise ValueError(
+                        "rag_get_client_content requires format: 'client_name' or 'client_name, document_name'"
+                    )
 
             elif tool_name == "perplexity_search":
                 # Parse a structured input like: "topic=..., exclude_topics=[...], premium_sources=...|..., research_timeframe=last 7 days"
                 raw = tool_input.strip()
-                if '=' not in raw and ',' not in raw and '\n' not in raw:
+                if "=" not in raw and "," not in raw and "\n" not in raw:
                     return await tool_function(raw)
-                parts = [p.strip() for p in raw.split(',') if p.strip()]
+                parts = [p.strip() for p in raw.split(",") if p.strip()]
                 params = {}
                 for p in parts:
-                    if '=' in p:
-                        k, v = p.split('=', 1)
+                    if "=" in p:
+                        k, v = p.split("=", 1)
                         params[k.strip()] = v.strip()
-                topic = params.get('topic') or params.get('query') or raw
-                timeframe = params.get('research_timeframe', '')
-                exclude = params.get('exclude_topics', '')
-                sources = params.get('premium_sources', '')
+                topic = params.get("topic") or params.get("query") or raw
+                timeframe = params.get("research_timeframe", "")
+                exclude = params.get("exclude_topics", "")
+                sources = params.get("premium_sources", "")
 
                 # Build site filters from premium_sources (pipe-separated URLs)
                 domains = []
-                for src in sources.split('|'):
+                for src in sources.split("|"):
                     src = src.strip()
                     if not src:
                         continue
-                    if '://' in src:
-                        host_and_path = src.split('://', 1)[1]
+                    if "://" in src:
+                        host_and_path = src.split("://", 1)[1]
                     else:
                         host_and_path = src
-                    domain = host_and_path.split('/', 1)[0]
+                    domain = host_and_path.split("/", 1)[0]
                     if domain:
                         domains.append(domain)
-                site_filter = ''
+                site_filter = ""
                 if domains:
-                    site_filter = ' (' + ' OR '.join([f"site:{d}" for d in domains]) + ')'
+                    site_filter = (
+                        " (" + " OR ".join([f"site:{d}" for d in domains]) + ")"
+                    )
 
                 # Exclude listing pages that cause generic/old info when filtering by site
                 url_excludes = ""
@@ -487,26 +522,30 @@ class AgentExecutor:
                     url_excludes = " -inurl:/tag/ -inurl:/category/ -inurl:/topics/ -inurl:/newsletter -inurl:/newsletters"
 
                 # Map timeframe to a natural-language hint for PPLX
-                tf_hint = ''
+                tf_hint = ""
                 if timeframe:
-                    if '7' in timeframe:
-                        tf_hint = ' past week'
-                    elif 'yesterday' in timeframe.lower():
-                        tf_hint = ' since yesterday'
-                    elif 'month' in timeframe.lower():
-                        tf_hint = ' past month'
+                    if "7" in timeframe:
+                        tf_hint = " past week"
+                    elif "yesterday" in timeframe.lower():
+                        tf_hint = " since yesterday"
+                    elif "month" in timeframe.lower():
+                        tf_hint = " past month"
 
                 # Exclude topics
-                ex_hint = ''
+                ex_hint = ""
                 if exclude:
                     # normalize list-like input
                     ex_items = []
-                    if exclude.startswith('[') and exclude.endswith(']'):
-                        ex_items = [x.strip(" ' \"") for x in exclude[1:-1].split(',') if x.strip()]
+                    if exclude.startswith("[") and exclude.endswith("]"):
+                        ex_items = [
+                            x.strip(" ' \"")
+                            for x in exclude[1:-1].split(",")
+                            if x.strip()
+                        ]
                     else:
-                        ex_items = [x.strip() for x in exclude.split('|') if x.strip()]
+                        ex_items = [x.strip() for x in exclude.split("|") if x.strip()]
                     if ex_items:
-                        ex_hint = ' ' + ' '.join([f"-{x}" for x in ex_items])
+                        ex_hint = " " + " ".join([f"-{x}" for x in ex_items])
 
                 query = f"{topic}{site_filter}{url_excludes}{tf_hint}{ex_hint}".strip()
                 return await tool_function(query)
@@ -518,16 +557,18 @@ class AgentExecutor:
                     stripped = line.strip()
                     if not stripped:
                         continue
-                    if ':' in stripped:
-                        key, value = stripped.split(':', 1)
+                    if ":" in stripped:
+                        key, value = stripped.split(":", 1)
                         current_key = key.strip().lower()
                         params[current_key] = value.strip()
                     elif current_key:
-                        params[current_key] = (params[current_key] + f"\n{stripped}").strip()
+                        params[current_key] = (
+                            params[current_key] + f"\n{stripped}"
+                        ).strip()
 
-                article_content = params.get('article_content', tool_input)
-                image_style = params.get('image_style', 'professional')
-                image_provider = params.get('image_provider', 'openai')
+                article_content = params.get("article_content", tool_input)
+                image_style = params.get("image_style", "professional")
+                image_provider = params.get("image_provider", "openai")
 
                 return await tool_function(
                     article_content=article_content,
@@ -547,15 +588,23 @@ class AgentExecutor:
             if tool_name == "rag_search_content":
                 try:
                     # Try to extract client name from input for fallback
-                    parts = [part.strip() for part in tool_input.split(',', 1)]
+                    parts = [part.strip() for part in tool_input.split(",", 1)]
                     client_name = "siebert"  # Default
 
-                    if len(parts) >= 1 and parts[0] and not any(keyword in parts[0].lower() for keyword in ['mark', 'malek', 'insight', 'market']):
+                    if (
+                        len(parts) >= 1
+                        and parts[0]
+                        and not any(
+                            keyword in parts[0].lower()
+                            for keyword in ["mark", "malek", "insight", "market"]
+                        )
+                    ):
                         # First part might be client name
                         client_name = parts[0]
 
                     # Fallback to rag_get_client_content
                     from core.infrastructure.tools.rag_tool import RAGTool
+
                     rag_tool = RAGTool()
                     fallback_result = await rag_tool.get_client_content(client_name)
                     return f"[FALLBACK] Search failed ({str(e)}), retrieved all {client_name} content instead:\n{fallback_result}"
@@ -564,7 +613,9 @@ class AgentExecutor:
 
             raise Exception(error_msg)
 
-    def _validate_tool_parameters(self, tool_name: str, tool_input: str) -> tuple[bool, str]:
+    def _validate_tool_parameters(
+        self, tool_name: str, tool_input: str
+    ) -> tuple[bool, str]:
         """
         Validate tool parameters before execution.
 
@@ -577,7 +628,7 @@ class AgentExecutor:
         """
         try:
             if tool_name == "rag_search_content":
-                parts = [part.strip() for part in tool_input.split(',', 1)]
+                parts = [part.strip() for part in tool_input.split(",", 1)]
 
                 # Check if we have at least a query
                 if len(parts) == 0 or not any(part.strip() for part in parts):
@@ -600,10 +651,13 @@ class AgentExecutor:
                 return True, ""
 
             elif tool_name == "rag_get_client_content":
-                parts = [part.strip() for part in tool_input.split(',', 1)]
+                parts = [part.strip() for part in tool_input.split(",", 1)]
 
                 if len(parts) == 0 or not parts[0].strip():
-                    return False, "rag_get_client_content requires at least a client name"
+                    return (
+                        False,
+                        "rag_get_client_content requires at least a client name",
+                    )
 
                 return True, ""
 
@@ -630,9 +684,9 @@ class AgentExecutor:
         returns the default configuration.
         """
         # Check if context has provider configuration
-        provider_name = context.get('provider')
-        model = context.get('model')
-        temperature = context.get('temperature')
+        provider_name = context.get("provider")
+        model = context.get("model")
+        temperature = context.get("temperature")
 
         # If no dynamic config in context, use default
         if not provider_name and not model:
@@ -643,6 +697,7 @@ class AgentExecutor:
             # Use provider from context or default
             if provider_name:
                 from ...domain.value_objects.provider_config import LLMProvider
+
                 provider = LLMProvider(provider_name)
             else:
                 provider = self.provider_config.provider
@@ -653,7 +708,7 @@ class AgentExecutor:
                 defaults = {
                     LLMProvider.OPENAI: "gpt-4o",
                     LLMProvider.ANTHROPIC: "claude-3-7-sonnet-latest",
-                    LLMProvider.DEEPSEEK: "deepseek-chat"
+                    LLMProvider.DEEPSEEK: "deepseek-chat",
                 }
                 model = defaults.get(provider, self.provider_config.model)
 
@@ -672,10 +727,12 @@ class AgentExecutor:
                 presence_penalty=self.provider_config.presence_penalty,
                 api_key=self.provider_config.api_key,
                 base_url=self.provider_config.base_url,
-                additional_params=self.provider_config.additional_params
+                additional_params=self.provider_config.additional_params,
             )
 
-            logger.debug(f"🔧 Using dynamic config: {provider.value}/{model} (temp: {temperature})")
+            logger.debug(
+                f"🔧 Using dynamic config: {provider.value}/{model} (temp: {temperature})"
+            )
             return dynamic_config
 
         except Exception as e:
@@ -686,31 +743,33 @@ class AgentExecutor:
         """Extract real token usage from LLM API response."""
         try:
             # Check if response has usage information (handle both object and dataclass)
-            usage_data = getattr(llm_response, 'usage', None)
+            usage_data = getattr(llm_response, "usage", None)
             if usage_data:
                 usage = usage_data
 
                 # Handle different response formats
                 if isinstance(usage, dict):
                     return TokenUsage(
-                        prompt_tokens=usage.get('prompt_tokens', 0),
-                        completion_tokens=usage.get('completion_tokens', 0),
-                        total_tokens=usage.get('total_tokens', 0),
-                        reasoning_tokens=usage.get('reasoning_tokens', 0),
-                        cached_tokens=usage.get('cached_tokens', 0)
+                        prompt_tokens=usage.get("prompt_tokens", 0),
+                        completion_tokens=usage.get("completion_tokens", 0),
+                        total_tokens=usage.get("total_tokens", 0),
+                        reasoning_tokens=usage.get("reasoning_tokens", 0),
+                        cached_tokens=usage.get("cached_tokens", 0),
                     )
                 else:
                     # Handle object-style usage
                     return TokenUsage(
-                        prompt_tokens=getattr(usage, 'prompt_tokens', 0),
-                        completion_tokens=getattr(usage, 'completion_tokens', 0),
-                        total_tokens=getattr(usage, 'total_tokens', 0),
-                        reasoning_tokens=getattr(usage, 'reasoning_tokens', 0),
-                        cached_tokens=getattr(usage, 'cached_tokens', 0)
+                        prompt_tokens=getattr(usage, "prompt_tokens", 0),
+                        completion_tokens=getattr(usage, "completion_tokens", 0),
+                        total_tokens=getattr(usage, "total_tokens", 0),
+                        reasoning_tokens=getattr(usage, "reasoning_tokens", 0),
+                        cached_tokens=getattr(usage, "cached_tokens", 0),
                     )
 
             # Fallback to estimation if no usage data
-            logger.warning("⚠️ No token usage data in LLM response, falling back to estimation")
+            logger.warning(
+                "⚠️ No token usage data in LLM response, falling back to estimation"
+            )
             return self._estimate_token_usage(llm_response)
 
         except Exception as e:
@@ -719,7 +778,11 @@ class AgentExecutor:
 
     def _estimate_token_usage(self, llm_response) -> TokenUsage:
         """Fallback token estimation when real usage is not available."""
-        response_text = llm_response.content if hasattr(llm_response, 'content') else str(llm_response)
+        response_text = (
+            llm_response.content
+            if hasattr(llm_response, "content")
+            else str(llm_response)
+        )
 
         # Simple word-based estimation (rough approximation)
         estimated_completion_tokens = len(response_text.split())
@@ -728,5 +791,5 @@ class AgentExecutor:
         return TokenUsage(
             prompt_tokens=estimated_prompt_tokens,
             completion_tokens=estimated_completion_tokens,
-            total_tokens=estimated_prompt_tokens + estimated_completion_tokens
+            total_tokens=estimated_prompt_tokens + estimated_completion_tokens,
         )

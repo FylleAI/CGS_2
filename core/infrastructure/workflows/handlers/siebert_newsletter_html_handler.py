@@ -54,7 +54,7 @@ VALIDATION TARGETS:
 """
 
 
-@register_workflow('siebert_newsletter_html')
+@register_workflow("siebert_newsletter_html")
 class SiebertNewsletterHtmlHandler(WorkflowHandler):
     """Handler for Siebert's HTML email newsletter workflow."""
 
@@ -65,130 +65,154 @@ class SiebertNewsletterHtmlHandler(WorkflowHandler):
         """Validate base newsletter inputs (topic, word count, audience)."""
         super().validate_inputs(context)
 
-        topic = context.get('topic') or context.get('newsletter_topic', '')
+        topic = context.get("topic") or context.get("newsletter_topic", "")
         if not topic or len(topic) < 5:
             raise ValueError("Newsletter topic must be at least 5 characters")
         if len(topic) > 200:
             raise ValueError("Newsletter topic must be less than 200 characters")
-        if 'topic' not in context and 'newsletter_topic' in context:
-            context['topic'] = context['newsletter_topic']
+        if "topic" not in context and "newsletter_topic" in context:
+            context["topic"] = context["newsletter_topic"]
 
-        audience = context.get('target_audience', '')
+        audience = context.get("target_audience", "")
         if not audience:
-            context['target_audience'] = "Gen Z investors and young professionals"
-            audience = context['target_audience']
+            context["target_audience"] = "Gen Z investors and young professionals"
+            audience = context["target_audience"]
         if len(audience) > 500:
             raise ValueError("Target audience must be less than 500 characters")
 
-        word_count = context.get('target_word_count', 1000)
+        word_count = context.get("target_word_count", 1000)
         if word_count < 800 or word_count > 1200:
             logger.info(
                 "🔧 Adjusting word count from %s to Siebert range (800-1200)",
                 word_count,
             )
             word_count = max(800, min(1200, word_count))
-            context['target_word_count'] = word_count
+            context["target_word_count"] = word_count
 
-        context['client_name'] = 'siebert'
-        context['client_profile'] = 'siebert'
-        logger.info("✅ Inputs validated for Siebert HTML newsletter: %s words", word_count)
+        context["client_name"] = "siebert"
+        context["client_profile"] = "siebert"
+        logger.info(
+            "✅ Inputs validated for Siebert HTML newsletter: %s words", word_count
+        )
 
     def prepare_context(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare execution context and inject design system instructions."""
         context = super().prepare_context(context)
 
-        context.setdefault('target_word_count', 1000)
-        context.setdefault('exclude_topics', ["crypto day trading", "get rich quick", "penny stocks"])
-        context.setdefault('cultural_trends', '')
-        context.setdefault('research_timeframe', 'last 7 days')
-        context.setdefault('premium_sources', '')
-        context.setdefault('custom_instructions', '')
-        context.setdefault('client_name', 'siebert')
-        context.setdefault('client_profile', 'siebert')
+        context.setdefault("target_word_count", 1000)
+        context.setdefault(
+            "exclude_topics", ["crypto day trading", "get rich quick", "penny stocks"]
+        )
+        context.setdefault("cultural_trends", "")
+        context.setdefault("research_timeframe", "last 7 days")
+        context.setdefault("premium_sources", "")
+        context.setdefault("custom_instructions", "")
+        context.setdefault("client_name", "siebert")
+        context.setdefault("client_profile", "siebert")
 
         now = datetime.now()
-        context.setdefault('current_date', now.strftime('%B %d, %Y'))
-        context.setdefault('current_month_year', now.strftime('%B %Y'))
-        context.setdefault('community_name', 'Wealthbuilder')
-        context.setdefault('newsletter_title', 'WEALTHBUILDER NEWSLETTER')
+        context.setdefault("current_date", now.strftime("%B %d, %Y"))
+        context.setdefault("current_month_year", now.strftime("%B %Y"))
+        context.setdefault("community_name", "Wealthbuilder")
+        context.setdefault("newsletter_title", "WEALTHBUILDER NEWSLETTER")
 
         context.setdefault(
-            'siebert_target_urls',
-            'https://www.federalreserve.gov/newsevents/pressreleases/monetary|'
-            'https://www.thedailyupside.com/finance/|https://www.thedailyupside.com/investments/|'
-            'https://www.thedailyupside.com/economics/|https://www.thedailyupside.com/newsletter/|'
-            'https://moneywithkatie.com/blog/category/investing|https://thehustle.co/news|'
-            'https://www.morningbrew.com/tag/finance|https://www.morningbrew.com/tag/economy|'
-            'https://blog.siebert.com/tag/daily-market#BlogListing|https://www.axios.com/newsletters/axios-markets|'
-            'https://www.axios.com/newsletters/axios-macro|https://decrypt.co/|https://www.coindesk.com/'
+            "siebert_target_urls",
+            "https://www.federalreserve.gov/newsevents/pressreleases/monetary|"
+            "https://www.thedailyupside.com/finance/|https://www.thedailyupside.com/investments/|"
+            "https://www.thedailyupside.com/economics/|https://www.thedailyupside.com/newsletter/|"
+            "https://moneywithkatie.com/blog/category/investing|https://thehustle.co/news|"
+            "https://www.morningbrew.com/tag/finance|https://www.morningbrew.com/tag/economy|"
+            "https://blog.siebert.com/tag/daily-market#BlogListing|https://www.axios.com/newsletters/axios-markets|"
+            "https://www.axios.com/newsletters/axios-macro|https://decrypt.co/|https://www.coindesk.com/",
         )
 
-        total_words = context['target_word_count']
-        context['siebert_section_word_counts'] = {
-            'community_greeting': int(total_words * 0.055),
-            'feature_story': int(total_words * 0.30),
-            'market_reality_check': int(total_words * 0.225),
-            'by_the_numbers': int(total_words * 0.135),
-            'your_move_this_week': int(total_words * 0.165),
-            'community_corner': int(total_words * 0.07),
-            'quick_links': int(total_words * 0.07),
-            'sign_off': int(total_words * 0.035),
+        total_words = context["target_word_count"]
+        context["siebert_section_word_counts"] = {
+            "community_greeting": int(total_words * 0.055),
+            "feature_story": int(total_words * 0.30),
+            "market_reality_check": int(total_words * 0.225),
+            "by_the_numbers": int(total_words * 0.135),
+            "your_move_this_week": int(total_words * 0.165),
+            "community_corner": int(total_words * 0.07),
+            "quick_links": int(total_words * 0.07),
+            "sign_off": int(total_words * 0.035),
         }
 
-        exclude_topics = context.get('exclude_topics', [])
+        exclude_topics = context.get("exclude_topics", [])
         if isinstance(exclude_topics, str) and exclude_topics:
-            context['exclude_topics'] = [topic.strip() for topic in exclude_topics.split(',') if topic.strip()]
+            context["exclude_topics"] = [
+                topic.strip() for topic in exclude_topics.split(",") if topic.strip()
+            ]
         elif not isinstance(exclude_topics, list):
-            context['exclude_topics'] = ["crypto day trading", "get rich quick", "penny stocks"]
+            context["exclude_topics"] = [
+                "crypto day trading",
+                "get rich quick",
+                "penny stocks",
+            ]
 
-        if not isinstance(context.get('cultural_trends', ''), str):
-            context['cultural_trends'] = ''
+        if not isinstance(context.get("cultural_trends", ""), str):
+            context["cultural_trends"] = ""
 
-        premium_sources = context.get('premium_sources', '')
+        premium_sources = context.get("premium_sources", "")
         if premium_sources and isinstance(premium_sources, str):
-            sources_list = [s.strip() for s in premium_sources.split('\n') if s.strip()]
-            context['premium_sources'] = '|'.join(sources_list) if sources_list else ''
+            sources_list = [s.strip() for s in premium_sources.split("\n") if s.strip()]
+            context["premium_sources"] = "|".join(sources_list) if sources_list else ""
         else:
-            context['premium_sources'] = ''
+            context["premium_sources"] = ""
 
-        if context.get('research_timeframe') not in {'last 7 days', 'yesterday', 'last month'}:
-            context['research_timeframe'] = 'last 7 days'
+        if context.get("research_timeframe") not in {
+            "last 7 days",
+            "yesterday",
+            "last month",
+        }:
+            context["research_timeframe"] = "last 7 days"
 
         # Inject HTML design system instructions for Task 5
-        context['html_design_system_instructions'] = HTML_DESIGN_SYSTEM_INSTRUCTIONS.strip()
-        context['workflow_output_format'] = 'html'
+        context["html_design_system_instructions"] = (
+            HTML_DESIGN_SYSTEM_INSTRUCTIONS.strip()
+        )
+        context["workflow_output_format"] = "html"
 
-        logger.info("🔧 Context prepared for Siebert HTML workflow; design system injected")
+        logger.info(
+            "🔧 Context prepared for Siebert HTML workflow; design system injected"
+        )
         return context
 
-    def post_process_task(self, task_id: str, task_output: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    def post_process_task(
+        self, task_id: str, task_output: str, context: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Capture task outputs and run HTML validation after Task 5."""
         logger.info("🔧 POST-PROCESSING TASK: %s", task_id)
 
-        if task_id == 'task1_siebert_context_setup':
-            context['siebert_brand_extracted'] = True
-            context['template_structure_defined'] = True
-        elif task_id == 'task2_perplexity_research':
-            context['perplexity_research_completed'] = True
-        elif task_id == 'task3_newsletter_assembly':
+        if task_id == "task1_siebert_context_setup":
+            context["siebert_brand_extracted"] = True
+            context["template_structure_defined"] = True
+        elif task_id == "task2_perplexity_research":
+            context["perplexity_research_completed"] = True
+        elif task_id == "task3_newsletter_assembly":
             word_count = len(task_output.split()) if task_output else 0
-            context['final_word_count'] = word_count
-            target_count = context.get('target_word_count', 1000)
-            context['word_count_accuracy'] = (word_count / target_count * 100) if target_count else 0
-            context['siebert_format_applied'] = True
-        elif task_id == 'task4_compliance_review':
-            context['compliance_reviewed'] = True
-            context['final_compliance_word_count'] = len(task_output.split()) if task_output else 0
-            context['compliance_review_completed'] = True
-            context['compliance_approved_markdown'] = task_output
-        elif task_id == 'task5_html_builder':
-            validation_errors = self._validate_html_output(task_output or '')
+            context["final_word_count"] = word_count
+            target_count = context.get("target_word_count", 1000)
+            context["word_count_accuracy"] = (
+                (word_count / target_count * 100) if target_count else 0
+            )
+            context["siebert_format_applied"] = True
+        elif task_id == "task4_compliance_review":
+            context["compliance_reviewed"] = True
+            context["final_compliance_word_count"] = (
+                len(task_output.split()) if task_output else 0
+            )
+            context["compliance_review_completed"] = True
+            context["compliance_approved_markdown"] = task_output
+        elif task_id == "task5_html_builder":
+            validation_errors = self._validate_html_output(task_output or "")
             if validation_errors:
-                context['html_validation_errors'] = validation_errors
+                context["html_validation_errors"] = validation_errors
                 logger.error("❌ HTML validation failed: %s", validation_errors)
                 raise ValueError(f"HTML validation failed: {validation_errors}")
-            context['html_validation_passed'] = True
-            context['final_html_container'] = task_output
+            context["html_validation_passed"] = True
+            context["final_html_container"] = task_output
 
         return context
 
@@ -197,31 +221,41 @@ class SiebertNewsletterHtmlHandler(WorkflowHandler):
         try:
             logger.info("🔧 POST-PROCESSING WORKFLOW: siebert_newsletter_html")
 
-            final_html = context.get('final_html_container')
+            final_html = context.get("final_html_container")
             if not final_html:
-                final_html = context.get('task5_html_builder_output')
+                final_html = context.get("task5_html_builder_output")
             if not final_html:
-                fallback = context.get('task4_compliance_review_output') or context.get('task3_newsletter_assembly_output')
-                final_html = fallback or ''
-                logger.warning("⚠️ Falling back to pre-HTML output; HTML builder did not produce output")
+                fallback = context.get("task4_compliance_review_output") or context.get(
+                    "task3_newsletter_assembly_output"
+                )
+                final_html = fallback or ""
+                logger.warning(
+                    "⚠️ Falling back to pre-HTML output; HTML builder did not produce output"
+                )
 
-            context['final_output'] = final_html
-            context['html_email_container'] = final_html
-            context['compliance_markdown'] = context.get('compliance_approved_markdown', '')
+            context["final_output"] = final_html
+            context["html_email_container"] = final_html
+            context["compliance_markdown"] = context.get(
+                "compliance_approved_markdown", ""
+            )
 
             summary = {
-                'workflow_type': 'siebert_newsletter_html',
-                'client': 'siebert',
-                'newsletter_topic': context.get('topic', ''),
-                'target_audience': context.get('target_audience', ''),
-                'target_word_count': context.get('target_word_count', 1000),
-                'final_word_count': context.get('final_word_count', 0),
-                'word_count_accuracy': context.get('word_count_accuracy', 0),
-                'perplexity_research': context.get('perplexity_research_completed', False),
-                'compliance_reviewed': context.get('compliance_review_completed', False),
-                'html_validation_passed': context.get('html_validation_passed', False),
+                "workflow_type": "siebert_newsletter_html",
+                "client": "siebert",
+                "newsletter_topic": context.get("topic", ""),
+                "target_audience": context.get("target_audience", ""),
+                "target_word_count": context.get("target_word_count", 1000),
+                "final_word_count": context.get("final_word_count", 0),
+                "word_count_accuracy": context.get("word_count_accuracy", 0),
+                "perplexity_research": context.get(
+                    "perplexity_research_completed", False
+                ),
+                "compliance_reviewed": context.get(
+                    "compliance_review_completed", False
+                ),
+                "html_validation_passed": context.get("html_validation_passed", False),
             }
-            context['workflow_summary'] = summary
+            context["workflow_summary"] = summary
 
             context = super().post_process_workflow(context)
             logger.info("✅ Siebert HTML workflow post-processing complete")
@@ -235,36 +269,42 @@ class SiebertNewsletterHtmlHandler(WorkflowHandler):
         """Run guardrail checks on the generated HTML."""
         errors: List[str] = []
         if not html.strip():
-            errors.append('HTML output is empty')
+            errors.append("HTML output is empty")
             return errors
 
-        if not html.strip().startswith('<div'):
-            errors.append('Output must start with a single <div> root container')
+        if not html.strip().startswith("<div"):
+            errors.append("Output must start with a single <div> root container")
 
         if self.banned_pattern.search(html):
-            errors.append('Contains banned structural tags (<html>, <head>, <body>, <style>, <script>)')
+            errors.append(
+                "Contains banned structural tags (<html>, <head>, <body>, <style>, <script>)"
+            )
 
         if self.forbidden_attributes.search(html):
-            errors.append('Contains forbidden attributes (class/id)')
+            errors.append("Contains forbidden attributes (class/id)")
 
-        if 'max-width: 600px' not in html:
-            errors.append('Root container must define max-width: 600px inline')
+        if "max-width: 600px" not in html:
+            errors.append("Root container must define max-width: 600px inline")
 
-        if 'style=' not in html.split('>', 1)[0]:
-            errors.append('Root container must include inline styles')
+        if "style=" not in html.split(">", 1)[0]:
+            errors.append("Root container must include inline styles")
 
-        if '<!-- QUALITY CHECKLIST' not in html:
-            errors.append('Missing required <!-- QUALITY CHECKLIST --> audit comment at end of HTML output')
+        if "<!-- QUALITY CHECKLIST" not in html:
+            errors.append(
+                "Missing required <!-- QUALITY CHECKLIST --> audit comment at end of HTML output"
+            )
 
-        if '—' in html:
-            errors.append('Em dash detected; should not appear in HTML output')
+        if "—" in html:
+            errors.append("Em dash detected; should not appear in HTML output")
 
         hrefs = re.findall(r"href=\"([^\"]+)\"", html)
         for href in hrefs:
-            if not href.startswith(('http://', 'https://', 'mailto:')):
-                errors.append(f'Invalid link href detected: {href}')
+            if not href.startswith(("http://", "https://", "mailto:")):
+                errors.append(f"Invalid link href detected: {href}")
 
-        if '<html' in html.lower() or '<body' in html.lower():  # redundant but explicit guard
-            errors.append('HTML should not include <html> or <body> tags')
+        if (
+            "<html" in html.lower() or "<body" in html.lower()
+        ):  # redundant but explicit guard
+            errors.append("HTML should not include <html> or <body> tags")
 
         return errors

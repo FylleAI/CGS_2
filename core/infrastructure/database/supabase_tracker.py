@@ -3,6 +3,7 @@
 This module is optional. It's enabled only when USE_SUPABASE=true and
 both SUPABASE_URL and SUPABASE_ANON_KEY are configured in environment.
 """
+
 from __future__ import annotations
 
 import logging
@@ -27,14 +28,22 @@ class SupabaseTracker:
         if not (settings.supabase_url and settings.supabase_anon_key):
             raise ValueError("Supabase credentials not configured")
         if create_client is None:
-            raise RuntimeError("supabase package not installed. Run: pip install supabase>=2.0.0")
+            raise RuntimeError(
+                "supabase package not installed. Run: pip install supabase>=2.0.0"
+            )
 
         self.client: Client = create_client(
             settings.supabase_url, settings.supabase_anon_key
         )
 
     # ------------- Workflow run lifecycle -------------
-    def start_workflow_run(self, client_name: str, workflow_name: str, topic: str, agent_executor: str = None) -> str:
+    def start_workflow_run(
+        self,
+        client_name: str,
+        workflow_name: str,
+        topic: str,
+        agent_executor: str = None,
+    ) -> str:
         """Start tracking a new workflow run, returns run_id (UUID string)."""
         run_data = {
             "client_name": client_name,
@@ -72,7 +81,9 @@ class SupabaseTracker:
         if tokens is not None:
             update_data["total_tokens"] = tokens
         try:
-            self.client.table("workflow_runs").update(update_data).eq("id", run_id).execute()
+            self.client.table("workflow_runs").update(update_data).eq(
+                "id", run_id
+            ).execute()
         except Exception as e:  # pragma: no cover
             logger.warning(f"Error completing workflow run {run_id}: {e}")
 
@@ -131,7 +142,11 @@ class SupabaseTracker:
         agent_name: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
-        data: Dict[str, Any] = {"run_id": run_id, "level": level.upper(), "message": message}
+        data: Dict[str, Any] = {
+            "run_id": run_id,
+            "level": level.upper(),
+            "message": message,
+        }
         if agent_name:
             data["agent_name"] = agent_name
         if metadata:
@@ -199,7 +214,8 @@ class SupabaseTracker:
             "title": title,
             "content": content,
             "topic": title,
-            "metadata": (metadata or {}) | {"client_name": client_name, "workflow_name": workflow_name},
+            "metadata": (metadata or {})
+            | {"client_name": client_name, "workflow_name": workflow_name},
         }
         try:
             self.client.table("content_generations").insert(data).execute()
@@ -231,7 +247,13 @@ class SupabaseTracker:
 
     def get_run_details(self, run_id: str) -> Optional[Dict[str, Any]]:
         try:
-            run = self.client.table("workflow_runs").select("*").eq("id", run_id).execute().data
+            run = (
+                self.client.table("workflow_runs")
+                .select("*")
+                .eq("id", run_id)
+                .execute()
+                .data
+            )
             if not run:
                 return None
             agents = (
@@ -287,14 +309,18 @@ class SupabaseTracker:
 
 # Factory function
 
+
 def get_tracker() -> Optional[SupabaseTracker]:
     """Return a SupabaseTracker if enabled, else None."""
     try:
         settings = get_settings()
-        if settings.use_supabase and settings.supabase_url and settings.supabase_anon_key:
+        if (
+            settings.use_supabase
+            and settings.supabase_url
+            and settings.supabase_anon_key
+        ):
             return SupabaseTracker()
         return None
     except Exception as e:  # pragma: no cover
         logger.info(f"Supabase tracker not available: {e}")
         return None
-

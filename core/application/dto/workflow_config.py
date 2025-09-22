@@ -8,7 +8,7 @@ from uuid import UUID
 @dataclass
 class WorkflowConfigRequest:
     """Request DTO for workflow configuration."""
-    
+
     name: str
     workflow_type: str
     description: str = ""
@@ -16,7 +16,7 @@ class WorkflowConfigRequest:
     target_audience: str = ""
     tasks: List[Dict[str, Any]] = None
     context: Dict[str, Any] = None
-    
+
     def __post_init__(self) -> None:
         """Initialize default values."""
         if self.tasks is None:
@@ -28,7 +28,7 @@ class WorkflowConfigRequest:
 @dataclass
 class WorkflowConfigResponse:
     """Response DTO for workflow configuration."""
-    
+
     workflow_id: UUID
     name: str
     workflow_type: str
@@ -38,7 +38,7 @@ class WorkflowConfigResponse:
     success: bool = True
     error_message: Optional[str] = None
     metadata: Dict[str, Any] = None
-    
+
     def __post_init__(self) -> None:
         """Initialize default values."""
         if self.metadata is None:
