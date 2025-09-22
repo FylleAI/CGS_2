@@ -157,6 +157,8 @@ async def execute_dynamic_workflow(workflow_type: str, context: Dict[str, Any]) 
         from ..tools.web_search_tool import WebSearchTool
         from ..tools.rag_tool import RAGTool
         from ..tools.perplexity_research_tool import PerplexityResearchTool
+        from ..tools.image_generation_tool import ImageGenerationTool
+        from ..tools.brand_style_guide_tool import BrandStyleGuideTool
 
         # Initialize with default settings
         settings = Settings()
@@ -178,6 +180,8 @@ async def execute_dynamic_workflow(workflow_type: str, context: Dict[str, Any]) 
         web_search_tool = WebSearchTool(settings.serper_api_key)
         rag_tool = RAGTool()
         perplexity_tool = PerplexityResearchTool(settings.perplexity_api_key)
+        image_tool = ImageGenerationTool()
+        brand_style_tool = BrandStyleGuideTool()
 
         agent_executor.register_tools({
             ToolNames.WEB_SEARCH_SERPER: {
@@ -195,6 +199,14 @@ async def execute_dynamic_workflow(workflow_type: str, context: Dict[str, Any]) 
             ToolNames.WEB_SEARCH_PERPLEXITY: {
                 'function': perplexity_tool.search,
                 'description': 'Search using Perplexity AI'
+            },
+            ToolNames.IMAGE_GENERATION: {
+                'function': image_tool.generate,
+                'description': 'Prepare structured prompts for image generation providers'
+            },
+            ToolNames.BRAND_STYLE_GUIDE: {
+                'function': brand_style_tool.get_style,
+                'description': 'Retrieve brand palette and visual guardrails'
             }
         })
 
