@@ -70,19 +70,22 @@ class LLMProviderFactory:
 
         elif provider_type == LLMProvider.GEMINI:
             api_key = settings.gemini_api_key
-            if not api_key:
+            use_vertex = settings.use_vertex_gemini
+            sa_path = settings.google_application_credentials
+            # Allow Vertex-only setup without API key when Service Account is configured
+            if not api_key and not (use_vertex and sa_path):
                 logger.warning(
-                    "⚠️ Gemini provider requested but API key is not configured"
+                    "⚠️ Gemini provider requested but neither API key nor Vertex Service Account is configured"
                 )
-                raise ValueError("Gemini API key not configured")
+                raise ValueError("Gemini credentials not configured")
             return GeminiAdapter(
                 api_key,
                 project_id=settings.gcp_project_id,
                 location=settings.gcp_location,
-                use_vertex=settings.use_vertex_gemini,
+                use_vertex=use_vertex,
                 endpoint=settings.vertex_api_endpoint,
                 api_version=settings.vertex_api_version,
-                sa_credentials_path=settings.google_application_credentials,
+                sa_credentials_path=sa_path,
             )
 
         else:
@@ -168,10 +171,14 @@ class LLMProviderFactory:
 
         for provider_name, api_key in provider_keys.items():
             available = bool(api_key)
+            # Special handling for Gemini: available if API key OR Vertex SA is configured
+            if provider_name == "gemini":
+                if settings.use_vertex_gemini and settings.google_application_credentials:
+                    available = True
             availability[provider_name] = available
             if not available:
                 logger.debug(
-                    f"🔍 Provider '{provider_name}' is not configured (missing API key)"
+                    f"🔍 Provider '{provider_name}' is not configured (missing API key/credentials)"
                 )
 
         return availability
