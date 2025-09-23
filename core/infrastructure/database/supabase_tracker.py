@@ -156,6 +156,83 @@ class SupabaseTracker:
         except Exception as e:  # pragma: no cover
             logger.warning(f"Error adding log for run {run_id}: {e}")
 
+    # ------------- Cost event logging (LLM & Tools) -------------
+    def log_llm_call(
+        self,
+        run_id: str,
+        agent_name: Optional[str],
+        provider_name: str,
+        model_name: str,
+        tokens_prompt: Optional[int] = None,
+        tokens_completion: Optional[int] = None,
+        tokens_total: Optional[int] = None,
+        cost_usd: Optional[float] = None,
+        duration_seconds: Optional[float] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Log a single LLM call as a cost event (granular ledger)."""
+        data: Dict[str, Any] = {
+            "run_id": run_id,
+            "event_type": "llm",
+            "agent_name": agent_name,
+            "provider_name": provider_name,
+            "model_name": model_name,
+            "tokens_prompt": tokens_prompt,
+            "tokens_completion": tokens_completion,
+            "tokens_total": tokens_total,
+            "cost_usd": cost_usd,
+            "metadata": metadata or {},
+        }
+        if duration_seconds is not None:
+            try:
+                data["duration_seconds"] = round(float(duration_seconds), 3)
+            except Exception:
+                data["duration_seconds"] = None
+        try:
+            self.client.table("run_cost_events").insert(data).execute()
+        except Exception as e:  # pragma: no cover
+            logger.warning(f"Error logging LLM cost event for run {run_id}: {e}")
+
+    def log_tool_execution(
+        self,
+        run_id: str,
+        agent_name: Optional[str],
+        tool_name: str,
+        provider_name: Optional[str] = None,
+        units: Optional[float] = None,
+        unit_cost_usd: Optional[float] = None,
+        usage_tokens: Optional[int] = None,
+        cost_per_1k_tokens_usd: Optional[float] = None,
+        cost_usd: Optional[float] = None,
+        cost_source: Optional[str] = None,
+        duration_seconds: Optional[float] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Log a single tool execution as a cost event (granular ledger)."""
+        data: Dict[str, Any] = {
+            "run_id": run_id,
+            "event_type": "tool",
+            "agent_name": agent_name,
+            "tool_name": tool_name,
+            "provider_name": provider_name,
+            "units": units,
+            "unit_cost_usd": unit_cost_usd,
+            "usage_tokens": usage_tokens,
+            "cost_per_1k_tokens_usd": cost_per_1k_tokens_usd,
+            "cost_usd": cost_usd,
+            "cost_source": cost_source,
+            "metadata": metadata or {},
+        }
+        if duration_seconds is not None:
+            try:
+                data["duration_seconds"] = round(float(duration_seconds), 3)
+            except Exception:
+                data["duration_seconds"] = None
+        try:
+            self.client.table("run_cost_events").insert(data).execute()
+        except Exception as e:  # pragma: no cover
+            logger.warning(f"Error logging tool cost event for run {run_id}: {e}")
+
     # ------------- RAG document tracking -------------
     def log_rag_document(
         self,

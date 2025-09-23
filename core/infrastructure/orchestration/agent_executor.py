@@ -175,9 +175,29 @@ class AgentExecutor:
                 duration_ms=duration_ms,
             )
 
+            # Persist LLM cost event to Supabase (if tracker configured)
+            try:
+                tracker = context.get("tracker")
+                run_id = context.get("run_id")
+                if tracker and run_id:
+                    tracker.log_llm_call(
+                        run_id=run_id,
+                        agent_name=agent.name,
+                        provider_name=dynamic_config.provider.value,
+                        model_name=dynamic_config.model,
+                        tokens_prompt=token_usage.prompt_tokens,
+                        tokens_completion=token_usage.completion_tokens,
+                        tokens_total=token_usage.total_tokens,
+                        cost_usd=cost_breakdown.total_cost,
+                        duration_seconds=duration_ms / 1000.0,
+                        metadata={},
+                    )
+            except Exception as e:  # pragma: no cover
+                logger.warning(f"Tracker log_llm_call failed: {e}")
+
             # Process tool calls if any
             final_response = await self.process_tool_calls(
-                response, session_id, agent.name
+                response, session_id, agent.name, tracker=tracker, run_id=run_id
             )
 
             # End agent session successfully
@@ -303,6 +323,8 @@ class AgentExecutor:
         agent_response: str,
         session_id: str = None,
         agent_name: Optional[str] = None,
+        tracker=None,
+        run_id: Optional[str] = None,
     ) -> str:
         """
         Process tool calls in the agent's response.
@@ -405,6 +427,26 @@ class AgentExecutor:
                             cost_usd=cost_details.cost_usd,
                             metadata=execution_metadata,
                         )
+
+                    # Also persist tool cost event to Supabase (if tracker configured)
+                    try:
+                        if tracker and run_id:
+                            tracker.log_tool_execution(
+                                run_id=run_id,
+                                agent_name=agent_name,
+                                tool_name=original_tool_name,
+                                provider_name=execution_metadata.get("provider"),
+                                units=cost_details.units,
+                                unit_cost_usd=execution_metadata.get("unit_cost_usd"),
+                                usage_tokens=execution_metadata.get("usage_tokens"),
+                                cost_per_1k_tokens_usd=execution_metadata.get("cost_per_1k_tokens_usd"),
+                                cost_usd=cost_details.cost_usd,
+                                cost_source=execution_metadata.get("cost_source") or cost_details.source,
+                                duration_seconds=duration_ms / 1000.0,
+                                metadata=execution_metadata,
+                            )
+                    except Exception as e:  # pragma: no cover
+                        logger.warning(f"Tracker log_tool_execution failed: {e}")
 
                     # Replace the tool call with the result
                     tool_call = (
