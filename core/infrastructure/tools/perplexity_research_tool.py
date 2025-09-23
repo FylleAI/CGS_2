@@ -26,11 +26,46 @@ class PerplexityResearchTool:
         api_key: Optional[str] = None,
         model: Optional[str] = None,
         timeout: int = 30,
+        cost_per_call_usd: Optional[float] = None,
+        cost_per_1k_tokens_usd: Optional[float] = None,
     ) -> None:
         self.api_key = api_key or os.getenv("PERPLEXITY_API_KEY")
         self.base_url = "https://api.perplexity.ai/chat/completions"
         self.model = model or "sonar-pro"
         self.timeout = timeout
+        self.cost_per_call_usd, self.cost_source = self._resolve_cost(
+            cost_per_call_usd,
+            "PERPLEXITY_COST_PER_CALL_USD",
+        )
+        per_1k, token_source = self._resolve_cost(
+            cost_per_1k_tokens_usd, "PERPLEXITY_COST_PER_1K_TOKENS"
+        )
+        self.cost_per_token_usd = per_1k / 1000.0 if per_1k else 0.0
+        self.token_cost_source = token_source
+
+    @staticmethod
+    def _resolve_cost(
+        explicit_cost: Optional[float], env_var: str
+    ) -> tuple[float, str]:
+        if explicit_cost is not None:
+            try:
+                return float(explicit_cost), "explicit"
+            except (TypeError, ValueError):  # pragma: no cover - defensive
+                logger.warning(
+                    "Invalid explicit cost supplied for Perplexity tool: %s",
+                    explicit_cost,
+                )
+        env_value = os.getenv(env_var)
+        if env_value:
+            try:
+                return float(env_value), f"env:{env_var}"
+            except ValueError:  # pragma: no cover - defensive
+                logger.warning(
+                    "Invalid %s value for Perplexity tool cost: %s",
+                    env_var,
+                    env_value,
+                )
+        return 0.0, "default"
 
     async def search(
         self, query: str, opts: Optional[Dict[str, Any]] = None
@@ -86,9 +121,32 @@ class PerplexityResearchTool:
 
         duration_ms = int((time.time() - start) * 1000)
         logger.debug("Perplexity search completed in %sms", duration_ms)
+        usage = data.get("usage", {}) if isinstance(data, dict) else {}
+        total_tokens = 0
+        if isinstance(usage, dict):
+            total_tokens = usage.get("total_tokens") or (
+                usage.get("prompt_tokens", 0) + usage.get("completion_tokens", 0)
+            )
+
+        token_cost = None
+        if total_tokens and self.cost_per_token_usd:
+            token_cost = total_tokens * self.cost_per_token_usd
+
+        cost_usd = token_cost if token_cost is not None else self.cost_per_call_usd
+
         return {
             "provider": "perplexity",
             "model_used": data.get("model", self.model),
             "duration_ms": duration_ms,
             "data": data,
+            "usage_tokens": total_tokens,
+            "cost_usd": cost_usd,
+            "cost_per_call_usd": self.cost_per_call_usd,
+            "cost_per_1k_tokens_usd": self.cost_per_token_usd * 1000
+            if self.cost_per_token_usd
+            else 0.0,
+            "cost_source": "usage"
+            if token_cost is not None
+            else self.cost_source,
+            "token_cost_source": self.token_cost_source,
         }

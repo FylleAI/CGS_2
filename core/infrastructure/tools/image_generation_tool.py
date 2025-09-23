@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 from typing import Any, Dict, Optional
@@ -28,6 +27,26 @@ class ImageGenerationTool:
         )
         self._openai_adapter: Optional[OpenAIAdapter] = None
         self._gemini_adapter: Optional[GeminiAdapter] = None
+        self.openai_image_cost, self.openai_cost_source = self._resolve_cost_from_env(
+            "OPENAI_IMAGE_COST_USD"
+        )
+        self.gemini_image_cost, self.gemini_cost_source = self._resolve_cost_from_env(
+            "GEMINI_IMAGE_COST_USD"
+        )
+
+    @staticmethod
+    def _resolve_cost_from_env(env_var: str) -> tuple[float, str]:
+        value = os.getenv(env_var)
+        if value:
+            try:
+                return float(value), f"env:{env_var}"
+            except ValueError:  # pragma: no cover - defensive
+                logger.warning(
+                    "Invalid %s value for image generation cost: %s",
+                    env_var,
+                    value,
+                )
+        return 0.0, "default"
 
     def _get_openai_adapter(self) -> OpenAIAdapter:
         if self._openai_adapter is None:
@@ -103,6 +122,8 @@ class ImageGenerationTool:
             "style": style,
             "size": size,
             "quality": quality,
+            "cost_usd": self.openai_image_cost,
+            "cost_source": self.openai_cost_source,
         }
 
     async def _generate_with_gemini(
@@ -132,6 +153,8 @@ class ImageGenerationTool:
             "prompt": prompt,
             "style": style,
             "size": size,
+            "cost_usd": self.gemini_image_cost,
+            "cost_source": self.gemini_cost_source,
         }
 
 
@@ -164,4 +187,4 @@ async def image_generation_tool(
         **result,
     }
 
-    return json.dumps(payload, indent=2)
+    return payload
