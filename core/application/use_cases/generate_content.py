@@ -632,22 +632,52 @@ LENGTH: {context.get('length', 'medium')} length article
                 ToolNames.WEB_SEARCH_SERPER: {
                     "function": self.web_search_tool.search,
                     "description": "Search the web for current information and trends",
+                    "metadata": {
+                        "provider": "serper",
+                        "category": "web_search",
+                        "cost_per_call_usd": self.web_search_tool.cost_per_call_usd,
+                        "cost_source": self.web_search_tool.cost_source,
+                    },
                 },
                 ToolNames.RAG_GET_CLIENT_CONTENT: {
                     "function": self.rag_tool.get_client_content,
                     "description": "Retrieve content from client knowledge base",
+                    "metadata": {
+                        "provider": "rag",
+                        "category": "knowledge_base",
+                        "cost_per_call_usd": 0.0,
+                    },
                 },
                 ToolNames.RAG_SEARCH_CONTENT: {
                     "function": self.rag_tool.search_content,
                     "description": "Search within client knowledge base",
+                    "metadata": {
+                        "provider": "rag",
+                        "category": "knowledge_base",
+                        "cost_per_call_usd": 0.0,
+                    },
                 },
                 ToolNames.WEB_SEARCH_PERPLEXITY: {
                     "function": self.perplexity_tool.search,
                     "description": "Search using Perplexity AI",
+                    "metadata": {
+                        "provider": "perplexity",
+                        "category": "web_research",
+                        "cost_per_call_usd": self.perplexity_tool.cost_per_call_usd,
+                        "cost_per_1k_tokens_usd": self.perplexity_tool.cost_per_token_usd
+                        * 1000,
+                        "cost_source": self.perplexity_tool.cost_source,
+                        "token_cost_source": self.perplexity_tool.token_cost_source,
+                    },
                 },
                 ToolNames.IMAGE_GENERATION: {
                     "function": image_generation_tool,
                     "description": "Generate contextual images for enhanced articles",
+                    "metadata": {
+                        "provider": "image_generation",
+                        "category": "creative",
+                        "cost_override_key": "image_generation_tool",
+                    },
                 },
             }
         )

@@ -227,6 +227,7 @@ class AgentLogger:
         tool_name: str,
         tool_input: Any,
         tool_description: str = "",
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> str:
         """Log a tool call start."""
         call_id = str(uuid4())
@@ -234,6 +235,20 @@ class AgentLogger:
 
         if session_id in self.active_sessions:
             self.active_sessions[session_id]["tool_calls"] += 1
+
+        data = {
+            "session_id": session_id,
+            "call_id": call_id,
+            "tool_input": (
+                str(tool_input)[:500] + "..."
+                if len(str(tool_input)) > 500
+                else str(tool_input)
+            ),
+            "tool_description": tool_description,
+            "call_number": session.get("tool_calls", 0),
+        }
+        if metadata:
+            data.update(metadata)
 
         entry = LogEntry(
             interaction_type=InteractionType.TOOL_CALL,
@@ -244,17 +259,7 @@ class AgentLogger:
             workflow_id=session.get("workflow_id"),
             tool_name=tool_name,
             message=f"🛠️ TOOL CALL: {tool_name}",
-            data={
-                "session_id": session_id,
-                "call_id": call_id,
-                "tool_input": (
-                    str(tool_input)[:500] + "..."
-                    if len(str(tool_input)) > 500
-                    else str(tool_input)
-                ),
-                "tool_description": tool_description,
-                "call_number": session.get("tool_calls", 0),
-            },
+            data=data,
         )
 
         self._log_entry(entry)
@@ -268,9 +273,28 @@ class AgentLogger:
         tool_output: Any,
         duration_ms: float,
         success: bool = True,
+        cost_usd: Optional[float] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         """Log a tool call response."""
         session = self.active_sessions.get(session_id, {})
+
+        if session_id in self.active_sessions and cost_usd:
+            self.active_sessions[session_id]["total_cost"] += cost_usd
+
+        data = {
+            "session_id": session_id,
+            "call_id": call_id,
+            "tool_output": (
+                str(tool_output)[:500] + "..."
+                if len(str(tool_output)) > 500
+                else str(tool_output)
+            ),
+            "output_length": len(str(tool_output)),
+            "success": success,
+        }
+        if metadata:
+            data.update(metadata)
 
         entry = LogEntry(
             interaction_type=InteractionType.TOOL_RESPONSE,
@@ -285,18 +309,9 @@ class AgentLogger:
                 if success
                 else f"⚠️ TOOL WARNING: {tool_name}"
             ),
-            data={
-                "session_id": session_id,
-                "call_id": call_id,
-                "tool_output": (
-                    str(tool_output)[:500] + "..."
-                    if len(str(tool_output)) > 500
-                    else str(tool_output)
-                ),
-                "output_length": len(str(tool_output)),
-                "success": success,
-            },
+            data=data,
             duration_ms=duration_ms,
+            cost_usd=cost_usd,
         )
 
         self._log_entry(entry)
@@ -308,9 +323,20 @@ class AgentLogger:
         tool_name: str,
         error: Exception,
         duration_ms: float,
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         """Log a tool call error."""
         session = self.active_sessions.get(session_id, {})
+
+        data = {
+            "session_id": session_id,
+            "call_id": call_id,
+            "error_type": type(error).__name__,
+            "error_message": str(error),
+            "error_details": getattr(error, "args", []),
+        }
+        if metadata:
+            data.update(metadata)
 
         entry = LogEntry(
             interaction_type=InteractionType.TOOL_ERROR,
@@ -321,13 +347,7 @@ class AgentLogger:
             workflow_id=session.get("workflow_id"),
             tool_name=tool_name,
             message=f"❌ TOOL ERROR: {tool_name} - {str(error)}",
-            data={
-                "session_id": session_id,
-                "call_id": call_id,
-                "error_type": type(error).__name__,
-                "error_message": str(error),
-                "error_details": getattr(error, "args", []),
-            },
+            data=data,
             duration_ms=duration_ms,
         )
 
