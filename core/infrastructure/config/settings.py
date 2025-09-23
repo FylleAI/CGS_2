@@ -130,6 +130,20 @@ class Settings(BaseSettings):
     supabase_url: Optional[str] = Field(default=None, env="SUPABASE_URL")
     supabase_anon_key: Optional[str] = Field(default=None, env="SUPABASE_ANON_KEY")
     use_supabase: bool = Field(default=False, env="USE_SUPABASE")
+    # Tool cost tracking (optional overrides; tools also read directly from os.getenv)
+    serper_cost_per_call_usd: Optional[float] = Field(default=None, env="SERPER_COST_PER_CALL_USD")
+    perplexity_cost_per_call_usd: Optional[float] = Field(default=None, env="PERPLEXITY_COST_PER_CALL_USD")
+    perplexity_cost_per_1k_tokens: Optional[float] = Field(default=None, env="PERPLEXITY_COST_PER_1K_TOKENS")
+    perplexity_sonar_cost_per_1k_tokens_input: Optional[float] = Field(default=None, env="PERPLEXITY_SONAR_COST_PER_1K_TOKENS_INPUT")
+    perplexity_sonar_cost_per_1k_tokens_output: Optional[float] = Field(default=None, env="PERPLEXITY_SONAR_COST_PER_1K_TOKENS_OUTPUT")
+    perplexity_sonar_pro_cost_per_1k_tokens_input: Optional[float] = Field(default=None, env="PERPLEXITY_SONAR_PRO_COST_PER_1K_TOKENS_INPUT")
+    perplexity_sonar_pro_cost_per_1k_tokens_output: Optional[float] = Field(default=None, env="PERPLEXITY_SONAR_PRO_COST_PER_1K_TOKENS_OUTPUT")
+    openai_image_cost_usd: Optional[float] = Field(default=None, env="OPENAI_IMAGE_COST_USD")
+    openai_image_cost_low_usd: Optional[float] = Field(default=None, env="OPENAI_IMAGE_COST_LOW_USD")
+    openai_image_cost_medium_usd: Optional[float] = Field(default=None, env="OPENAI_IMAGE_COST_MEDIUM_USD")
+    openai_image_cost_high_usd: Optional[float] = Field(default=None, env="OPENAI_IMAGE_COST_HIGH_USD")
+    gemini_image_cost_usd: Optional[float] = Field(default=None, env="GEMINI_IMAGE_COST_USD")
+
 
     class Config:
         env_file = ".env"
