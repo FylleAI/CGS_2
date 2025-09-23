@@ -201,26 +201,61 @@ async def execute_dynamic_workflow(
                 ToolNames.WEB_SEARCH_SERPER: {
                     "function": web_search_tool.search,
                     "description": "Search the web for current information and trends",
+                    "metadata": {
+                        "provider": "serper",
+                        "category": "web_search",
+                        "cost_per_call_usd": web_search_tool.cost_per_call_usd,
+                        "cost_source": web_search_tool.cost_source,
+                    },
                 },
                 ToolNames.RAG_GET_CLIENT_CONTENT: {
                     "function": rag_tool.get_client_content,
                     "description": "Retrieve content from client knowledge base",
+                    "metadata": {
+                        "provider": "rag",
+                        "category": "knowledge_base",
+                        "cost_per_call_usd": 0.0,
+                    },
                 },
                 ToolNames.RAG_SEARCH_CONTENT: {
                     "function": rag_tool.search_content,
                     "description": "Search within client knowledge base",
+                    "metadata": {
+                        "provider": "rag",
+                        "category": "knowledge_base",
+                        "cost_per_call_usd": 0.0,
+                    },
                 },
                 ToolNames.WEB_SEARCH_PERPLEXITY: {
                     "function": perplexity_tool.search,
                     "description": "Search using Perplexity AI",
+                    "metadata": {
+                        "provider": "perplexity",
+                        "category": "web_research",
+                        "cost_per_call_usd": perplexity_tool.cost_per_call_usd,
+                        "cost_per_1k_tokens_usd": perplexity_tool.cost_per_token_usd
+                        * 1000,
+                        "cost_source": perplexity_tool.cost_source,
+                        "token_cost_source": perplexity_tool.token_cost_source,
+                    },
                 },
                 ToolNames.IMAGE_GENERATION: {
                     "function": image_generation_tool,
                     "description": "Generate contextual images for the final article",
+                    "metadata": {
+                        "provider": "image_generation",
+                        "category": "creative",
+                        "cost_override_key": "image_generation_tool",
+                    },
                 },
                 ToolNames.BRAND_STYLE_GUIDE: {
                     "function": brand_style_tool.get_style,
                     "description": "Retrieve brand palette and visual guardrails",
+                    "metadata": {
+                        "provider": "brand_style",
+                        "category": "knowledge_base",
+                        "cost_per_call_usd": 0.0,
+                    },
                 },
             }
         )

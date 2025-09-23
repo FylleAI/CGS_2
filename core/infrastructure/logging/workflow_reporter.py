@@ -46,6 +46,7 @@ class WorkflowMetrics:
     total_cost: float = 0.0
     cost_breakdown_by_provider: Dict[str, float] = None
     cost_breakdown_by_agent: Dict[str, float] = None
+    cost_breakdown_by_tool: Dict[str, float] = None
 
     # Agent metrics
     agents_used: List[AgentPerformance] = None
@@ -73,6 +74,8 @@ class WorkflowMetrics:
             self.cost_breakdown_by_provider = {}
         if self.cost_breakdown_by_agent is None:
             self.cost_breakdown_by_agent = {}
+        if self.cost_breakdown_by_tool is None:
+            self.cost_breakdown_by_tool = {}
         if self.agents_used is None:
             self.agents_used = []
         if self.tool_usage_breakdown is None:
@@ -345,6 +348,31 @@ class WorkflowReporter:
             if entry.agent_id in agent_performance:
                 agent_performance[entry.agent_id]["tool_calls"] += 1
 
+            if entry.cost_usd:
+                metrics.total_cost += entry.cost_usd
+
+                provider = (
+                    entry.data.get("provider")
+                    or entry.data.get("tool_provider")
+                    or entry.data.get("image_provider")
+                    or "tool"
+                )
+                if provider not in metrics.cost_breakdown_by_provider:
+                    metrics.cost_breakdown_by_provider[provider] = 0.0
+                metrics.cost_breakdown_by_provider[provider] += entry.cost_usd
+
+                if entry.agent_id:
+                    if entry.agent_id not in metrics.cost_breakdown_by_agent:
+                        metrics.cost_breakdown_by_agent[entry.agent_id] = 0.0
+                    metrics.cost_breakdown_by_agent[entry.agent_id] += entry.cost_usd
+
+                if tool_name not in metrics.cost_breakdown_by_tool:
+                    metrics.cost_breakdown_by_tool[tool_name] = 0.0
+                metrics.cost_breakdown_by_tool[tool_name] += entry.cost_usd
+
+                if entry.agent_id in agent_performance:
+                    agent_performance[entry.agent_id]["total_cost"] += entry.cost_usd
+
     def _log_workflow_completion(self, metrics: WorkflowMetrics) -> None:
         """Log comprehensive workflow completion summary."""
         logger.info("=" * 80)
@@ -367,6 +395,11 @@ class WorkflowReporter:
             logger.info("💳 Cost by Provider:")
             for provider, cost in metrics.cost_breakdown_by_provider.items():
                 logger.info(f"   {provider}: ${cost:.6f}")
+
+        if metrics.cost_breakdown_by_tool:
+            logger.info("🧰 Cost by Tool:")
+            for tool, cost in metrics.cost_breakdown_by_tool.items():
+                logger.info(f"   {tool}: ${cost:.6f}")
 
         # Agent performance summary
         if metrics.agents_used:
