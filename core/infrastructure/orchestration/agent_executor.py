@@ -1,22 +1,31 @@
 """Agent executor for task execution."""
 
-import logging
 import json
-import time
+import logging
 import re
-import inspect
-from typing import Dict, Any, List, Optional
-from uuid import UUID
+import time
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 
+from ...application.interfaces.llm_provider_interface import LLMProviderInterface
 from ...domain.entities.agent import Agent
 from ...domain.repositories.agent_repository import AgentRepository
-from ...application.interfaces.llm_provider_interface import LLMProviderInterface
 from ...domain.value_objects.provider_config import ProviderConfig
-from ..logging.agent_logger import agent_logger, LogLevel, InteractionType
-from ..logging.cost_calculator import cost_calculator, TokenUsage, CostBreakdown
+from ..logging.agent_logger import InteractionType, LogLevel, agent_logger
+from ..logging.cost_calculator import CostBreakdown, TokenUsage, cost_calculator
+from ..logging.tool_cost_calculator import tool_cost_calculator
 from .simple_system_prompt_builder import SimpleSystemPromptBuilder
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class ToolExecutionResult:
+    """Normalized representation of tool execution outcomes."""
+
+    output_text: str
+    raw_output: Any = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
 
 class AgentExecutor:
@@ -39,11 +48,18 @@ class AgentExecutor:
         self.tools_registry = {}
         self.system_prompt_builder = SimpleSystemPromptBuilder()
 
-    def register_tool(self, tool_name: str, tool_function: callable, description: str):
+    def register_tool(
+        self,
+        tool_name: str,
+        tool_function: callable,
+        description: str,
+        metadata: Optional[Dict[str, Any]] = None,
+    ):
         """Register a tool for agent use."""
         self.tools_registry[tool_name] = {
             "function": tool_function,
             "description": description,
+            "metadata": metadata or {},
         }
 
     def register_tools(self, tools: Dict[str, Dict[str, Any]]):
@@ -53,6 +69,7 @@ class AgentExecutor:
                 tool_name,
                 tool_info["function"],
                 tool_info.get("description", f"Tool: {tool_name}"),
+                tool_info.get("metadata"),
             )
 
     async def execute_agent(
@@ -330,6 +347,9 @@ class AgentExecutor:
             canonical_tool_name = ALIASES.get(original_tool_name, original_tool_name)
 
             if canonical_tool_name in self.tools_registry:
+                tool_info = self.tools_registry[canonical_tool_name]
+                tool_metadata = tool_info.get("metadata", {})
+
                 # Log tool call start
                 call_id = None
                 if session_id:
@@ -337,24 +357,41 @@ class AgentExecutor:
                         session_id=session_id,
                         tool_name=original_tool_name,
                         tool_input=tool_input.strip(),
-                        tool_description=self.tools_registry[canonical_tool_name][
-                            "description"
-                        ],
+                        tool_description=tool_info["description"],
+                        metadata=tool_metadata,
                     )
 
                 try:
                     # Execute the tool with timing
                     start_time = time.time()
-                    tool_function = self.tools_registry[canonical_tool_name]["function"]
+                    tool_function = tool_info["function"]
 
                     # Parse tool input based on tool type
-                    tool_result = await self._execute_tool_with_params(
+                    execution_result = await self._execute_tool_with_params(
                         canonical_tool_name,
                         tool_function,
                         tool_input.strip(),
                         agent_name,
+                        tool_metadata,
                     )
                     duration_ms = (time.time() - start_time) * 1000
+
+                    execution_metadata = dict(execution_result.metadata or {})
+                    if tool_metadata:
+                        execution_metadata = {
+                            **tool_metadata,
+                            **execution_metadata,
+                        }
+
+                    cost_details = tool_cost_calculator.calculate_cost(
+                        canonical_tool_name, tool_metadata, execution_metadata
+                    )
+                    if cost_details.cost_usd:
+                        execution_metadata["cost_usd"] = cost_details.cost_usd
+                    execution_metadata.setdefault(
+                        "cost_source", cost_details.source
+                    )
+                    execution_metadata.setdefault("units", cost_details.units)
 
                     # Log successful tool response
                     if session_id and call_id:
@@ -362,17 +399,25 @@ class AgentExecutor:
                             session_id=session_id,
                             call_id=call_id,
                             tool_name=original_tool_name,
-                            tool_output=tool_result,
+                            tool_output=execution_result.output_text,
                             duration_ms=duration_ms,
                             success=True,
+                            cost_usd=cost_details.cost_usd,
+                            metadata=execution_metadata,
                         )
 
                     # Replace the tool call with the result
                     tool_call = (
                         f"[{original_tool_name}]{tool_input}[/{original_tool_name}]"
                     )
-                    tool_result_text = f"[{original_tool_name} RESULT]\n{tool_result}\n[/{original_tool_name} RESULT]"
-                    agent_response = agent_response.replace(tool_call, tool_result_text)
+                    tool_result_text = (
+                        f"[{original_tool_name} RESULT]\n"
+                        f"{execution_result.output_text}\n"
+                        f"[/{original_tool_name} RESULT]"
+                    )
+                    agent_response = agent_response.replace(
+                        tool_call, tool_result_text
+                    )
 
                 except Exception as e:
                     duration_ms = (
@@ -389,11 +434,14 @@ class AgentExecutor:
                             tool_name=tool_name,
                             error=e,
                             duration_ms=duration_ms,
+                            metadata=tool_metadata,
                         )
 
                     # Replace with error message
                     tool_call = f"[{tool_name}]{tool_input}[/{tool_name}]"
-                    error_text = f"[{tool_name} ERROR] {str(e)} [/{tool_name} ERROR]"
+                    error_text = (
+                        f"[{tool_name} ERROR] {str(e)} [/{tool_name} ERROR]"
+                    )
                     agent_response = agent_response.replace(tool_call, error_text)
             else:
                 # Tool not found - log error
@@ -403,14 +451,18 @@ class AgentExecutor:
                         tool_name=tool_name,
                         tool_input=tool_input.strip(),
                         tool_description="Tool not found",
+                        metadata={"provider": "unknown"},
                     )
 
                     agent_logger.log_tool_error(
                         session_id=session_id,
                         call_id=call_id,
                         tool_name=tool_name,
-                        error=Exception(f"Tool '{tool_name}' not found in registry"),
+                        error=Exception(
+                            f"Tool '{tool_name}' not found in registry"
+                        ),
                         duration_ms=0,
+                        metadata={"provider": "unknown"},
                     )
 
                 tool_call = f"[{tool_name}]{tool_input}[/{tool_name}]"
@@ -425,7 +477,8 @@ class AgentExecutor:
         tool_function: callable,
         tool_input: str,
         agent_name: Optional[str] = None,
-    ) -> str:
+        tool_metadata: Optional[Dict[str, Any]] = None,
+    ) -> ToolExecutionResult:
         """
         Execute tool with proper parameter parsing and validation.
 
@@ -462,7 +515,12 @@ class AgentExecutor:
                 if not query.strip():
                     raise ValueError("Search query cannot be empty")
 
-                return await tool_function(client_name, query, agent_name=agent_name)
+                result = await tool_function(
+                    client_name, query, agent_name=agent_name
+                )
+                return self._normalize_tool_result(
+                    tool_name, result, tool_metadata
+                )
 
             elif tool_name == "rag_get_client_content":
                 # Parse: "client_name" or "client_name, document_name"
@@ -470,12 +528,20 @@ class AgentExecutor:
 
                 if len(parts) == 2:
                     client_name, document_name = parts
-                    return await tool_function(
+                    result = await tool_function(
                         client_name, document_name, agent_name=agent_name
+                    )
+                    return self._normalize_tool_result(
+                        tool_name, result, tool_metadata
                     )
                 elif len(parts) == 1:
                     client_name = parts[0]
-                    return await tool_function(client_name, agent_name=agent_name)
+                    result = await tool_function(
+                        client_name, agent_name=agent_name
+                    )
+                    return self._normalize_tool_result(
+                        tool_name, result, tool_metadata
+                    )
                 else:
                     raise ValueError(
                         "rag_get_client_content requires format: 'client_name' or 'client_name, document_name'"
@@ -485,7 +551,13 @@ class AgentExecutor:
                 # Parse a structured input like: "topic=..., exclude_topics=[...], premium_sources=...|..., research_timeframe=last 7 days"
                 raw = tool_input.strip()
                 if "=" not in raw and "," not in raw and "\n" not in raw:
-                    return await tool_function(raw)
+                    result = await tool_function(raw)
+                    metadata = {"query": raw}
+                    if tool_metadata:
+                        metadata = {**tool_metadata, **metadata}
+                    return self._normalize_tool_result(
+                        tool_name, result, metadata
+                    )
                 parts = [p.strip() for p in raw.split(",") if p.strip()]
                 params = {}
                 for p in parts:
@@ -548,7 +620,13 @@ class AgentExecutor:
                         ex_hint = " " + " ".join([f"-{x}" for x in ex_items])
 
                 query = f"{topic}{site_filter}{url_excludes}{tf_hint}{ex_hint}".strip()
-                return await tool_function(query)
+                result = await tool_function(query)
+                metadata = {"query": query}
+                if tool_metadata:
+                    metadata = {**tool_metadata, **metadata}
+                return self._normalize_tool_result(
+                    tool_name, result, metadata
+                )
 
             elif tool_name == "image_generation_tool":
                 params: Dict[str, str] = {}
@@ -570,15 +648,27 @@ class AgentExecutor:
                 image_style = params.get("image_style", "professional")
                 image_provider = params.get("image_provider", "openai")
 
-                return await tool_function(
+                result = await tool_function(
                     article_content=article_content,
                     image_style=image_style,
                     image_provider=image_provider,
                 )
+                metadata = {
+                    "style": image_style,
+                    "image_provider": image_provider,
+                }
+                if tool_metadata:
+                    metadata = {**tool_metadata, **metadata}
+                return self._normalize_tool_result(
+                    tool_name, result, metadata
+                )
 
             else:
                 # Default behavior for other tools (single parameter)
-                return await tool_function(tool_input)
+                result = await tool_function(tool_input)
+                return self._normalize_tool_result(
+                    tool_name, result, tool_metadata
+                )
 
         except Exception as e:
             # Enhanced error handling with fallback
@@ -607,11 +697,91 @@ class AgentExecutor:
 
                     rag_tool = RAGTool()
                     fallback_result = await rag_tool.get_client_content(client_name)
-                    return f"[FALLBACK] Search failed ({str(e)}), retrieved all {client_name} content instead:\n{fallback_result}"
+                    fallback_text = (
+                        "[FALLBACK] Search failed (")
+                    fallback_text += f"{str(e)}), retrieved all {client_name} "
+                    fallback_text += "content instead:\n"
+                    fallback_text += fallback_result
+                    return self._normalize_tool_result(
+                        tool_name,
+                        fallback_text,
+                        tool_metadata,
+                    )
                 except Exception as fallback_error:
                     error_msg += f" | Fallback also failed: {str(fallback_error)}"
 
             raise Exception(error_msg)
+
+    def _normalize_tool_result(
+        self,
+        tool_name: str,
+        result: Any,
+        tool_metadata: Optional[Dict[str, Any]] = None,
+    ) -> ToolExecutionResult:
+        """Convert heterogeneous tool outputs into a standard structure."""
+
+        metadata: Dict[str, Any] = {}
+        if tool_metadata:
+            metadata.update(tool_metadata)
+
+        if isinstance(result, ToolExecutionResult):
+            combined_metadata = {**metadata, **(result.metadata or {})}
+            return ToolExecutionResult(
+                output_text=result.output_text,
+                raw_output=result.raw_output,
+                metadata=combined_metadata,
+            )
+
+        if isinstance(result, tuple) and len(result) == 2:
+            output_text, extra = result
+            if isinstance(extra, dict):
+                metadata.update(extra)
+            return ToolExecutionResult(
+                output_text=str(output_text),
+                raw_output=result,
+                metadata=metadata,
+            )
+
+        if isinstance(result, dict):
+            dict_copy = dict(result)
+            extra_meta = dict_copy.pop("metadata", {}) if isinstance(
+                dict_copy.get("metadata"), dict
+            ) else {}
+
+            for key in [
+                "provider",
+                "model",
+                "cost_usd",
+                "cost_per_call_usd",
+                "cost_per_1k_tokens_usd",
+                "cost_source",
+                "token_cost_source",
+                "usage_tokens",
+                "duration_ms",
+            ]:
+                if key in dict_copy and key not in metadata:
+                    metadata[key] = dict_copy[key]
+
+            metadata.update(extra_meta)
+
+            try:
+                output_text = json.dumps(dict_copy, ensure_ascii=False, indent=2)
+            except Exception:
+                output_text = str(dict_copy)
+
+            return ToolExecutionResult(
+                output_text=output_text,
+                raw_output=result,
+                metadata=metadata,
+            )
+
+        # Default string representation
+        output_text = str(result)
+        return ToolExecutionResult(
+            output_text=output_text,
+            raw_output=result,
+            metadata=metadata,
+        )
 
     def _validate_tool_parameters(
         self, tool_name: str, tool_input: str

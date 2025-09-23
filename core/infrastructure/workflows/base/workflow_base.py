@@ -110,6 +110,13 @@ class WorkflowHandler(ABC):
                     "duration_seconds": workflow_metrics.total_duration_ms / 1000,
                     "agents_used": len(workflow_metrics.agents_used),
                     "success_rate": workflow_metrics.success_rate,
+                    "cost_by_provider": workflow_metrics.cost_breakdown_by_provider,
+                    "cost_by_agent": workflow_metrics.cost_breakdown_by_agent,
+                    "cost_by_tool": workflow_metrics.cost_breakdown_by_tool,
+                    "tool_usage": workflow_metrics.tool_usage_breakdown,
+                    "llm_usage": workflow_metrics.llm_usage_breakdown,
+                    "total_tool_calls": workflow_metrics.total_tool_calls,
+                    "total_llm_calls": workflow_metrics.total_llm_calls,
                 }
 
             logger.info(f"🎉 Workflow execution completed: {self.workflow_type}")
