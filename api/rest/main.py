@@ -1,6 +1,8 @@
 """FastAPI application main module."""
 
 import logging
+import os
+from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +25,20 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting CGSRef API...")
     settings = get_settings()
+
+    # Ensure Google ADC env vars for Vertex AI are set from Settings
+    try:
+        if settings.google_application_credentials and not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+            cred_path = Path(settings.google_application_credentials).expanduser().resolve()
+            os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = str(cred_path)
+            logger.info("GOOGLE_APPLICATION_CREDENTIALS set from settings")
+
+        if settings.gcp_project_id and not os.getenv("GOOGLE_CLOUD_PROJECT"):
+            os.environ["GOOGLE_CLOUD_PROJECT"] = settings.gcp_project_id
+        if settings.gcp_location and not os.getenv("GOOGLE_CLOUD_REGION"):
+            os.environ["GOOGLE_CLOUD_REGION"] = settings.gcp_location
+    except Exception as e:
+        logger.warning(f"Failed to set Google ADC env vars: {e}")
 
     # Validate configuration
     if not settings.has_any_provider():

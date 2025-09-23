@@ -239,77 +239,24 @@ class GeminiAdapter(LLMProviderInterface):
 
         try:
             if self.use_vertex:
-                # Prefer Vertex SDK; if ADC missing -> fall back to AI Studio (API key)
-                try:
-                    self._init_vertex()
-                    try:
-                        from google.auth.exceptions import DefaultCredentialsError  # type: ignore
-                    except Exception:
-                        DefaultCredentialsError = tuple()  # type: ignore
-
-                    try:
-                        try:
-                            from vertexai.preview.generative_models import GenerativeModel  # type: ignore
-                        except ImportError:  # pragma: no cover
-                            from vertexai.generative_models import GenerativeModel  # type: ignore
-
-                        inputs: list[str] = []
-                        if system_message:
-                            inputs.append(str(system_message))
-                        inputs.append(str(prompt))
-
-                        model = GenerativeModel(config.model)
-                        logger.debug(
-                            f"Vertex SDK generate_content model={config.model} project={self.project_id} location={self.location}"
-                        )
-                        response = model.generate_content(inputs)
-                        text = getattr(response, "text", None)
-                        if not text:
-                            raise ValueError("Vertex Gemini returned empty response")
-                        return text
-                    except Exception as ve:
-                        msg = str(ve).lower()
-                        adc_missing = (
-                            ("default credentials" in msg or "adc" in msg)
-                            or ("could not automatically determine credentials" in msg)
-                            or (
-                                isinstance(ve, DefaultCredentialsError)
-                                if isinstance(DefaultCredentialsError, type)
-                                else False
-                            )
-                        )
-                        if adc_missing:
-                            logger.warning(
-                                "Vertex SDK ADC not found -> falling back to AI Studio (API key)"
-                            )
-                            # Fallback: AI Studio SDK with API key
-                            model = self._get_model(config)
-                            full_prompt = (
-                                f"{system_message}\n\n{prompt}"
-                                if system_message
-                                else prompt
-                            )
-                            response = model.generate_content(full_prompt)
-                            if not response.text:
-                                raise ValueError(
-                                    "Gemini (AI Studio) returned empty response"
-                                )
-                            return response.text
-                        logger.error(f"Vertex SDK call failed: {ve}")
-                        raise
-                except Exception as init_err:
-                    # _init_vertex failed; fallback to AI Studio
-                    logger.warning(
-                        f"Vertex init failed: {init_err} -> falling back to AI Studio"
-                    )
-                    model = self._get_model(config)
-                    full_prompt = (
-                        f"{system_message}\n\n{prompt}" if system_message else prompt
-                    )
-                    response = model.generate_content(full_prompt)
-                    if not response.text:
-                        raise ValueError("Gemini (AI Studio) returned empty response")
-                    return response.text
+                # Use direct Vertex REST call with ADC/SA when available
+                self._init_vertex()
+                body: Dict[str, Any] = {
+                    "contents": self._build_contents_from_text(str(prompt)),
+                    "generation_config": {
+                        "temperature": config.temperature,
+                        "top_p": config.top_p,
+                        "max_output_tokens": config.max_tokens or 8192,
+                    },
+                }
+                sys_inst = self._build_system_instruction(system_message)
+                if sys_inst:
+                    body["system_instruction"] = sys_inst
+                data = await self._vertex_call(config.model, body)
+                text = self._extract_text_from_vertex_response(data)
+                if not text:
+                    raise ValueError("Vertex Gemini returned empty response")
+                return text
 
             # Fallback to Google AI Studio SDK
             model = self._get_model(config)
