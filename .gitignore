@@ -129,3 +129,9 @@ content_debug_results.json
 
 # Secrets
 .secrets/
+
+
+# Additional secrets and frontend env
+secrets/
+web/react-app/.env
+web/react-app/build/
