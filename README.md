@@ -143,6 +143,34 @@ web/react-app/.env
 
 In caso di fresh clone: ricordati di ricreare `.env` e `secrets/vertex_service_account.json` localmente.
 
+### Tracciamento costi Tool e override via env
+Questa codebase calcola e riporta i costi dei tool non‑LLM (web search, Perplexity, image generation, ecc.) nelle metriche del workflow. I tool ritornano payload strutturati con metadati di costo, che vengono normalizzati e inclusi nel reporter (breakdown per provider/agent/tool).
+
+Variabili ambiente supportate (override facoltativi):
+- SERPER_COST_PER_CALL_USD
+- PERPLEXITY_COST_PER_CALL_USD
+- PERPLEXITY_COST_PER_1K_TOKENS
+- OPENAI_IMAGE_COST_USD
+- GEMINI_IMAGE_COST_USD
+- TOOL_COST_<TOOL_NAME> (override generico; es. TOOL_COST_image_generation_tool)
+
+Note:
+- Se un provider ritorna `usage` con token, il costo può essere calcolato come `usage_tokens / 1000 * PERPLEXITY_COST_PER_1K_TOKENS`.
+- In assenza di dati o override, il costo di default è 0.0 USD.
+- I metadati di costo sono visibili nei log del tool e nel riepilogo del workflow (cost_by_provider/agent/tool).
+
+Esempio (.env):
+```
+# Costi opzionali per tool
+SERPER_COST_PER_CALL_USD=0.01
+PERPLEXITY_COST_PER_CALL_USD=0.0
+PERPLEXITY_COST_PER_1K_TOKENS=0.50
+OPENAI_IMAGE_COST_USD=0.04
+GEMINI_IMAGE_COST_USD=0.03
+# Override generico per nome tool registrato
+TOOL_COST_image_generation_tool=0.04
+```
+
 ---
 
 ## Logging di default (più silenzioso)
