@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 from typing import Any, Dict, Optional
@@ -28,6 +27,57 @@ class ImageGenerationTool:
         )
         self._openai_adapter: Optional[OpenAIAdapter] = None
         self._gemini_adapter: Optional[GeminiAdapter] = None
+        self.openai_image_cost, self.openai_cost_source = self._resolve_cost_from_env(
+            "OPENAI_IMAGE_COST_USD"
+        )
+        # Optional tiered OpenAI image pricing
+        self.openai_image_cost_low, self.openai_low_source = self._resolve_cost_from_env(
+            "OPENAI_IMAGE_COST_LOW_USD"
+        )
+        self.openai_image_cost_medium, self.openai_medium_source = self._resolve_cost_from_env(
+            "OPENAI_IMAGE_COST_MEDIUM_USD"
+        )
+        self.openai_image_cost_high, self.openai_high_source = self._resolve_cost_from_env(
+            "OPENAI_IMAGE_COST_HIGH_USD"
+        )
+        self.gemini_image_cost, self.gemini_cost_source = self._resolve_cost_from_env(
+            "GEMINI_IMAGE_COST_USD"
+        )
+
+    @staticmethod
+    def _resolve_cost_from_env(env_var: str) -> tuple[float, str]:
+        value = os.getenv(env_var)
+        if value:
+            try:
+                return float(value), f"env:{env_var}"
+            except ValueError:  # pragma: no cover - defensive
+                logger.warning(
+                    "Invalid %s value for image generation cost: %s",
+                    env_var,
+                    value,
+                )
+        return 0.0, "default"
+
+
+    def _resolve_openai_image_cost_for(self, size: str, quality: str) -> tuple[float, str]:
+        s = (size or "").lower()
+        q = (quality or "").lower()
+        # High tier: explicit 2048 size or HD quality
+        if "2048" in s or q == "hd":
+            if self.openai_image_cost_high:
+                return self.openai_image_cost_high, self.openai_high_source
+        # Medium tier: common 512 or 1024 defaults
+        if s in ("512x512", "1024x1024"):
+            if self.openai_image_cost_medium:
+                return self.openai_image_cost_medium, self.openai_medium_source
+        # Low tier: small size
+        if s in ("256x256",):
+            if self.openai_image_cost_low:
+                return self.openai_image_cost_low, self.openai_low_source
+        # Fallback to single-tier env if provided
+        if self.openai_image_cost:
+            return self.openai_image_cost, self.openai_cost_source
+        return 0.0, "default"
 
     def _get_openai_adapter(self) -> OpenAIAdapter:
         if self._openai_adapter is None:
@@ -92,6 +142,7 @@ class ImageGenerationTool:
         )
 
         result = await adapter.generate_image(prompt, config)
+        cost_usd, cost_source = self._resolve_openai_image_cost_for(size, quality)
         return {
             "success": True,
             "provider": "openai",
@@ -103,6 +154,8 @@ class ImageGenerationTool:
             "style": style,
             "size": size,
             "quality": quality,
+            "cost_usd": cost_usd,
+            "cost_source": cost_source,
         }
 
     async def _generate_with_gemini(
@@ -132,6 +185,8 @@ class ImageGenerationTool:
             "prompt": prompt,
             "style": style,
             "size": size,
+            "cost_usd": self.gemini_image_cost,
+            "cost_source": self.gemini_cost_source,
         }
 
 
@@ -164,4 +219,4 @@ async def image_generation_tool(
         **result,
     }
 
-    return json.dumps(payload, indent=2)
+    return payload

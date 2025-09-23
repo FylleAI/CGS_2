@@ -3,6 +3,7 @@ Workflow registry for dynamic workflow management.
 """
 
 import logging
+import os
 from typing import Dict, Type, Any
 from .base.workflow_base import WorkflowHandler
 
@@ -177,6 +178,36 @@ async def execute_dynamic_workflow(
 
         # Initialize with default settings
         settings = Settings()
+
+        # Seed tool-cost env vars from Settings so tools that read os.getenv pick them up
+        def _set_env_if(val, key):
+            if val is not None:
+                os.environ[key] = str(val)
+        _set_env_if(settings.serper_cost_per_call_usd, "SERPER_COST_PER_CALL_USD")
+        _set_env_if(settings.perplexity_cost_per_call_usd, "PERPLEXITY_COST_PER_CALL_USD")
+        _set_env_if(settings.perplexity_cost_per_1k_tokens, "PERPLEXITY_COST_PER_1K_TOKENS")
+        _set_env_if(
+            settings.perplexity_sonar_cost_per_1k_tokens_input,
+            "PERPLEXITY_SONAR_COST_PER_1K_TOKENS_INPUT",
+        )
+        _set_env_if(
+            settings.perplexity_sonar_cost_per_1k_tokens_output,
+            "PERPLEXITY_SONAR_COST_PER_1K_TOKENS_OUTPUT",
+        )
+        _set_env_if(
+            settings.perplexity_sonar_pro_cost_per_1k_tokens_input,
+            "PERPLEXITY_SONAR_PRO_COST_PER_1K_TOKENS_INPUT",
+        )
+        _set_env_if(
+            settings.perplexity_sonar_pro_cost_per_1k_tokens_output,
+            "PERPLEXITY_SONAR_PRO_COST_PER_1K_TOKENS_OUTPUT",
+        )
+        _set_env_if(settings.openai_image_cost_usd, "OPENAI_IMAGE_COST_USD")
+        _set_env_if(settings.openai_image_cost_low_usd, "OPENAI_IMAGE_COST_LOW_USD")
+        _set_env_if(settings.openai_image_cost_medium_usd, "OPENAI_IMAGE_COST_MEDIUM_USD")
+        _set_env_if(settings.openai_image_cost_high_usd, "OPENAI_IMAGE_COST_HIGH_USD")
+        _set_env_if(settings.gemini_image_cost_usd, "GEMINI_IMAGE_COST_USD")
+
         provider_config = ProviderConfig(
             provider=LLMProvider.OPENAI, model="gpt-4o", temperature=0.7
         )
@@ -201,26 +232,62 @@ async def execute_dynamic_workflow(
                 ToolNames.WEB_SEARCH_SERPER: {
                     "function": web_search_tool.search,
                     "description": "Search the web for current information and trends",
+                    "metadata": {
+                        "provider": "serper",
+                        "category": "web_search",
+                        # Prefer Settings-based pricing (loaded from .env), fallback to tool defaults
+                        "cost_per_call_usd": settings.serper_cost_per_call_usd or web_search_tool.cost_per_call_usd,
+                        "cost_source": ("env" if settings.serper_cost_per_call_usd is not None else web_search_tool.cost_source),
+                    },
                 },
                 ToolNames.RAG_GET_CLIENT_CONTENT: {
                     "function": rag_tool.get_client_content,
                     "description": "Retrieve content from client knowledge base",
+                    "metadata": {
+                        "provider": "rag",
+                        "category": "knowledge_base",
+                        "cost_per_call_usd": 0.0,
+                    },
                 },
                 ToolNames.RAG_SEARCH_CONTENT: {
                     "function": rag_tool.search_content,
                     "description": "Search within client knowledge base",
+                    "metadata": {
+                        "provider": "rag",
+                        "category": "knowledge_base",
+                        "cost_per_call_usd": 0.0,
+                    },
                 },
                 ToolNames.WEB_SEARCH_PERPLEXITY: {
                     "function": perplexity_tool.search,
                     "description": "Search using Perplexity AI",
+                    "metadata": {
+                        "provider": "perplexity",
+                        "category": "web_research",
+                        "cost_per_call_usd": perplexity_tool.cost_per_call_usd,
+                        "cost_per_1k_tokens_usd": perplexity_tool.cost_per_token_usd
+                        * 1000,
+                        "cost_source": perplexity_tool.cost_source,
+                        "token_cost_source": perplexity_tool.token_cost_source,
+                    },
                 },
                 ToolNames.IMAGE_GENERATION: {
                     "function": image_generation_tool,
                     "description": "Generate contextual images for the final article",
+                    "metadata": {
+                        "provider": "image_generation",
+                        "category": "creative",
+                        "cost_override_key": "image_generation_tool",
+                    },
                 },
                 ToolNames.BRAND_STYLE_GUIDE: {
                     "function": brand_style_tool.get_style,
                     "description": "Retrieve brand palette and visual guardrails",
+                    "metadata": {
+                        "provider": "brand_style",
+                        "category": "knowledge_base",
+                        "cost_per_call_usd": 0.0,
+                    },
                 },
             }
         )

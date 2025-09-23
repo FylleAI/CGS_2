@@ -143,6 +143,59 @@ web/react-app/.env
 
 In caso di fresh clone: ricordati di ricreare `.env` e `secrets/vertex_service_account.json` localmente.
 
+### Tracciamento costi Tool e override via env
+Questa codebase calcola e riporta i costi dei tool non‑LLM (web search, Perplexity, image generation, ecc.) nelle metriche del workflow. I tool ritornano payload strutturati con metadati di costo, che vengono normalizzati e inclusi nel reporter (breakdown per provider/agent/tool).
+
+Variabili ambiente supportate (override facoltativi):
+- SERPER_COST_PER_CALL_USD
+- PERPLEXITY_COST_PER_CALL_USD (spesso ND/non usato)
+- PERPLEXITY_COST_PER_1K_TOKENS (singolo rate di fallback)
+- [Precise split per Perplexity]
+  - PERPLEXITY_SONAR_COST_PER_1K_TOKENS_INPUT / PERPLEXITY_SONAR_COST_PER_1K_TOKENS_OUTPUT
+  - PERPLEXITY_SONAR_PRO_COST_PER_1K_TOKENS_INPUT / PERPLEXITY_SONAR_PRO_COST_PER_1K_TOKENS_OUTPUT
+- OPENAI_IMAGE_COST_USD (fallback singolo)
+- [Tier OpenAI Image per size/quality]
+  - OPENAI_IMAGE_COST_LOW_USD / OPENAI_IMAGE_COST_MEDIUM_USD / OPENAI_IMAGE_COST_HIGH_USD
+- GEMINI_IMAGE_COST_USD
+- TOOL_COST_<TOOL_NAME> (override generico; es. TOOL_COST_image_generation_tool)
+
+Valori di riferimento (ufficiali che puoi usare nei tuoi .env):
+- SERPER: $0.00030 per singola query
+- Perplexity Sonar: input $0.001 / output $0.001 per 1k token (per‑call ND)
+- Perplexity Sonar Pro: input $0.003 / output $0.015 per 1k token (per‑call ND)
+- OpenAI Image: low $0.01, medium $0.04, high $0.17 per immagine
+  - Mappatura: 256×256 → low; 512×512 o 1024×1024 → medium; 2048×2048 o quality=hd → high
+  - Se i tier non sono impostati, si usa `OPENAI_IMAGE_COST_USD` come fallback unico
+- Gemini Image: ≈ $0.039 per immagine (1024×1024 con Gemini 2.5 Flash Image)
+
+Note:
+- Perplexity: se disponibili i rate split, il costo è `prompt_tokens/1000*INPUT_RATE + completion_tokens/1000*OUTPUT_RATE`. Altrimenti si usa il rate unico `PERPLEXITY_COST_PER_1K_TOKENS` su (prompt+completion).
+- In assenza di dati o override, il costo di default è 0.0 USD.
+- I metadati di costo sono visibili nei log del tool e nel riepilogo del workflow (cost_by_provider/agent/tool).
+
+Esempio (.env):
+```
+# Costi opzionali per tool
+SERPER_COST_PER_CALL_USD=0.0003
+PERPLEXITY_COST_PER_CALL_USD=
+# Singolo rate (fallback)
+PERPLEXITY_COST_PER_1K_TOKENS=
+# Split input/output (ora supportato)
+# PERPLEXITY_SONAR_COST_PER_1K_TOKENS_INPUT=0.001
+# PERPLEXITY_SONAR_COST_PER_1K_TOKENS_OUTPUT=0.001
+# PERPLEXITY_SONAR_PRO_COST_PER_1K_TOKENS_INPUT=0.003
+# PERPLEXITY_SONAR_PRO_COST_PER_1K_TOKENS_OUTPUT=0.015
+# OpenAI Image tiers
+OPENAI_IMAGE_COST_USD=0.04
+OPENAI_IMAGE_COST_LOW_USD=0.01
+OPENAI_IMAGE_COST_MEDIUM_USD=0.04
+OPENAI_IMAGE_COST_HIGH_USD=0.17
+# Gemini Image
+GEMINI_IMAGE_COST_USD=0.039
+# Override generico per nome tool registrato
+TOOL_COST_image_generation_tool=0.04
+```
+
 ---
 
 ## Logging di default (più silenzioso)
