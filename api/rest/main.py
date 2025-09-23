@@ -7,6 +7,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from dotenv import load_dotenv
+
+# Make .env values visible to os.environ (tools read env directly)
+load_dotenv(dotenv_path=Path(".env"), override=False)
 
 from core.infrastructure.config.settings import get_settings
 from .v1.endpoints import content, workflows, agents, system, knowledge_base

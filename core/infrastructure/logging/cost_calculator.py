@@ -92,6 +92,12 @@ class CostCalculator:
                     "completion_cost_per_1k": 0.06,
                     "supports_caching": False,
                 },
+                "gpt-4-32k": {
+                    "tier": ModelTier.PREMIUM,
+                    "prompt_cost_per_1k": 0.06,
+                    "completion_cost_per_1k": 0.12,
+                    "supports_caching": False,
+                },
                 "gpt-4-turbo": {
                     "tier": ModelTier.PREMIUM,
                     "prompt_cost_per_1k": 0.01,
@@ -101,8 +107,8 @@ class CostCalculator:
                 # GPT-3.5 models
                 "gpt-3.5-turbo": {
                     "tier": ModelTier.BASIC,
-                    "prompt_cost_per_1k": 0.0005,
-                    "completion_cost_per_1k": 0.0015,
+                    "prompt_cost_per_1k": 0.0015,
+                    "completion_cost_per_1k": 0.0020,
                     "supports_caching": False,
                 },
                 # o1 reasoning models
@@ -139,35 +145,35 @@ class CostCalculator:
                 # Claude 3.5 models
                 "claude-3-5-haiku-20241022": {
                     "tier": ModelTier.BASIC,
-                    "prompt_cost_per_1k": 0.001,
-                    "completion_cost_per_1k": 0.005,
+                    "prompt_cost_per_1k": 0.00080,
+                    "completion_cost_per_1k": 0.0040,
                     "supports_caching": True,
-                    "cache_write_cost_per_1k": 0.0025,
-                    "cache_read_cost_per_1k": 0.0001,
+                    "cache_write_cost_per_1k": 0.0010,
+                    "cache_read_cost_per_1k": 0.00008,
                 },
                 "claude-3-5-haiku-latest": {
                     "tier": ModelTier.BASIC,
-                    "prompt_cost_per_1k": 0.001,
-                    "completion_cost_per_1k": 0.005,
+                    "prompt_cost_per_1k": 0.00080,
+                    "completion_cost_per_1k": 0.0040,
                     "supports_caching": True,
-                    "cache_write_cost_per_1k": 0.0025,
-                    "cache_read_cost_per_1k": 0.0001,
+                    "cache_write_cost_per_1k": 0.0010,
+                    "cache_read_cost_per_1k": 0.00008,
                 },
                 "claude-3-7-sonnet-20250219": {
                     "tier": ModelTier.PREMIUM,
                     "prompt_cost_per_1k": 0.003,
                     "completion_cost_per_1k": 0.015,
                     "supports_caching": True,
-                    "cache_write_cost_per_1k": 0.0075,
-                    "cache_read_cost_per_1k": 0.0003,
+                    "cache_write_cost_per_1k": 0.00375,
+                    "cache_read_cost_per_1k": 0.00030,
                 },
                 "claude-3-7-sonnet-latest": {
                     "tier": ModelTier.PREMIUM,
                     "prompt_cost_per_1k": 0.003,
                     "completion_cost_per_1k": 0.015,
                     "supports_caching": True,
-                    "cache_write_cost_per_1k": 0.0075,
-                    "cache_read_cost_per_1k": 0.0003,
+                    "cache_write_cost_per_1k": 0.00375,
+                    "cache_read_cost_per_1k": 0.00030,
                 },
                 # Claude 4 models (future pricing estimates)
                 "claude-sonnet-4-20250514": {
@@ -186,12 +192,20 @@ class CostCalculator:
                     "cache_write_cost_per_1k": 0.0375,
                     "cache_read_cost_per_1k": 0.0015,
                 },
+                "claude-4.1-opus": {
+                    "tier": ModelTier.PREMIUM,
+                    "prompt_cost_per_1k": 0.015,
+                    "completion_cost_per_1k": 0.075,
+                    "supports_caching": True,
+                    "cache_write_cost_per_1k": 0.01875,
+                    "cache_read_cost_per_1k": 0.00150,
+                },
             },
             "deepseek": {
                 "deepseek-chat": {
                     "tier": ModelTier.BASIC,
-                    "prompt_cost_per_1k": 0.00014,
-                    "completion_cost_per_1k": 0.00028,
+                    "prompt_cost_per_1k": 0.00027,
+                    "completion_cost_per_1k": 0.00110,
                     "supports_caching": False,
                 },
                 "deepseek-coder": {
@@ -200,36 +214,34 @@ class CostCalculator:
                     "completion_cost_per_1k": 0.00028,
                     "supports_caching": False,
                 },
+                "deepseek-reasoner": {
+                    "tier": ModelTier.BASIC,
+                    "prompt_cost_per_1k": 0.00055,
+                    "completion_cost_per_1k": 0.00219,
+                    "supports_caching": False,
+                },
             },
             "gemini": {
                 # Gemini 2.5 Pro - Prompt <= 128k tokens
                 "gemini-2.5-pro": {
                     "tier": ModelTier.PREMIUM,
-                    "prompt_cost_per_1k": 0.00125,  # $1.25 per 1M tokens
-                    "completion_cost_per_1k": 0.005,  # $5 per 1M tokens
+                    "prompt_cost_per_1k": 0.00125,
+                    "completion_cost_per_1k": 0.010,
                     "supports_caching": True,
-                    "cache_write_cost_per_1k": 0.0003125,  # $0.3125 per 1M tokens
-                    "cache_read_cost_per_1k": 0.0003125,
-                    "cache_storage_cost_per_hour": 4.50,  # $4.50/hour
                 },
                 # Gemini 2.5 Pro - Prompt > 128k tokens (higher pricing tier)
                 "gemini-2.5-pro-large": {
                     "tier": ModelTier.PREMIUM,
-                    "prompt_cost_per_1k": 0.0025,  # $2.50 per 1M tokens
-                    "completion_cost_per_1k": 0.01,  # $10 per 1M tokens
+                    "prompt_cost_per_1k": 0.00250,
+                    "completion_cost_per_1k": 0.015,
                     "supports_caching": True,
-                    "cache_write_cost_per_1k": 0.000625,  # $0.625 per 1M tokens
-                    "cache_read_cost_per_1k": 0.000625,
-                    "cache_storage_cost_per_hour": 4.50,  # $4.50/hour
                 },
                 # Gemini 2.5 Flash - Prompt <= 128k tokens
                 "gemini-2.5-flash": {
                     "tier": ModelTier.STANDARD,
-                    "prompt_cost_per_1k": 0.000125,  # ~$0.125 per 1M tokens (mid-range estimate)
-                    "completion_cost_per_1k": 0.0005,  # ~$0.50 per 1M tokens (mid-range estimate)
+                    "prompt_cost_per_1k": 0.00030,
+                    "completion_cost_per_1k": 0.00250,
                     "supports_caching": True,
-                    "cache_write_cost_per_1k": 0.00003125,  # Estimated proportional to Pro
-                    "cache_read_cost_per_1k": 0.00003125,
                 },
                 # Gemini 2.0 Flash (similar pricing to 2.5 Flash)
                 "gemini-2.0-flash": {
@@ -251,11 +263,21 @@ class CostCalculator:
                 },
                 "gemini-1.5-flash": {
                     "tier": ModelTier.STANDARD,
-                    "prompt_cost_per_1k": 0.000125,
-                    "completion_cost_per_1k": 0.0005,
+                    "prompt_cost_per_1k": 0.000075,
+                    "completion_cost_per_1k": 0.00030,
                     "supports_caching": True,
-                    "cache_write_cost_per_1k": 0.00003125,
-                    "cache_read_cost_per_1k": 0.00003125,
+                    "cache_write_cost_per_1k": 0.00001875,
+                    "cache_read_cost_per_1k": 0.0000375,
+                    "cache_storage_cost_per_hour": 1.00,
+                },
+                "gemini-1.5-flash-large": {
+                    "tier": ModelTier.STANDARD,
+                    "prompt_cost_per_1k": 0.00015,
+                    "completion_cost_per_1k": 0.00060,
+                    "supports_caching": True,
+                    "cache_write_cost_per_1k": 0.00001875,
+                    "cache_read_cost_per_1k": 0.0000375,
+                    "cache_storage_cost_per_hour": 1.00,
                 },
             },
         }
