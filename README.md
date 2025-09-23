@@ -110,6 +110,39 @@ Crea web/react-app/.env:
 REACT_APP_API_URL=http://localhost:8000
 ```
 
+### Gemini via Vertex AI (Service Account)
+Se vuoi usare Gemini tramite Vertex AI (consigliato in ambiente aziendale), non serve la `GEMINI_API_KEY`.
+
+1) Imposta nel tuo `.env` (root repo):
+
+```env
+USE_VERTEX_GEMINI=true
+GCP_PROJECT_ID=<il-tuo-progetto-gcp>
+GCP_LOCATION=us-central1   # oppure la tua regione Vertex (es. europe-west4)
+GOOGLE_APPLICATION_CREDENTIALS=secrets/vertex_service_account.json
+```
+
+2) Inserisci le credenziali della Service Account:
+- Crea la cartella `secrets/` (se non esiste)
+- Salva il JSON della Service Account in `secrets/vertex_service_account.json`
+- Ruoli minimi consigliati: `Vertex AI User`
+
+Note importanti:
+- Con `USE_VERTEX_GEMINI=true` e una Service Account valida, il backend usa sempre Vertex (`aiplatform.googleapis.com`) con OAuth2 (SA bearer token).
+- `GEMINI_API_KEY` non è necessaria per le generazioni Gemini via Vertex.
+- Alcuni endpoint di "listing" modelli potrebbero ancora tentare query ad AI Studio per metadati: eventuali warning non impattano le generazioni via Vertex.
+
+### Git ignore per segreti e variabili
+Questo repository ignora per default i seguenti file/cartelle (estratto):
+
+```
+secrets/
+.env
+web/react-app/.env
+```
+
+In caso di fresh clone: ricordati di ricreare `.env` e `secrets/vertex_service_account.json` localmente.
+
 ---
 
 ## Logging di default (più silenzioso)
