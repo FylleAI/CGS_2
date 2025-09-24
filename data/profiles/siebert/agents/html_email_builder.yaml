@@ -1,5 +1,5 @@
 name: html_email_builder
-role: email_html_builder
+role: writer
 goal: Convert approved Siebert newsletter markdown into a single inline-styled HTML
   email container ready for HubSpot and Mailchimp
 backstory: |

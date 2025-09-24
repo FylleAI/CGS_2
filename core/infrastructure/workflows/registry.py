@@ -167,9 +167,8 @@ async def execute_dynamic_workflow(
     # Add agent executor to context if not present
     if "agent_executor" not in context:
         from ..orchestration.agent_executor import AgentExecutor
-        from ..external_services.openai_adapter import OpenAIAdapter
-        from ...domain.value_objects.provider_config import ProviderConfig, LLMProvider
         from ..config.settings import Settings
+        from ..factories.provider_factory import LLMProviderFactory
         from ..tools.web_search_tool import WebSearchTool
         from ..tools.rag_tool import RAGTool
         from ..tools.perplexity_research_tool import PerplexityResearchTool
@@ -208,14 +207,12 @@ async def execute_dynamic_workflow(
         _set_env_if(settings.openai_image_cost_high_usd, "OPENAI_IMAGE_COST_HIGH_USD")
         _set_env_if(settings.gemini_image_cost_usd, "GEMINI_IMAGE_COST_USD")
 
-        provider_config = ProviderConfig(
-            provider=LLMProvider.OPENAI, model="gpt-4o", temperature=0.7
-        )
-        llm_provider = OpenAIAdapter(settings.openai_api_key)
+        # Select provider based on Settings (respects Vertex Gemini, etc.)
+        provider, provider_config = LLMProviderFactory.create_default_provider_and_config(settings)
 
         agent_executor = AgentExecutor(
             agent_repository=context["agent_repository"],
-            llm_provider=llm_provider,
+            llm_provider=provider,
             provider_config=provider_config,
         )
 

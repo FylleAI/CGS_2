@@ -683,6 +683,12 @@ export const apiService = {
         timeout: 600000 // 10 minutes for complex workflows (Siebert multi-agent, Perplexity research)
       });
 
+	      // Debug: raw backend response for investigation
+	      // NOTE: temporary log, remove after verifying the issue
+	      // eslint-disable-next-line no-console
+	      console.debug('API generateContent: backend response', response.data);
+
+
       // Extract workflow metrics from backend response
       const backendMetrics = response.data.workflow_metrics;
       const metadata = response.data.metadata || {};
@@ -719,6 +725,7 @@ export const apiService = {
         wordCount: response.data.word_count || response.data.wordCount || 0,
         generationTime: response.data.generation_time_seconds || response.data.generationTime || 0,
         success: response.data.success !== false,
+        errorMessage: response.data.error_message || response.data.errorMessage || null,
         workflowMetrics: backendMetrics,
         metadata,
         generatedImage: normalisedImage,
@@ -734,6 +741,15 @@ export const apiService = {
       if (markdownOutput) {
         result.markdownOutput = markdownOutput;
       }
+
+
+	      // Debug: transformed result
+	      // eslint-disable-next-line no-console
+	      console.debug('API generateContent: transformed result', result);
+	      if (result.htmlOutput && typeof result.htmlOutput === 'string' && !result.htmlOutput.trim().startsWith('<div')) {
+	        // eslint-disable-next-line no-console
+	        console.warn('HTML output does not start with <div>. First 160 chars:', result.htmlOutput.slice(0, 160));
+	      }
 
       // Log workflow completion
       frontendLogger.logWorkflowComplete(workflowId, result, backendMetrics);

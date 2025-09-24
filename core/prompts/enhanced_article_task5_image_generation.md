@@ -9,6 +9,10 @@ You have received a compliance-approved article. Your role is to design a contex
 - **Target Audience**: {{target_audience}}
 - **Image Style**: {{image_style}}
 - **Image Provider**: {{image_provider}}
+- **Image Size**: {{image_size}}
+- **Image Quality**: {{image_quality}}
+- **Image Focus (optional)**: {{image_focus}}
+
 
 ## TASK INSTRUCTIONS
 
@@ -29,6 +33,11 @@ Use the image generation tool to create the asset. Provide all required paramete
 article_content: {{task4_compliance_review}}
 image_style: {{image_style}}
 image_provider: {{image_provider}}
+topic: {{topic}}
+target_audience: {{target_audience}}
+image_size: {{image_size}}
+image_quality: {{image_quality}}
+image_focus: {{image_focus}}
 [/image_generation_tool]
 
 ## CRITICAL REQUIREMENTS
@@ -44,6 +53,11 @@ image_provider: {{image_provider}}
 article_content: {{task4_compliance_review}}
 image_style: {{image_style}}
 image_provider: {{image_provider}}
+topic: {{topic}}
+target_audience: {{target_audience}}
+image_size: {{image_size}}
+image_quality: {{image_quality}}
+image_focus: {{image_focus}}
 [/image_generation_tool]
 
 2) Optionally: 1–2 lines describing the visual concept (no JSON, no URLs).

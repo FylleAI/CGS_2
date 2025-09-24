@@ -682,28 +682,36 @@ class AgentExecutor:
                         current_key = key.strip().lower()
                         params[current_key] = value.strip()
                     elif current_key:
-                        params[current_key] = (
-                            params[current_key] + f"\n{stripped}"
-                        ).strip()
+                        params[current_key] = (params[current_key] + f"\n{stripped}").strip()
 
                 article_content = params.get("article_content", tool_input)
                 image_style = params.get("image_style", "professional")
                 image_provider = params.get("image_provider", "openai")
+                topic = params.get("topic")
+                target_audience = params.get("target_audience")
+                image_focus = params.get("image_focus")
+                image_size = params.get("image_size", "1024x1024")
+                image_quality = params.get("image_quality", "standard")
 
                 result = await tool_function(
                     article_content=article_content,
                     image_style=image_style,
                     image_provider=image_provider,
+                    topic=topic,
+                    target_audience=target_audience,
+                    image_focus=image_focus,
+                    image_size=image_size,
+                    image_quality=image_quality,
                 )
                 metadata = {
                     "style": image_style,
                     "image_provider": image_provider,
+                    "image_size": image_size,
+                    "image_quality": image_quality,
                 }
                 if tool_metadata:
                     metadata = {**tool_metadata, **metadata}
-                return self._normalize_tool_result(
-                    tool_name, result, metadata
-                )
+                return self._normalize_tool_result(tool_name, result, metadata)
 
             else:
                 # Default behavior for other tools (single parameter)

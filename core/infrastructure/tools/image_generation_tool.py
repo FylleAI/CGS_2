@@ -194,24 +194,50 @@ async def image_generation_tool(
     article_content: str,
     image_style: str = "professional",
     image_provider: str = "openai",
+    topic: Optional[str] = None,
+    target_audience: Optional[str] = None,
+    image_focus: Optional[str] = None,
+    image_size: str = "1024x1024",
+    image_quality: str = "standard",
 ) -> str:
-    """Agent-facing wrapper that builds an image prompt from article content."""
+    """Agent-facing wrapper that builds an image prompt from article content.
+
+    Enriches the image prompt with topic/target audience and optional image_focus
+    to improve contextual relevance and reduce generic outputs.
+    """
 
     tool = ImageGenerationTool()
 
     excerpt = (article_content or "").strip()
-    if len(excerpt) > 500:
-        excerpt = excerpt[:500] + "..."
+    if len(excerpt) > 600:
+        excerpt = excerpt[:600] + "..."
 
-    prompt = (
-        "Create an illustrative, brand-safe image that captures the main ideas of this compliance-approved "
-        f"article. Style should be {image_style}.\n\nArticle summary:\n{excerpt}"
-    )
+    # Build a richer, directive prompt for the image model
+    extra_context_parts = []
+    if topic:
+        extra_context_parts.append(f"Topic: {topic}")
+    if target_audience:
+        extra_context_parts.append(f"Target audience: {target_audience}")
+    if image_focus:
+        extra_context_parts.append(f"Required visual focus: {image_focus}")
+    extra_context = ("\n".join(extra_context_parts)).strip()
+
+    prompt_sections = [
+        "Create a brand-safe, contextual image that directly reflects the core message of the article below.",
+        f"Style: {image_style}. Avoid generic stock imagery. No text overlays. Respect compliance.",
+    ]
+    if extra_context:
+        prompt_sections.append(extra_context)
+    prompt_sections.append("Article excerpt (use key motifs, settings, and symbols mentioned):\n" + excerpt)
+
+    prompt = "\n\n".join(prompt_sections)
 
     result = await tool.generate_image(
         prompt=prompt,
         provider=image_provider,
         style=image_style,
+        size=image_size,
+        quality=image_quality,
     )
 
     payload = {

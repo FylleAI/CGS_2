@@ -30,6 +30,8 @@ from ...infrastructure.workflows.registry import (
     list_available_workflows,
 )
 from ...infrastructure.database.supabase_tracker import get_tracker, SupabaseTracker
+from ...infrastructure import workflows as _workflows  # Ensure handlers are registered
+
 
 logger = logging.getLogger(__name__)
 
@@ -191,8 +193,8 @@ class GenerateContentUseCase:
                     success_rate=metrics_data.get("success_rate", 1.0),
                     tasks_completed=metrics_data.get("tasks_completed", 0),
                     tasks_failed=metrics_data.get("tasks_failed", 0),
-                    tool_calls=metrics_data.get("tool_calls", 0),
-                    llm_calls=metrics_data.get("llm_calls", 0),
+                    tool_calls=metrics_data.get("tool_calls", metrics_data.get("total_tool_calls", 0)),
+                    llm_calls=metrics_data.get("llm_calls", metrics_data.get("total_llm_calls", 0)),
                 )
 
             # 7. Create response
