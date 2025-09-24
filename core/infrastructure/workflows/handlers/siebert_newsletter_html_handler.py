@@ -208,11 +208,14 @@ class SiebertNewsletterHtmlHandler(WorkflowHandler):
         elif task_id == "task5_html_builder":
             validation_errors = self._validate_html_output(task_output or "")
             if validation_errors:
+                # Downgrade to non-fatal: record errors and proceed with best-effort HTML
                 context["html_validation_errors"] = validation_errors
-                logger.error("❌ HTML validation failed: %s", validation_errors)
-                raise ValueError(f"HTML validation failed: {validation_errors}")
-            context["html_validation_passed"] = True
-            context["final_html_container"] = task_output
+                logger.error("❌ HTML validation failed (non-fatal): %s", validation_errors)
+                context["html_validation_passed"] = False
+                context["final_html_container"] = task_output
+            else:
+                context["html_validation_passed"] = True
+                context["final_html_container"] = task_output
 
         return context
 

@@ -94,8 +94,11 @@ class WorkflowHandler(ABC):
             logger.debug(f"🔧 POST-PROCESSING RETURNED: {type(context)}")
             logger.debug("✅ Post-processing completed")
 
-            # Get final output for reporting
-            final_output = context.get("final_content", context.get("content", ""))
+            # Get final output for reporting (prefer explicit final_output)
+            final_output = context.get(
+                "final_output",
+                context.get("final_content", context.get("content", "")),
+            )
 
             # Complete workflow tracking
             workflow_metrics = workflow_reporter.complete_workflow_tracking(

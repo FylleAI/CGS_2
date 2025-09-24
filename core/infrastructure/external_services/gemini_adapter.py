@@ -155,7 +155,12 @@ class GeminiAdapter(LLMProviderInterface):
     async def _vertex_call(
         self, model: str, body: Dict[str, Any], stream: bool = False
     ) -> Any:
-        timeout = httpx.Timeout(60.0)
+        # Allow overriding read-timeout via env; default to 180s to accommodate longer generations
+        try:
+            read_timeout = float(os.environ.get("GEMINI_HTTP_TIMEOUT_SECONDS", "180"))
+        except Exception:
+            read_timeout = 180.0
+        timeout = httpx.Timeout(connect=30.0, read=read_timeout, write=30.0, pool=60.0)
 
         headers: Optional[Dict[str, str]] = None
         params: Optional[Dict[str, str]] = None
@@ -181,10 +186,25 @@ class GeminiAdapter(LLMProviderInterface):
                 "Vertex call using API key on publisher-only endpoint (no project scope)"
             )
 
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            resp = await client.post(url, json=body, headers=headers, params=params)
-        resp.raise_for_status()
-        return resp.json()
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                resp = await client.post(url, json=body, headers=headers, params=params)
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.ReadTimeout as te:
+            logger.error("Vertex Gemini request timed out after %.1fs (model=%s)", read_timeout, model)
+            raise TimeoutError(f"Vertex Gemini request timed out after {read_timeout:.0f}s for model {model}") from te
+        except httpx.HTTPError as he:
+            # Provide clearer context on HTTP failures
+            status = getattr(he.response, "status_code", None) if hasattr(he, "response") else None
+            text = None
+            try:
+                if hasattr(he, "response") and he.response is not None:
+                    text = he.response.text
+            except Exception:
+                pass
+            logger.error("Vertex Gemini HTTP error status=%s model=%s body_excerpt=%s", status, model, str(text)[:200] if text else None)
+            raise
 
     def _build_contents_from_text(self, text: str) -> List[Dict[str, Any]]:
         return [{"role": "user", "parts": [{"text": text}]}]
