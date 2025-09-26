@@ -1,10 +1,6 @@
 TASK 4 - SIEBERT COMPLIANCE REVIEW
 Review {{task3_newsletter_assembly_output}} for FINRA Rule 2210 and SEC compliance, fixing only essential issues.
-Ensure disclaimers, balanced risk language, and preservation of Section 5, word counts, Gen Z tone, and INLINE CITATIONS (keep outlet name, month/year, and full URL intact).
-
-Branding & Header (mandatory):
-- Title must be "{{newsletter_title}}"; replace any occurrence of "Future Millionaires" in title, greeting, or sign-off with "{{community_name}}" where appropriate.
-- Edition line must read "*{{current_month_year}} Edition*". If different (e.g., older months like December 2024), correct it.
+Balanced risk language, and preservation of Section 5, word counts, Gen Z tone, and INLINE CITATIONS (keep outlet name, month/year, and full URL intact).
 
 Consistency checks (mandatory):
 - For every inline citation, verify that Month YYYY matches the source's publish date (derive from page/metadata or URL pattern like 20250917 -> September 2025). If mismatched, correct Month YYYY and any surrounding narrative to reflect the source date.
@@ -18,7 +14,8 @@ Consistency checks (mandatory):
 
 Style safeguards:
 - Preserve structure and Siebert voice; do NOT remove links or sources without replacing with compliant equivalents.
-- Do NOT use em dashes (—); prefer commas or a simple hyphen (-).
+- Do NOT use em dashes (—); prefer normal puntuaction.
+- Insert disclaimer dedicated in every section if needed
 
 Output:
 - Corrected newsletter ready for publication.
