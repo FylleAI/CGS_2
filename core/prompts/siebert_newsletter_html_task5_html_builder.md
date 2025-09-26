@@ -6,7 +6,7 @@ INPUTS:
 {{task4_compliance_review_output}}
 - HTML design system and guardrails:
 {{html_design_system_instructions}}
-- Helpful context variables: community_name={{community_name}}, current_month_year={{current_month_year}}, current_date={{current_date}}
+
 
 REQUIREMENTS:
 1. Output a single root <div> element. Do not include <!DOCTYPE>, <html>, <head>, <body>, <style>, <script>, class, or id.
