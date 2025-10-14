@@ -542,5 +542,39 @@ curl -X POST http://localhost:8001/api/v1/onboarding/{session_id}/answers \
 curl http://localhost:8001/api/v1/onboarding/{session_id}/status
 ```
 
-Vedi `IMPLEMENTATION_STATUS.md` per dettagli implementazione completa.
+## 📚 Documentazione Completa
+
+### Guide Setup e Testing
+- [QUICKSTART.md](QUICKSTART.md) - Guida rapida per iniziare
+- [CONFIGURAZIONE_COMPLETA.md](CONFIGURAZIONE_COMPLETA.md) - Setup dettagliato
+- [TEST_GUIDE.md](TEST_GUIDE.md) - Guida ai test
+- [INTEGRATION_TEST_GUIDE.md](INTEGRATION_TEST_GUIDE.md) - Test integrazione con CGS
+- [SETUP_CGS_INTEGRATION.md](SETUP_CGS_INTEGRATION.md) - Setup integrazione CGS
+- [CURRENT_STATUS.md](CURRENT_STATUS.md) - Stato attuale implementazione
+
+### 🗺️ Guide Implementazione Profili Dinamici
+
+**Roadmap completa per trasformare il sistema da "agent generici" a "agent brand-specific"**
+
+- **[IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md)** - Piano completo implementazione
+  - Priorità 1 (Essenziale): Attivare agent e creare entry Supabase
+  - Priorità 2 (Miglioramento): Profili dinamici e knowledge base
+  - Priorità 3 (Ottimizzazione): Context injection e caching
+  - Timeline, testing strategy, metriche di successo
+
+- **[IMPLEMENTATION_CODE.md](IMPLEMENTATION_CODE.md)** - Codice dettagliato
+  - `CreateClientProfileUseCase`: Creazione profili dinamici da snapshot
+  - `PopulateKnowledgeBaseUseCase`: Auto-popolazione KB con brand info
+  - `ProfileCache`: Cache in-memory con fallback Supabase
+  - Context injection per personalizzazione agent runtime
+
+- **[IMPLEMENTATION_EXAMPLES.md](IMPLEMENTATION_EXAMPLES.md)** - Esempi pratici
+  - Comandi step-by-step per ogni priorità
+  - Scenari di test e verifiche
+  - Troubleshooting guide con soluzioni
+  - Script utility per automazione
+
+---
+
+**Prossimi Step**: Vedi [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md) per iniziare l'implementazione.
 
