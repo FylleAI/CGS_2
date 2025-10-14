@@ -38,7 +38,7 @@ Il servizio di onboarding ha **2 modalità di test**:
 
 ```bash
 # Dalla directory onboarding
-cd /Users/davidescantamburlo/Desktop/Test\ Onboarding\ /CGS_2/onboarding
+cd /path/to/your/CGS_2/onboarding
 
 # Avvia il server
 uvicorn onboarding.api.main:app --reload --port 8001
@@ -104,7 +104,7 @@ Questo test esegue l'intero flusso di onboarding con chiamate API reali.
 
 ```bash
 # In un terminale separato, avvia CGS
-cd /Users/davidescantamburlo/Desktop/Test\ Onboarding\ /CGS_2
+cd /path/to/your/CGS_2
 uvicorn core.api.main:app --reload --port 8000
 ```
 
@@ -286,7 +286,7 @@ curl -X POST http://localhost:8001/api/v1/onboarding/SESSION_ID/execute
 Ho creato uno script Python che esegue tutti gli step automaticamente:
 
 ```bash
-cd /Users/davidescantamburlo/Desktop/Test\ Onboarding\ /CGS_2/onboarding
+cd /path/to/your/CGS_2/onboarding
 
 # Test completo con azienda di esempio
 python3 -m examples.test_full_flow
@@ -341,7 +341,7 @@ lsof -i :8001
 
 **Soluzione**: Avvia CGS backend:
 ```bash
-cd /Users/davidescantamburlo/Desktop/Test\ Onboarding\ /CGS_2
+cd /path/to/your/CGS_2
 uvicorn core.api.main:app --reload --port 8000
 ```
 
@@ -356,7 +356,7 @@ grep PERPLEXITY_API_KEY onboarding/.env
 
 **Soluzione**: Verifica path credenziali GCP:
 ```bash
-ls -la /Users/davidescantamburlo/Desktop/Test\ Onboarding\ /CGS_2/startup-program-461116-e59705839bd1.json
+ls -la /path/to/your/CGS_2/startup-program-461116-e59705839bd1.json
 ```
 
 ### Problema: "Supabase error"

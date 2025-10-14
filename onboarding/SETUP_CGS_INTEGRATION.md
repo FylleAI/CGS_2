@@ -12,12 +12,12 @@ Ho analizzato la tua configurazione CGS esistente e trovato:
 
 | Servizio | Status | Valore |
 |----------|--------|--------|
-| **Perplexity API** | ✅ Configurato | `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` |
-| **Gemini API** | ✅ Configurato | `AIzaSyCos3jhCIoWKYb4bpJ1XxBpSaejs4A9T30` |
+| **Perplexity API** | ✅ Configurato | `pplx-***` (da .env) |
+| **Gemini API** | ✅ Configurato | `AIzaSy***` (da .env) |
 | **Vertex AI (GCP)** | ✅ Configurato | Project: `startup-program-461116` |
 | **GCP Credentials** | ✅ Configurato | File JSON presente |
 | **Supabase** | ✅ Configurato | URL + Anon Key |
-| **CGS API Key** | ✅ Configurato | `cgs-api-key-12345-test-local` |
+| **CGS API Key** | ✅ Configurato | `cgs-api-key-***` (da .env) |
 | **Brevo Email** | ⚠️ Da configurare | Aggiungi la tua API key |
 
 ---
@@ -45,7 +45,7 @@ SUPABASE_URL=https://...
 ```bash
 # Il servizio di onboarding può leggere direttamente da .env.
 # Basta avviarlo nella stessa directory
-cd /Users/davidescantamburlo/Desktop/Test\ Onboarding\ /CGS_2
+cd /path/to/your/CGS_2
 uvicorn onboarding.api.main:app --reload --port 8001 --env-file .env.
 ```
 
@@ -73,7 +73,7 @@ BREVO_API_KEY=xkeysib-your-actual-brevo-api-key-here
 
 Il file `.env` punta a:
 ```bash
-GOOGLE_APPLICATION_CREDENTIALS=/Users/davidescantamburlo/Desktop/Test Onboarding /CGS_2/startup-program-461116-e59705839bd1.json
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/your/project/startup-program-461116-e59705839bd1.json
 ```
 
 ✅ **Verificato**: Il file esiste nella posizione corretta!
@@ -95,7 +95,7 @@ cat onboarding/infrastructure/database/supabase_schema.sql
 
 ```bash
 # Opzione A: Dalla root di CGS (usa .env. esistente)
-cd /Users/davidescantamburlo/Desktop/Test\ Onboarding\ /CGS_2
+cd /path/to/your/CGS_2
 uvicorn onboarding.api.main:app --reload --port 8001 --env-file .env.
 
 # Opzione B: Dalla directory onboarding (usa onboarding/.env)
