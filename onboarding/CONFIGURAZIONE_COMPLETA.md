@@ -289,7 +289,7 @@ nano onboarding/.env
 BREVO_API_KEY=your-brevo-api-key-here
 
 # Con la tua vera chiave:
-BREVO_API_KEY=xkeysib-abc123...
+BREVO_API_KEY=xkeysib-your-actual-key-here
 ```
 
 ### 2. Setup Database (3 minuti)

@@ -14,7 +14,7 @@ cd onboarding
 python3 -m uvicorn onboarding.api.main:app --reload --port 8001 --env-file .env
 
 # Terminal 2: CGS Backend (porta 8000)
-cd /Users/davidescantamburlo/Desktop/Test\ Onboarding\ /CGS_2
+cd /path/to/your/CGS_2
 python3 -m uvicorn api.rest.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 

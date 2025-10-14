@@ -179,7 +179,7 @@ curl -s http://localhost:8001/api/v1/onboarding/$SESSION_ID | python3 -m json.to
 
 ```bash
 # Crea nuova sessione e completa tutto
-cd /Users/davidescantamburlo/Desktop/Test\ Onboarding\ /CGS_2
+cd /path/to/your/CGS_2
 ./onboarding/examples/test_manual_integration.sh
 ```
 
