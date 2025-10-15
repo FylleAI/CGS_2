@@ -140,6 +140,20 @@ export interface QuestionResponse {
   required: boolean;
 }
 
+// Wizard-compatible question type
+export interface Question {
+  id: string;
+  question: string;
+  context?: string;
+  type: 'text' | 'number' | 'boolean' | 'select' | 'enum' | 'multiselect';
+  options?: Array<{
+    value: string;
+    label: string;
+    description?: string;
+  }>;
+  required?: boolean;
+}
+
 export interface StartOnboardingResponse {
   session_id: string;
   trace_id: string;

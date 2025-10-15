@@ -1,26 +1,12 @@
 /**
  * Step3SnapshotReview Component
- * Review company snapshot before proceeding
+ * Minimal wizard-style snapshot review
  */
 
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Stack,
-  Divider,
-} from '@mui/material';
-import {
-  Business,
-  People,
-  RecordVoiceOver,
-  Lightbulb,
-  ArrowForward,
-} from '@mui/icons-material';
+import { Box, Typography, Stack, Avatar, Chip } from '@mui/material';
+import { motion } from 'framer-motion';
+import { WizardButton } from '../wizard/WizardButton';
 import type { CompanySnapshot } from '@/types/onboarding';
 
 interface Step3SnapshotReviewProps {
@@ -35,176 +21,151 @@ export const Step3SnapshotReview: React.FC<Step3SnapshotReviewProps> = ({
   isLoading = false,
 }) => {
   return (
-    <Box>
-      {/* Header */}
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
-          ✅ Research Complete!
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Here's what we learned about your company
-        </Typography>
-      </Box>
+    <Box
+      sx={{
+        width: '100%',
+        maxWidth: 600,
+        mx: 'auto',
+        px: 3,
+      }}
+    >
+      <Stack spacing={4} alignItems="center">
+        {/* Success Icon */}
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+        >
+          <Avatar
+            sx={{
+              width: 80,
+              height: 80,
+              fontSize: '2.5rem',
+              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+            }}
+          >
+            ✅
+          </Avatar>
+        </motion.div>
 
-      {/* Company Info */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <Business color="primary" />
-            <Typography variant="h6" fontWeight={600}>
-              Company Overview
-            </Typography>
-          </Box>
-          <Typography variant="h5" gutterBottom>
-            {snapshot.company.name}
+        {/* Header */}
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
+            Research Complete!
           </Typography>
-          {snapshot.company.industry && (
-            <Chip
-              label={snapshot.company.industry}
-              size="small"
-              color="primary"
-              variant="outlined"
-              sx={{ mb: 2 }}
-            />
-          )}
-          <Typography variant="body2" color="text.secondary" paragraph>
-            {snapshot.company.description}
+          <Typography variant="body1" color="text.secondary">
+            Here's what we learned about {snapshot.company.name}
           </Typography>
+        </Box>
 
-          {snapshot.company.key_offerings.length > 0 && (
-            <>
-              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                Key Offerings:
-              </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mb: 2 }}>
-                {snapshot.company.key_offerings.map((offering, index) => (
-                  <Chip key={index} label={offering} size="small" />
-                ))}
-              </Stack>
-            </>
-          )}
-
-          {snapshot.company.differentiators.length > 0 && (
-            <>
-              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                Differentiators:
-              </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                {snapshot.company.differentiators.map((diff, index) => (
-                  <Chip key={index} label={diff} size="small" color="success" variant="outlined" />
-                ))}
-              </Stack>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Audience */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <People color="primary" />
-            <Typography variant="h6" fontWeight={600}>
-              Target Audience
-            </Typography>
-          </Box>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            {snapshot.audience.primary}
-          </Typography>
-
-          {snapshot.audience.pain_points.length > 0 && (
-            <>
-              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                Pain Points:
-              </Typography>
-              <ul style={{ margin: 0, paddingLeft: 20 }}>
-                {snapshot.audience.pain_points.map((point, index) => (
-                  <li key={index}>
-                    <Typography variant="body2" color="text.secondary">
-                      {point}
-                    </Typography>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Voice & Tone */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-            <RecordVoiceOver color="primary" />
-            <Typography variant="h6" fontWeight={600}>
-              Brand Voice
-            </Typography>
-          </Box>
-          <Typography variant="body2" color="text.secondary" paragraph>
-            <strong>Tone:</strong> {snapshot.voice.tone}
-          </Typography>
-
-          {snapshot.voice.style_guidelines.length > 0 && (
-            <>
-              <Typography variant="subtitle2" fontWeight={600} gutterBottom>
-                Style Guidelines:
-              </Typography>
-              <ul style={{ margin: 0, paddingLeft: 20 }}>
-                {snapshot.voice.style_guidelines.map((guideline, index) => (
-                  <li key={index}>
-                    <Typography variant="body2" color="text.secondary">
-                      {guideline}
-                    </Typography>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Insights (if available) */}
-      {snapshot.insights && Object.keys(snapshot.insights).length > 0 && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Lightbulb color="primary" />
-              <Typography variant="h6" fontWeight={600}>
-                Insights
-              </Typography>
-            </Box>
-            {snapshot.insights.market_position && (
-              <Typography variant="body2" color="text.secondary" paragraph>
-                <strong>Market Position:</strong> {snapshot.insights.market_position}
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      <Divider sx={{ my: 3 }} />
-
-      {/* Continue Button */}
-      <Box sx={{ textAlign: 'center' }}>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Next, we'll ask a few clarifying questions to tailor the content
-        </Typography>
-        <Button
-          variant="contained"
-          size="large"
-          onClick={onContinue}
-          disabled={isLoading}
-          endIcon={<ArrowForward />}
+        {/* Snapshot Summary Cards */}
+        <Box
           sx={{
-            px: 4,
-            py: 1.5,
-            fontSize: '1rem',
-            fontWeight: 600,
+            width: '100%',
+            p: 3,
+            borderRadius: 3,
+            backgroundColor: 'rgba(0, 208, 132, 0.05)',
+            border: '1px solid rgba(0, 208, 132, 0.2)',
           }}
         >
+          <Stack spacing={3}>
+            {/* Company Overview */}
+            <Box>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, color: '#00D084', mb: 1 }}
+              >
+                🏢 Company
+              </Typography>
+              <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
+                {snapshot.company.name}
+              </Typography>
+              {snapshot.company.industry && (
+                <Chip
+                  label={snapshot.company.industry}
+                  size="small"
+                  sx={{
+                    bgcolor: 'rgba(0, 208, 132, 0.1)',
+                    color: '#00D084',
+                    fontWeight: 600,
+                    mb: 1,
+                  }}
+                />
+              )}
+              <Typography variant="body2" color="text.secondary">
+                {snapshot.company.description}
+              </Typography>
+            </Box>
+
+            {/* Target Audience */}
+            <Box>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, color: '#00D084', mb: 1 }}
+              >
+                👥 Target Audience
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {snapshot.audience.primary}
+              </Typography>
+            </Box>
+
+            {/* Brand Voice */}
+            <Box>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, color: '#00D084', mb: 1 }}
+              >
+                🎨 Brand Voice
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {snapshot.voice.tone}
+              </Typography>
+            </Box>
+
+            {/* Key Offerings */}
+            {snapshot.company.key_offerings.length > 0 && (
+              <Box>
+                <Typography
+                  variant="subtitle2"
+                  sx={{ fontWeight: 700, color: '#00D084', mb: 1 }}
+                >
+                  ✨ Key Offerings
+                </Typography>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {snapshot.company.key_offerings.slice(0, 3).map((offering, index) => (
+                    <Chip
+                      key={index}
+                      label={offering}
+                      size="small"
+                      variant="outlined"
+                      sx={{ borderColor: 'rgba(0, 208, 132, 0.3)' }}
+                    />
+                  ))}
+                  {snapshot.company.key_offerings.length > 3 && (
+                    <Chip
+                      label={`+${snapshot.company.key_offerings.length - 3} more`}
+                      size="small"
+                      variant="outlined"
+                      sx={{ borderColor: 'rgba(0, 208, 132, 0.3)' }}
+                    />
+                  )}
+                </Stack>
+              </Box>
+            )}
+          </Stack>
+        </Box>
+
+        {/* Next Step Info */}
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
+          Next, we'll ask a few clarifying questions to tailor the content
+        </Typography>
+
+        {/* Continue Button */}
+        <WizardButton onClick={onContinue} loading={isLoading} size="large">
           Continue to Questions
-        </Button>
-      </Box>
+        </WizardButton>
+      </Stack>
     </Box>
   );
 };

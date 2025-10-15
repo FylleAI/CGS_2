@@ -1,42 +1,61 @@
 /**
  * Step1CompanyInput Component
- * Company information input with conversational UI
+ * Sequential wizard-style questions (like Step4)
  */
 
-import React from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  MenuItem,
-  Chip,
-  Stack,
-  InputAdornment,
-} from '@mui/material';
-import {
-  Business as BusinessIcon,
-  Language as WebIcon,
-  Email as EmailIcon,
-  Send as SendIcon,
-} from '@mui/icons-material';
-import { GOAL_OPTIONS, SUGGESTION_CHIPS } from '@/config/constants';
+import React, { useState } from 'react';
+import { Box, Stack, Typography, Chip, Grid } from '@mui/material';
+import { motion, AnimatePresence } from 'framer-motion';
+import { WizardInput } from '../wizard/WizardInput';
+import { WizardChoice } from '../wizard/WizardChoice';
+import { WizardButton } from '../wizard/WizardButton';
+import { GOAL_OPTIONS } from '@/config/constants';
 import type { OnboardingFormData, OnboardingGoal } from '@/types/onboarding';
 
 // ============================================================================
-// Validation Schema
+// Question Definitions
 // ============================================================================
 
-const schema = yup.object().shape({
-  brand_name: yup.string().required('Company name is required').min(2, 'Too short'),
-  website: yup.string().url('Must be a valid URL').nullable(),
-  goal: yup.string().required('Please select a goal').oneOf(['linkedin_post', 'newsletter', 'newsletter_premium', 'article']),
-  user_email: yup.string().email('Must be a valid email').nullable(),
-  additional_context: yup.string().nullable(),
-});
+interface Question {
+  id: keyof OnboardingFormData;
+  question: string;
+  type: 'text' | 'url' | 'email' | 'textarea' | 'choice';
+  placeholder?: string;
+  required?: boolean;
+  helperText?: string;
+}
+
+const QUESTIONS: Question[] = [
+  {
+    id: 'brand_name',
+    question: "What's your brand name?",
+    type: 'text',
+    placeholder: 'e.g., Acme Corp',
+    required: true,
+  },
+  {
+    id: 'website',
+    question: "What's your website?",
+    type: 'url',
+    placeholder: 'https://example.com',
+    required: false,
+    helperText: 'Optional - helps us understand your brand better',
+  },
+  {
+    id: 'goal',
+    question: 'What type of content do you want to create?',
+    type: 'choice',
+    required: true,
+  },
+  {
+    id: 'additional_context',
+    question: 'Any additional context you want to share?',
+    type: 'textarea',
+    placeholder: 'Tell us more about your company, target audience, tone of voice...',
+    required: false,
+    helperText: 'Optional - but helps us create better content',
+  },
+];
 
 // ============================================================================
 // Component
@@ -51,195 +70,190 @@ export const Step1CompanyInput: React.FC<Step1CompanyInputProps> = ({
   onSubmit,
   isLoading = false,
 }) => {
-  const {
-    control,
-    handleSubmit,
-    setValue,
-    formState: { errors },
-  } = useForm({
-    resolver: yupResolver(schema),
-    defaultValues: {
-      brand_name: '',
-      website: '',
-      goal: 'linkedin_post' as OnboardingGoal,
-      user_email: '',
-      additional_context: '',
-    },
-  });
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<Partial<OnboardingFormData>>({});
+  const [inputValue, setInputValue] = useState('');
+  const [inputError, setInputError] = useState('');
 
-  const handleChipClick = (value: string) => {
-    setValue('brand_name', value);
+  const currentQuestion = QUESTIONS[currentQuestionIndex];
+  const isLastQuestion = currentQuestionIndex === QUESTIONS.length - 1;
+
+  // ============================================================================
+  // Validation
+  // ============================================================================
+
+  const validateInput = (value: string, question: Question): string => {
+    if (question.required && !value.trim()) {
+      return 'This field is required';
+    }
+
+    if (question.type === 'url' && value.trim()) {
+      try {
+        new URL(value);
+      } catch {
+        return 'Please enter a valid URL';
+      }
+    }
+
+    if (question.type === 'email' && value.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(value)) {
+        return 'Please enter a valid email';
+      }
+    }
+
+    return '';
   };
 
-  return (
-    <Box>
-      {/* Header */}
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
-          👋 Welcome to Fylle AI
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Let's get started by learning about your company
-        </Typography>
-      </Box>
+  // ============================================================================
+  // Handlers
+  // ============================================================================
 
-      {/* Suggestion Chips */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-          Quick suggestions:
-        </Typography>
-        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-          {SUGGESTION_CHIPS.map((chip) => (
+  const handleNext = () => {
+    // Validate current input
+    const error = validateInput(inputValue, currentQuestion);
+    if (error) {
+      setInputError(error);
+      return;
+    }
+
+    // Save answer
+    const newAnswers = { ...answers, [currentQuestion.id]: inputValue };
+    setAnswers(newAnswers);
+
+    // Move to next question or submit
+    if (isLastQuestion) {
+      onSubmit(newAnswers);
+    } else {
+      setCurrentQuestionIndex((prev) => prev + 1);
+      setInputValue('');
+      setInputError('');
+    }
+  };
+
+  const handleChoiceSelect = (value: OnboardingGoal) => {
+    const newAnswers = { ...answers, [currentQuestion.id]: value };
+    setAnswers(newAnswers);
+
+    // Auto-advance after choice selection
+    setTimeout(() => {
+      if (isLastQuestion) {
+        onSubmit(newAnswers);
+      } else {
+        setCurrentQuestionIndex((prev) => prev + 1);
+        setInputValue('');
+        setInputError('');
+      }
+    }, 300);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && currentQuestion.type !== 'textarea') {
+      e.preventDefault();
+      handleNext();
+    }
+  };
+
+  // ============================================================================
+  // Render Question
+  // ============================================================================
+
+  const renderQuestion = () => {
+    if (currentQuestion.type === 'choice') {
+      return (
+        <Grid container spacing={2}>
+          {GOAL_OPTIONS.map((option) => (
+            <Grid item xs={12} sm={6} key={option.value}>
+              <WizardChoice
+                label={option.label}
+                description={option.description}
+                icon={option.icon}
+                selected={false}
+                onClick={() => handleChoiceSelect(option.value as OnboardingGoal)}
+              />
+            </Grid>
+          ))}
+        </Grid>
+      );
+    }
+
+    return (
+      <Stack spacing={3}>
+        <WizardInput
+          value={inputValue}
+          onChange={(e) => {
+            setInputValue(e.target.value);
+            setInputError('');
+          }}
+          onKeyPress={handleKeyPress}
+          placeholder={currentQuestion.placeholder}
+          error={!!inputError}
+          helperText={inputError || currentQuestion.helperText}
+          multiline={currentQuestion.type === 'textarea'}
+          rows={currentQuestion.type === 'textarea' ? 4 : 1}
+          autoFocus
+          fullWidth
+        />
+
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <WizardButton onClick={handleNext} loading={isLoading} size="large">
+            {isLastQuestion ? 'Start Research' : 'Continue'}
+          </WizardButton>
+        </Box>
+      </Stack>
+    );
+  };
+
+  // ============================================================================
+  // Render
+  // ============================================================================
+
+  return (
+    <Box
+      sx={{
+        width: '100%',
+        maxWidth: 600,
+        mx: 'auto',
+        px: 3,
+      }}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentQuestionIndex}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Stack spacing={4} alignItems="center">
+            {/* Question Counter */}
             <Chip
-              key={chip.value}
-              label={`${chip.icon} ${chip.label}`}
-              onClick={() => handleChipClick(chip.value)}
+              label={`Question ${currentQuestionIndex + 1} of ${QUESTIONS.length}`}
+              size="small"
               sx={{
-                cursor: 'pointer',
-                '&:hover': {
-                  backgroundColor: 'primary.light',
-                  color: 'white',
-                },
+                bgcolor: 'rgba(0, 208, 132, 0.1)',
+                color: '#00D084',
+                fontWeight: 600,
               }}
             />
-          ))}
-        </Stack>
-      </Box>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <Stack spacing={3}>
-          {/* Company Name */}
-          <Controller
-            name="brand_name"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Company Name"
-                placeholder="e.g., Acme Corp"
-                required
-                fullWidth
-                error={!!errors.brand_name}
-                helperText={errors.brand_name?.message}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <BusinessIcon color="primary" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
-          />
+            {/* Question Text */}
+            <Typography
+              variant="h4"
+              sx={{
+                fontWeight: 700,
+                textAlign: 'center',
+                color: 'text.primary',
+              }}
+            >
+              {currentQuestion.question}
+            </Typography>
 
-          {/* Website */}
-          <Controller
-            name="website"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Website (Optional)"
-                placeholder="https://example.com"
-                fullWidth
-                error={!!errors.website}
-                helperText={errors.website?.message}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <WebIcon color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
-          />
-
-          {/* Goal */}
-          <Controller
-            name="goal"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                select
-                label="What would you like to create?"
-                required
-                fullWidth
-                error={!!errors.goal}
-                helperText={errors.goal?.message}
-              >
-                {GOAL_OPTIONS.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.icon} {option.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-          />
-
-          {/* Email */}
-          <Controller
-            name="user_email"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Email (Optional)"
-                placeholder="your@email.com"
-                type="email"
-                fullWidth
-                error={!!errors.user_email}
-                helperText={errors.user_email?.message || 'We\'ll send the results here'}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <EmailIcon color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            )}
-          />
-
-          {/* Additional Context */}
-          <Controller
-            name="additional_context"
-            control={control}
-            render={({ field }) => (
-              <TextField
-                {...field}
-                label="Additional Context (Optional)"
-                placeholder="Tell us more about your company or specific requirements..."
-                multiline
-                rows={3}
-                fullWidth
-              />
-            )}
-          />
-
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            variant="contained"
-            size="large"
-            disabled={isLoading}
-            endIcon={<SendIcon />}
-            sx={{
-              py: 1.5,
-              fontSize: '1rem',
-              fontWeight: 600,
-              background: 'linear-gradient(135deg, #00D084 0%, #00A869 100%)',
-              '&:hover': {
-                background: 'linear-gradient(135deg, #00A869 0%, #00804E 100%)',
-              },
-            }}
-          >
-            {isLoading ? 'Starting Research...' : 'Start Research'}
-          </Button>
-        </Stack>
-      </form>
+            {/* Question Input/Choices */}
+            <Box sx={{ width: '100%' }}>{renderQuestion()}</Box>
+          </Stack>
+        </motion.div>
+      </AnimatePresence>
     </Box>
   );
 };

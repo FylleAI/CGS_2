@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ConversationalContainer } from '../components/onboarding/ConversationalContainer';
+import { WizardContainer } from '../components/wizard/WizardContainer';
 import { Step1CompanyInput } from '../components/steps/Step1CompanyInput';
 import { Step2ResearchProgress } from '../components/steps/Step2ResearchProgress';
 import { Step3SnapshotReview } from '../components/steps/Step3SnapshotReview';
@@ -14,7 +14,8 @@ import { Step6Results } from '../components/steps/Step6Results';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { useOnboardingStore } from '../store/onboardingStore';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
-import { Box, Typography, Button } from '@mui/material';
+import { Box, Typography } from '@mui/material';
+import { WizardButton } from '../components/wizard/WizardButton';
 import type { OnboardingFormData } from '../types/onboarding';
 
 export const OnboardingWizard: React.FC = () => {
@@ -98,23 +99,23 @@ export const OnboardingWizard: React.FC = () => {
   };
 
   return (
-    <ConversationalContainer currentStep={currentStep}>
+    <WizardContainer currentStep={currentStep} totalSteps={6}>
       {error ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography variant="h5" color="error" gutterBottom>
-            ❌ Error
+          <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
+            ❌ Oops!
           </Typography>
-          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
             {error.message}
           </Typography>
-          <Button variant="contained" onClick={resetOnboarding}>
+          <WizardButton onClick={resetOnboarding}>
             Try Again
-          </Button>
+          </WizardButton>
         </Box>
       ) : (
         renderStep()
       )}
-    </ConversationalContainer>
+    </WizardContainer>
   );
 };
 
