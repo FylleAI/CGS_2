@@ -360,6 +360,47 @@ async def get_available_clients(supabase=Depends(get_supabase_client)) -> List[s
         raise HTTPException(status_code=500, detail=f"Error retrieving clients: {e}")
 
 
+class ClientProfile(BaseModel):
+    """Client profile model for frontend."""
+
+    id: str
+    name: str
+    displayName: str
+    description: Optional[str] = None
+    brandVoice: Optional[str] = None
+    targetAudience: Optional[str] = None
+    industry: Optional[str] = None
+    ragEnabled: bool = True
+    knowledgeBasePath: Optional[str] = None
+
+
+@router.get("/profiles", response_model=List[ClientProfile])
+async def get_client_profiles(supabase=Depends(get_supabase_client)) -> List[ClientProfile]:
+    """Get list of client profiles with full details."""
+    logger.info("📋 Getting client profiles from Supabase")
+
+    try:
+        res = supabase.table("clients").select("*").execute()
+        profiles = []
+        for client in (res.data or []):
+            profiles.append(ClientProfile(
+                id=client["name"],  # Use name as ID for frontend compatibility
+                name=client["name"],
+                displayName=client.get("display_name", client["name"]),
+                description=client.get("description"),
+                brandVoice=client.get("brand_voice"),
+                targetAudience=client.get("target_audience"),
+                industry=client.get("industry"),
+                ragEnabled=client.get("rag_enabled", True),
+                knowledgeBasePath=client.get("knowledge_base_path")
+            ))
+        logger.info(f"✅ Found {len(profiles)} client profiles from Supabase")
+        return sorted(profiles, key=lambda x: x.name)
+    except Exception as e:
+        logger.error(f"Error getting client profiles from Supabase: {e}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving client profiles: {e}")
+
+
 class FrontendDocument(BaseModel):
     """Frontend-compatible document model."""
 

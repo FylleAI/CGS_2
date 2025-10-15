@@ -152,10 +152,20 @@ IMPORTANT GUIDELINES:
 2. Questions should be specific, actionable, and relevant to content creation
 3. Use question IDs: q1, q2, q3
 4. expected_response_type must be one of: string, enum, boolean, number
-5. For enum types, provide 3-5 clear options
-6. Extract evidence with source references where possible
-7. Infer brand voice from communication style in research
-8. Be concise but comprehensive
+5. **CRITICAL**: For enum types, you MUST provide 3-5 clear, specific options in the "options" array
+   - Options should be complete, actionable choices (e.g., "short (200-300 words)", not just "short")
+   - Each option should be self-explanatory and mutually exclusive
+   - NEVER leave options as null for enum types
+6. For string types, set options to null
+7. For boolean types, set options to null (Yes/No is automatic)
+8. For number types, set options to null
+9. Extract evidence with source references where possible
+10. Infer brand voice from communication style in research
+11. Be concise but comprehensive
+
+**VALIDATION RULES**:
+- If expected_response_type is "enum", options MUST be a non-empty array
+- If expected_response_type is NOT "enum", options MUST be null
 
 Return ONLY valid JSON, no markdown formatting or explanations.
 """

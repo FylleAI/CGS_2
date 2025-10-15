@@ -86,17 +86,24 @@ async def start_onboarding(
             questions_count=len(snapshot.clarifying_questions),
         )
         
-        questions = [
-            QuestionResponse(
-                id=q.id,
-                question=q.question,
-                reason=q.reason,
-                expected_response_type=q.expected_response_type,
-                options=q.options,
-                required=q.required,
+        # Map question types for frontend compatibility
+        questions = []
+        for q in snapshot.clarifying_questions:
+            # Convert 'enum' to 'select' for frontend
+            response_type = q.expected_response_type
+            if response_type == 'enum':
+                response_type = 'select'
+
+            questions.append(
+                QuestionResponse(
+                    id=q.id,
+                    question=q.question,
+                    reason=q.reason,
+                    expected_response_type=response_type,
+                    options=q.options,
+                    required=q.required,
+                )
             )
-            for q in snapshot.clarifying_questions
-        ]
         
         return StartOnboardingResponse(
             session_id=session.session_id,
