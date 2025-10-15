@@ -1,18 +1,18 @@
 /**
  * Step2ResearchProgress Component
- * Animated research progress indicator
+ * Minimal wizard-style progress indicator
  */
 
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, LinearProgress, Stack } from '@mui/material';
-import { CheckCircle, HourglassEmpty } from '@mui/icons-material';
-import { TypingIndicator } from '../common/TypingIndicator';
+import { Box, Typography, LinearProgress, Stack, Avatar } from '@mui/material';
+import { motion } from 'framer-motion';
+import { CheckCircle } from '@mui/icons-material';
 
 const RESEARCH_STEPS = [
-  { label: 'Searching company information', duration: 2000 },
-  { label: 'Analyzing industry data', duration: 2000 },
-  { label: 'Synthesizing insights', duration: 2000 },
-  { label: 'Generating questions', duration: 1500 },
+  { label: 'Searching company information', emoji: '🔍' },
+  { label: 'Analyzing industry data', emoji: '📊' },
+  { label: 'Synthesizing insights', emoji: '💡' },
+  { label: 'Generating questions', emoji: '❓' },
 ];
 
 export const Step2ResearchProgress: React.FC = () => {
@@ -20,111 +20,129 @@ export const Step2ResearchProgress: React.FC = () => {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const totalDuration = RESEARCH_STEPS.reduce((sum, step) => sum + step.duration, 0);
-    let elapsed = 0;
+    const stepDuration = 2000; // 2 seconds per step
+    const totalDuration = RESEARCH_STEPS.length * stepDuration;
 
     const interval = setInterval(() => {
-      elapsed += 100;
-      const newProgress = Math.min((elapsed / totalDuration) * 100, 100);
-      setProgress(newProgress);
+      setProgress((prev) => {
+        const newProgress = Math.min(prev + (100 / totalDuration) * 100, 100);
 
-      // Update current step
-      let cumulativeDuration = 0;
-      for (let i = 0; i < RESEARCH_STEPS.length; i++) {
-        cumulativeDuration += RESEARCH_STEPS[i].duration;
-        if (elapsed < cumulativeDuration) {
-          setCurrentStepIndex(i);
-          break;
+        // Update current step based on progress
+        const newStepIndex = Math.min(
+          Math.floor((newProgress / 100) * RESEARCH_STEPS.length),
+          RESEARCH_STEPS.length - 1
+        );
+        setCurrentStepIndex(newStepIndex);
+
+        if (newProgress >= 100) {
+          clearInterval(interval);
         }
-      }
 
-      if (elapsed >= totalDuration) {
-        clearInterval(interval);
-      }
+        return newProgress;
+      });
     }, 100);
 
     return () => clearInterval(interval);
   }, []);
 
+  const currentStep = RESEARCH_STEPS[currentStepIndex];
+  const isComplete = progress >= 100;
+
   return (
-    <Box sx={{ textAlign: 'center', py: 4 }}>
-      {/* Header */}
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
-        🔍 Researching Your Company
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-        This will take just a moment...
-      </Typography>
+    <Box
+      sx={{
+        width: '100%',
+        maxWidth: 500,
+        mx: 'auto',
+        px: 3,
+        textAlign: 'center',
+      }}
+    >
+      <Stack spacing={4} alignItems="center">
+        {/* Animated Icon */}
+        <motion.div
+          key={currentStepIndex}
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 15 }}
+        >
+          <Avatar
+            sx={{
+              width: 80,
+              height: 80,
+              fontSize: '2.5rem',
+              background: 'linear-gradient(135deg, #00D084 0%, #00A869 100%)',
+            }}
+          >
+            {isComplete ? '✅' : currentStep.emoji}
+          </Avatar>
+        </motion.div>
 
-      {/* Progress Bar */}
-      <LinearProgress
-        variant="determinate"
-        value={progress}
-        sx={{
-          height: 8,
-          borderRadius: 4,
-          mb: 4,
-          backgroundColor: 'grey.200',
-          '& .MuiLinearProgress-bar': {
-            background: 'linear-gradient(90deg, #00D084 0%, #00A869 100%)',
-          },
-        }}
-      />
+        {/* Current Step Text */}
+        <motion.div
+          key={`text-${currentStepIndex}`}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 700,
+              color: 'text.primary',
+              mb: 1,
+            }}
+          >
+            {isComplete ? 'Research Complete!' : currentStep.label}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {isComplete ? 'Moving to next step...' : 'This will take just a moment...'}
+          </Typography>
+        </motion.div>
 
-      {/* Steps */}
-      <Stack spacing={2} sx={{ maxWidth: 400, mx: 'auto' }}>
-        {RESEARCH_STEPS.map((step, index) => {
-          const isCompleted = index < currentStepIndex;
-          const isCurrent = index === currentStepIndex;
+        {/* Progress Bar */}
+        <Box sx={{ width: '100%' }}>
+          <LinearProgress
+            variant="determinate"
+            value={progress}
+            sx={{
+              height: 8,
+              borderRadius: 4,
+              backgroundColor: 'rgba(0, 208, 132, 0.1)',
+              '& .MuiLinearProgress-bar': {
+                background: 'linear-gradient(90deg, #00D084 0%, #00A869 100%)',
+                borderRadius: 4,
+              },
+            }}
+          />
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: 'block', mt: 1 }}
+          >
+            {Math.round(progress)}%
+          </Typography>
+        </Box>
 
-          return (
+        {/* Step Indicators */}
+        <Stack direction="row" spacing={1}>
+          {RESEARCH_STEPS.map((step, index) => (
             <Box
               key={index}
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                p: 2,
-                borderRadius: 2,
-                backgroundColor: isCurrent ? 'primary.50' : 'transparent',
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                backgroundColor:
+                  index <= currentStepIndex
+                    ? '#00D084'
+                    : 'rgba(0, 208, 132, 0.2)',
                 transition: 'all 0.3s ease',
               }}
-            >
-              {isCompleted ? (
-                <CheckCircle color="success" />
-              ) : isCurrent ? (
-                <HourglassEmpty color="primary" />
-              ) : (
-                <Box
-                  sx={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    border: '2px solid',
-                    borderColor: 'grey.300',
-                  }}
-                />
-              )}
-              <Typography
-                variant="body2"
-                sx={{
-                  flex: 1,
-                  fontWeight: isCurrent ? 600 : 400,
-                  color: isCompleted ? 'success.main' : isCurrent ? 'primary.main' : 'text.secondary',
-                }}
-              >
-                {step.label}
-              </Typography>
-              {isCurrent && <TypingIndicator />}
-            </Box>
-          );
-        })}
+            />
+          ))}
+        </Stack>
       </Stack>
-
-      {/* Footer */}
-      <Typography variant="caption" color="text.secondary" sx={{ mt: 4, display: 'block' }}>
-        Powered by Perplexity AI & Gemini
-      </Typography>
     </Box>
   );
 };
