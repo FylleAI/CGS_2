@@ -88,7 +88,7 @@ class InsightsInfo(BaseModel):
 
 class ClarifyingQuestion(BaseModel):
     """A clarifying question to ask the user."""
-    
+
     id: str = Field(..., description="Question ID (e.g., 'q1', 'q2')")
     question: str = Field(..., description="The question text")
     reason: str = Field(..., description="Why this question is being asked")
@@ -99,6 +99,15 @@ class ClarifyingQuestion(BaseModel):
         default=None, description="Options for enum-type questions"
     )
     required: bool = Field(default=True, description="Whether answer is required")
+
+    @field_validator("options")
+    @classmethod
+    def validate_enum_options(cls, v: Optional[List[str]], info) -> Optional[List[str]]:
+        """Ensure enum questions have options."""
+        response_type = info.data.get("expected_response_type")
+        if response_type == "enum" and (not v or len(v) == 0):
+            raise ValueError("Questions with expected_response_type='enum' must have options")
+        return v
 
 
 class SourceMetadata(BaseModel):
