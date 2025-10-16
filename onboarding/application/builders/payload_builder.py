@@ -134,7 +134,7 @@ class PayloadBuilder:
         metadata = CgsPayloadMetadata(
             source="onboarding_adapter",
             dry_run=dry_run,
-            requested_provider=requested_provider,
+            requested_provider=requested_provider or "gemini",  # Default: Gemini Pro 2.5
             language="it",
         )
         
@@ -194,7 +194,7 @@ class PayloadBuilder:
         metadata = CgsPayloadMetadata(
             source="onboarding_adapter",
             dry_run=dry_run,
-            requested_provider=requested_provider,
+            requested_provider=requested_provider or "gemini",  # Default: Gemini Pro 2.5
             language="it",
         )
         

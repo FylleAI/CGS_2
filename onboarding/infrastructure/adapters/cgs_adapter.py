@@ -132,6 +132,9 @@ class CgsAdapter:
         # Add provider if specified
         if payload.metadata.requested_provider:
             request["provider"] = payload.metadata.requested_provider
+            # Add default model for Gemini
+            if payload.metadata.requested_provider == "gemini":
+                request["model"] = "gemini-2.5-pro"
         
         # Map based on workflow type
         if isinstance(payload, CgsPayloadLinkedInPost):
