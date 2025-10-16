@@ -8,11 +8,38 @@
 // ============================================================================
 
 export enum OnboardingGoal {
+  // Social Media
   LINKEDIN_POST = 'linkedin_post',
+  LINKEDIN_ARTICLE = 'linkedin_article',
+
+  // Email Marketing
   NEWSLETTER = 'newsletter',
   NEWSLETTER_PREMIUM = 'newsletter_premium',
+
+  // Content Marketing
+  BLOG_POST = 'blog_post',
   ARTICLE = 'article',
 }
+
+// Labels for UI display
+export const GOAL_LABELS: Record<OnboardingGoal, string> = {
+  [OnboardingGoal.LINKEDIN_POST]: 'LinkedIn Post',
+  [OnboardingGoal.LINKEDIN_ARTICLE]: 'LinkedIn Article',
+  [OnboardingGoal.NEWSLETTER]: 'Newsletter',
+  [OnboardingGoal.NEWSLETTER_PREMIUM]: 'Premium Newsletter',
+  [OnboardingGoal.BLOG_POST]: 'Blog Post',
+  [OnboardingGoal.ARTICLE]: 'Article',
+};
+
+// Descriptions for UI display
+export const GOAL_DESCRIPTIONS: Record<OnboardingGoal, string> = {
+  [OnboardingGoal.LINKEDIN_POST]: 'Short, engaging post (200-400 words)',
+  [OnboardingGoal.LINKEDIN_ARTICLE]: 'Long-form thought leadership (800-1500 words)',
+  [OnboardingGoal.NEWSLETTER]: 'Curated newsletter (1000-1500 words)',
+  [OnboardingGoal.NEWSLETTER_PREMIUM]: 'Premium newsletter with research',
+  [OnboardingGoal.BLOG_POST]: 'SEO-optimized blog article (1200-2000 words)',
+  [OnboardingGoal.ARTICLE]: 'Generic article',
+};
 
 export enum SessionState {
   CREATED = 'created',

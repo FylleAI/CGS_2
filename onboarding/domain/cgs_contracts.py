@@ -196,3 +196,56 @@ class ResultEnvelope(BaseModel):
             return self.error.get("message")
         return None
 
+
+# ============================================================================
+# NEW: Unified Onboarding Content Payload (v2.0)
+# ============================================================================
+
+
+class OnboardingContentInput(BaseModel):
+    """Unified input for onboarding content generation."""
+
+    # Content type
+    content_type: str = Field(
+        ...,
+        description="Type of content: linkedin_post, linkedin_article, newsletter, blog_post"
+    )
+
+    # Common fields
+    topic: str = Field(..., min_length=1)
+    client_name: str = Field(..., min_length=1)
+    client_profile: str = Field(default="onboarding")
+    target_audience: str = Field(default="Business professionals")
+    tone: str = Field(default="professional")
+    context: str = Field(default="")
+    custom_instructions: Optional[str] = None
+
+    # Content-specific configuration
+    content_config: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Content type specific configuration (word_count, include_emoji, etc.)"
+    )
+
+
+class CgsPayloadOnboardingContent(BaseModel):
+    """
+    CGS Payload v2.0 for unified onboarding content generation.
+
+    Supports multiple content types via onboarding_content_generator workflow:
+    - linkedin_post: Short engaging post (200-400 words)
+    - linkedin_article: Long-form thought leadership (800-1500 words)
+    - newsletter: Multi-section newsletter (1000-1500 words)
+    - blog_post: SEO-optimized blog article (1200-2000 words)
+    """
+
+    version: str = Field(default="2.0")
+    session_id: UUID
+    workflow: str = Field(default="onboarding_content_generator")
+    goal: str  # Original onboarding goal (linkedin_post, linkedin_article, etc.)
+    trace_id: Optional[str] = None
+
+    company_snapshot: CompanySnapshot
+    clarifying_answers: Dict[str, Any] = Field(default_factory=dict)
+    input: OnboardingContentInput
+    metadata: CgsPayloadMetadata = Field(default_factory=CgsPayloadMetadata)
+
