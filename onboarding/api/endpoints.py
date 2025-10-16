@@ -307,6 +307,7 @@ async def get_session_detail(
             updated_at=session.updated_at.isoformat(),
             snapshot=session.snapshot,
             cgs_run_id=session.cgs_run_id,
+            cgs_response=session.cgs_response,  # ✨ NEW: Include full CGS response
             delivery_status=session.delivery_status,
             delivery_message_id=session.delivery_message_id,
             error_message=session.error_message,
