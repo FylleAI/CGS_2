@@ -11,6 +11,7 @@ from .handlers.siebert_newsletter_html_handler import SiebertNewsletterHtmlHandl
 from .handlers.reopla_enhanced_article_with_image_handler import (
     ReoplaEnhancedArticleWithImageHandler,
 )
+from .handlers.onboarding_content_handler import OnboardingContentHandler
 from .registry import (
     workflow_registry,
     execute_dynamic_workflow,
@@ -24,6 +25,7 @@ __all__ = [
     "SiebertPremiumNewsletterHandler",
     "SiebertNewsletterHtmlHandler",
     "ReoplaEnhancedArticleWithImageHandler",
+    "OnboardingContentHandler",
     "workflow_registry",
     "execute_dynamic_workflow",
     "list_available_workflows",

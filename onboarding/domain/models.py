@@ -13,11 +13,18 @@ from pydantic import BaseModel, Field, field_validator
 
 class OnboardingGoal(str, Enum):
     """Supported onboarding goals."""
-    
-    LINKEDIN_POST = "linkedin_post"
-    NEWSLETTER = "newsletter"
-    NEWSLETTER_PREMIUM = "newsletter_premium"
-    ARTICLE = "article"
+
+    # Social Media
+    LINKEDIN_POST = "linkedin_post"           # Short post (200-400 words)
+    LINKEDIN_ARTICLE = "linkedin_article"     # Long-form article (800-1500 words)
+
+    # Email Marketing
+    NEWSLETTER = "newsletter"                 # Standard newsletter (1000-1500 words)
+    NEWSLETTER_PREMIUM = "newsletter_premium" # Premium newsletter
+
+    # Content Marketing
+    BLOG_POST = "blog_post"                   # SEO-optimized blog (1200-2000 words)
+    ARTICLE = "article"                       # Generic article
 
 
 class SessionState(str, Enum):

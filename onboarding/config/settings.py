@@ -105,10 +105,24 @@ class OnboardingSettings(BaseSettings):
     # Default workflow mappings (goal -> CGS workflow_type)
     default_workflow_mappings: dict = Field(
         default={
-            "linkedin_post": "enhanced_article",
-            "newsletter": "premium_newsletter",
-            "newsletter_premium": "premium_newsletter",
-            "article": "enhanced_article",
+            "linkedin_post": "onboarding_content_generator",
+            "linkedin_article": "onboarding_content_generator",
+            "newsletter": "onboarding_content_generator",
+            "newsletter_premium": "onboarding_content_generator",
+            "blog_post": "onboarding_content_generator",
+            "article": "onboarding_content_generator",
+        }
+    )
+
+    # Content type mappings (goal -> content_type)
+    content_type_mappings: dict = Field(
+        default={
+            "linkedin_post": "linkedin_post",
+            "linkedin_article": "linkedin_article",
+            "newsletter": "newsletter",
+            "newsletter_premium": "newsletter",
+            "blog_post": "blog_post",
+            "article": "blog_post",  # Fallback to blog_post
         }
     )
     
@@ -142,7 +156,13 @@ class OnboardingSettings(BaseSettings):
     def get_workflow_type(self, goal: str) -> str:
         """Map onboarding goal to CGS workflow type."""
         return self.default_workflow_mappings.get(
-            goal.lower(), "enhanced_article"
+            goal.lower(), "onboarding_content_generator"
+        )
+
+    def get_content_type(self, goal: str) -> str:
+        """Map onboarding goal to content type."""
+        return self.content_type_mappings.get(
+            goal.lower(), "linkedin_post"  # Default fallback
         )
     
     def is_perplexity_configured(self) -> bool:

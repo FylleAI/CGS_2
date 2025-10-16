@@ -33,10 +33,42 @@ export const STEP_LABELS = [
 ] as const;
 
 export const GOAL_OPTIONS = [
-  { value: 'linkedin_post', label: 'LinkedIn Post', icon: '💼' },
-  { value: 'newsletter', label: 'Newsletter', icon: '📧' },
-  { value: 'newsletter_premium', label: 'Premium Newsletter', icon: '⭐' },
-  { value: 'article', label: 'Article', icon: '📝' },
+  {
+    value: 'linkedin_post',
+    label: 'LinkedIn Post',
+    icon: '💼',
+    description: 'Short, engaging post (200-400 words)'
+  },
+  {
+    value: 'linkedin_article',
+    label: 'LinkedIn Article',
+    icon: '📄',
+    description: 'Long-form thought leadership (800-1500 words)'
+  },
+  {
+    value: 'newsletter',
+    label: 'Newsletter',
+    icon: '📧',
+    description: 'Curated newsletter (1000-1500 words)'
+  },
+  {
+    value: 'newsletter_premium',
+    label: 'Premium Newsletter',
+    icon: '⭐',
+    description: 'Premium newsletter with research'
+  },
+  {
+    value: 'blog_post',
+    label: 'Blog Post',
+    icon: '✍️',
+    description: 'SEO-optimized blog article (1200-2000 words)'
+  },
+  {
+    value: 'article',
+    label: 'Article',
+    icon: '📝',
+    description: 'Generic article'
+  },
 ] as const;
 
 export const SUGGESTION_CHIPS = [

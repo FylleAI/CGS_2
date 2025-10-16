@@ -116,7 +116,7 @@ class CgsAdapter:
     
     def _convert_to_cgs_request(
         self,
-        payload: CgsPayloadLinkedInPost | CgsPayloadNewsletter,
+        payload: Any,  # CgsPayloadOnboardingContent | CgsPayloadLinkedInPost | CgsPayloadNewsletter
     ) -> Dict[str, Any]:
         """
         Convert onboarding payload to CGS API request format.
@@ -124,6 +124,9 @@ class CgsAdapter:
         Maps onboarding contracts to CGS ContentGenerationRequestModel.
         Includes rich context (company_snapshot + clarifying_answers) for agents.
         """
+        # Import here to avoid circular dependency
+        from onboarding.domain.cgs_contracts import CgsPayloadOnboardingContent
+
         # Base request
         request = {
             "workflow_type": payload.workflow,
@@ -155,12 +158,37 @@ class CgsAdapter:
                 f"📦 Rich context: Including {len(payload.clarifying_answers)} clarifying answers"
             )
 
+        # 🆕 NEW: Add content_type and content_config for unified onboarding workflow
+        if isinstance(payload, CgsPayloadOnboardingContent):
+            rich_context["content_type"] = payload.input.content_type
+            rich_context["content_config"] = payload.input.content_config
+            logger.info(
+                f"📦 Rich context: content_type={payload.input.content_type}, "
+                f"config={payload.input.content_config}"
+            )
+
         # Add rich context to request
         if rich_context:
             request["context"] = rich_context
         
-        # Map based on workflow type
-        if isinstance(payload, CgsPayloadLinkedInPost):
+        # Map based on payload type
+        if isinstance(payload, CgsPayloadOnboardingContent):
+            # 🆕 NEW: Unified onboarding content payload
+            request.update({
+                "topic": payload.input.topic,
+                "client_name": payload.input.client_name,
+                "target_audience": payload.input.target_audience,
+                "tone": payload.input.tone,
+                "context": payload.input.context,
+                "custom_instructions": payload.input.custom_instructions,
+            })
+            logger.info(
+                f"✅ Mapped CgsPayloadOnboardingContent to request "
+                f"(content_type={payload.input.content_type})"
+            )
+
+        elif isinstance(payload, CgsPayloadLinkedInPost):
+            # Legacy LinkedIn post payload
             request.update({
                 "topic": payload.input.topic,
                 "client_name": payload.input.client_name,
@@ -173,8 +201,9 @@ class CgsAdapter:
                 "context": payload.input.context,
                 "custom_instructions": payload.input.custom_instructions,
             })
-        
+
         elif isinstance(payload, CgsPayloadNewsletter):
+            # Legacy newsletter payload
             request.update({
                 "topic": payload.input.topic,
                 "newsletter_topic": payload.input.newsletter_topic,
@@ -184,7 +213,7 @@ class CgsAdapter:
                 "premium_sources": payload.input.premium_sources,
                 "custom_instructions": payload.input.custom_instructions,
             })
-        
+
         return request
     
     def _convert_to_result_envelope(
