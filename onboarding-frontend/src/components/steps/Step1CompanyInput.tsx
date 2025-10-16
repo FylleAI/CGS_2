@@ -48,6 +48,14 @@ const QUESTIONS: Question[] = [
     required: true,
   },
   {
+    id: 'user_email',
+    question: "What's your email address?",
+    type: 'email',
+    placeholder: 'your.email@example.com',
+    required: true,
+    helperText: "We'll send your content to this email",
+  },
+  {
     id: 'additional_context',
     question: 'Any additional context you want to share?',
     type: 'textarea',

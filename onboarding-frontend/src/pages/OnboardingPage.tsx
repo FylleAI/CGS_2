@@ -36,7 +36,7 @@ export const OnboardingWizard: React.FC = () => {
       brand_name: data.brand_name!,
       website: data.website || undefined,
       goal: data.goal!,
-      user_email: data.user_email || undefined,
+      user_email: data.user_email!,
       additional_context: data.additional_context || undefined,
     });
   };
