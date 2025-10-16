@@ -109,7 +109,7 @@ class SessionStatusResponse(BaseModel):
 
 class SessionDetailResponse(BaseModel):
     """Detailed session response."""
-    
+
     session_id: UUID
     trace_id: str
     brand_name: str
@@ -121,6 +121,7 @@ class SessionDetailResponse(BaseModel):
     updated_at: str
     snapshot: Optional[CompanySnapshot] = None
     cgs_run_id: Optional[UUID] = None
+    cgs_response: Optional[Dict[str, Any]] = None  # ✨ NEW: Include full CGS response with content
     delivery_status: Optional[str] = None
     delivery_message_id: Optional[str] = None
     error_message: Optional[str] = None
