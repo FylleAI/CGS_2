@@ -164,15 +164,21 @@ async def submit_answers(
                 message=f"Session already {session.state.value}. Please check status endpoint for updates.",
             )
 
-            # Add execution result if available
-            if session.execution_result:
-                if session.execution_result.content:
-                    response.content_title = session.execution_result.content.title
-                    response.content_preview = session.execution_result.content.body[:200] + "..."
-                    response.word_count = session.execution_result.content.word_count
+            # Add CGS response data if available
+            if session.cgs_response:
+                # Extract content from cgs_response dict
+                content_data = session.cgs_response.get("content")
+                if content_data:
+                    response.content_title = content_data.get("title")
+                    body = content_data.get("body", "")
+                    if body:
+                        response.content_preview = body[:200] + ("..." if len(body) > 200 else "")
+                    response.word_count = content_data.get("word_count")
 
-                if session.execution_result.workflow_metrics:
-                    response.workflow_metrics = session.execution_result.workflow_metrics.model_dump()
+                # Extract workflow metrics
+                metrics_data = session.cgs_response.get("workflow_metrics")
+                if metrics_data:
+                    response.workflow_metrics = metrics_data
 
             if session.delivery_status:
                 response.delivery_status = session.delivery_status
