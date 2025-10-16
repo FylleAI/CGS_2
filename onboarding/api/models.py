@@ -15,13 +15,11 @@ from onboarding.domain.models import (
 # Request models
 class StartOnboardingRequest(BaseModel):
     """Request to start onboarding."""
-    
+
     brand_name: str = Field(..., min_length=1, description="Company/brand name")
     website: Optional[str] = Field(default=None, description="Company website URL")
     goal: OnboardingGoal = Field(..., description="Content generation goal")
-    user_email: Optional[str] = Field(
-        default=None, description="Email for content delivery"
-    )
+    user_email: str = Field(..., min_length=1, description="Email for content delivery")
     additional_context: Optional[str] = Field(
         default=None, description="Additional context or instructions"
     )

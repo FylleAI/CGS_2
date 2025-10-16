@@ -177,7 +177,7 @@ class OnboardingSession(BaseModel):
     brand_name: str = Field(..., min_length=1)
     website: Optional[str] = None
     goal: OnboardingGoal
-    user_email: Optional[str] = None
+    user_email: str = Field(..., min_length=1)
     
     # State
     state: SessionState = Field(default=SessionState.CREATED)
@@ -189,6 +189,9 @@ class OnboardingSession(BaseModel):
     cgs_payload: Optional[Dict[str, Any]] = None
     cgs_run_id: Optional[UUID] = None
     cgs_response: Optional[Dict[str, Any]] = None
+
+    # RAG: Reference to company context (if reused)
+    company_context_id: Optional[UUID] = None
     
     # Delivery
     delivery_status: Optional[str] = None

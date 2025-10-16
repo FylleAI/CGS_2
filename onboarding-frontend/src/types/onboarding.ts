@@ -99,7 +99,7 @@ export interface OnboardingSession {
   brand_name: string;
   website?: string;
   goal: OnboardingGoal;
-  user_email?: string;
+  user_email: string;
   state: SessionState;
   created_at: string;
   updated_at: string;
@@ -118,7 +118,7 @@ export interface StartOnboardingRequest {
   brand_name: string;
   website?: string;
   goal: OnboardingGoal;
-  user_email?: string;
+  user_email: string;
   additional_context?: string;
 }
 

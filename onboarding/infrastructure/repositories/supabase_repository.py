@@ -218,6 +218,7 @@ class SupabaseSessionRepository:
             "delivery_timestamp": session.delivery_timestamp.isoformat() if session.delivery_timestamp else None,
             "error_message": session.error_message,
             "metadata": session.metadata,
+            "company_context_id": str(session.company_context_id) if session.company_context_id else None,
         }
     
     def _dict_to_session(self, data: Dict[str, Any]) -> OnboardingSession:
@@ -245,7 +246,7 @@ class SupabaseSessionRepository:
             brand_name=data["brand_name"],
             website=data.get("website"),
             goal=OnboardingGoal(data["goal"]),
-            user_email=data.get("user_email"),
+            user_email=data["user_email"],
             state=SessionState(data["state"]),
             created_at=created_at,
             updated_at=updated_at,
@@ -258,6 +259,7 @@ class SupabaseSessionRepository:
             delivery_timestamp=delivery_timestamp,
             error_message=data.get("error_message"),
             metadata=data.get("metadata", {}),
+            company_context_id=UUID(data["company_context_id"]) if data.get("company_context_id") else None,
         )
 
 
