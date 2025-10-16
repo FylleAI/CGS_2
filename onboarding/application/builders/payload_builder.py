@@ -116,7 +116,7 @@ class PayloadBuilder:
         linkedin_input = LinkedInPostInput(
             topic=topic,
             client_name=snapshot.company.name,
-            client_profile="default",
+            client_profile="onboarding",  # Use generic onboarding profile
             target_audience=target_audience,
             tone=tone,
             context=context,
@@ -183,7 +183,7 @@ class PayloadBuilder:
             topic=topic,
             newsletter_topic=newsletter_topic,
             client_name=snapshot.company.name,
-            client_profile="default",
+            client_profile="onboarding",  # Use generic onboarding profile
             target_audience=target_audience,
             target_word_count=target_word_count,
             premium_sources=premium_sources,
