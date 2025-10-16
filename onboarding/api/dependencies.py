@@ -12,6 +12,9 @@ from onboarding.infrastructure.repositories.supabase_repository import (
     SupabaseSessionRepository,
     get_session_repository,
 )
+from onboarding.infrastructure.repositories.company_context_repository import (
+    CompanyContextRepository,
+)
 from onboarding.application.builders.payload_builder import PayloadBuilder
 from onboarding.application.use_cases.create_session import CreateSessionUseCase
 from onboarding.application.use_cases.research_company import ResearchCompanyUseCase
@@ -67,6 +70,15 @@ def get_repository() -> Optional[SupabaseSessionRepository]:
     return get_session_repository()
 
 
+@lru_cache()
+def get_context_repository() -> Optional[CompanyContextRepository]:
+    """Get company context repository (RAG)."""
+    settings = get_settings()
+    if not settings.is_supabase_configured():
+        return None
+    return CompanyContextRepository(settings)
+
+
 # Builders
 @lru_cache()
 def get_payload_builder() -> PayloadBuilder:
@@ -88,6 +100,7 @@ def get_research_company_use_case() -> Optional[ResearchCompanyUseCase]:
     return ResearchCompanyUseCase(
         perplexity_adapter=perplexity,
         repository=get_repository(),
+        context_repository=get_context_repository(),
     )
 
 
@@ -99,6 +112,7 @@ def get_synthesize_snapshot_use_case() -> Optional[SynthesizeSnapshotUseCase]:
     return SynthesizeSnapshotUseCase(
         gemini_adapter=gemini,
         repository=get_repository(),
+        context_repository=get_context_repository(),
     )
 
 

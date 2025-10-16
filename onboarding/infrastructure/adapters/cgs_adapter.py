@@ -120,21 +120,44 @@ class CgsAdapter:
     ) -> Dict[str, Any]:
         """
         Convert onboarding payload to CGS API request format.
-        
+
         Maps onboarding contracts to CGS ContentGenerationRequestModel.
+        Includes rich context (company_snapshot + clarifying_answers) for agents.
         """
         # Base request
         request = {
             "workflow_type": payload.workflow,
             "client_profile": payload.input.client_profile,
         }
-        
+
         # Add provider if specified
         if payload.metadata.requested_provider:
             request["provider"] = payload.metadata.requested_provider
             # Add default model for Gemini
             if payload.metadata.requested_provider == "gemini":
                 request["model"] = "gemini-2.5-pro"
+
+        # 🆕 RICH CONTEXT: Add company_snapshot and clarifying_answers
+        # This makes the full snapshot available to CGS agents via context
+        rich_context = {}
+
+        if payload.company_snapshot:
+            rich_context["company_snapshot"] = payload.company_snapshot.model_dump(mode="json")
+            logger.info(
+                f"📦 Rich context: Including company_snapshot "
+                f"(industry={payload.company_snapshot.company.industry}, "
+                f"differentiators={len(payload.company_snapshot.company.differentiators)})"
+            )
+
+        if payload.clarifying_answers:
+            rich_context["clarifying_answers"] = payload.clarifying_answers
+            logger.info(
+                f"📦 Rich context: Including {len(payload.clarifying_answers)} clarifying answers"
+            )
+
+        # Add rich context to request
+        if rich_context:
+            request["context"] = rich_context
         
         # Map based on workflow type
         if isinstance(payload, CgsPayloadLinkedInPost):
