@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Depends, status
 
-from onboarding.domain.models import OnboardingInput
+from onboarding.domain.models import OnboardingInput, SessionState
 from onboarding.api.models import (
     StartOnboardingRequest,
     StartOnboardingResponse,
@@ -152,7 +152,33 @@ async def submit_answers(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Session not found: {session_id}",
             )
-        
+
+        # Check if already executing or done (idempotency)
+        if session.state in [SessionState.EXECUTING, SessionState.DELIVERING, SessionState.DONE]:
+            logger.info(f"Session {session_id} already in state {session.state}, returning current status")
+
+            # Build response with current state
+            response = SubmitAnswersResponse(
+                session_id=session.session_id,
+                state=session.state,
+                message=f"Session already {session.state.value}. Please check status endpoint for updates.",
+            )
+
+            # Add execution result if available
+            if session.execution_result:
+                if session.execution_result.content:
+                    response.content_title = session.execution_result.content.title
+                    response.content_preview = session.execution_result.content.body[:200] + "..."
+                    response.word_count = session.execution_result.content.word_count
+
+                if session.execution_result.workflow_metrics:
+                    response.workflow_metrics = session.execution_result.workflow_metrics.model_dump()
+
+            if session.delivery_status:
+                response.delivery_status = session.delivery_status
+
+            return response
+
         # Collect answers
         session = await collect_answers_uc.execute(session, request.answers)
         
