@@ -18,41 +18,6 @@ import { TOAST_CONFIG } from '@/config/constants';
 import { OnboardingGoal } from '@/types/onboarding';
 
 // ============================================================================
-// Analytics Generic Questions
-// ============================================================================
-
-const ANALYTICS_GENERIC_QUESTIONS: QuestionResponse[] = [
-  {
-    id: 'variable_1',
-    question: 'What is your primary business objective?',
-    reason: 'Understanding your main goal helps us provide targeted strategic insights and recommendations.',
-    expected_response_type: 'text',
-    required: true,
-  },
-  {
-    id: 'variable_2',
-    question: 'What is your target market?',
-    reason: 'Knowing your audience allows us to analyze market positioning and competitive landscape effectively.',
-    expected_response_type: 'text',
-    required: true,
-  },
-  {
-    id: 'variable_3',
-    question: 'What is your biggest challenge?',
-    reason: 'Identifying key challenges enables us to focus on actionable solutions and quick wins.',
-    expected_response_type: 'text',
-    required: true,
-  },
-  {
-    id: 'variable_4',
-    question: 'What makes you unique?',
-    reason: 'Your unique value proposition is crucial for differentiation analysis and content strategy.',
-    expected_response_type: 'text',
-    required: true,
-  },
-];
-
-// ============================================================================
 // Hook
 // ============================================================================
 
@@ -99,11 +64,6 @@ export const useOnboarding = () => {
         updated_at: new Date().toISOString(),
       });
 
-      // Determine which questions to use
-      const questionsToUse = requestedGoal === OnboardingGoal.COMPANY_ANALYTICS
-        ? ANALYTICS_GENERIC_QUESTIONS
-        : data.clarifying_questions;
-
       // Store snapshot summary (we'll get full snapshot later)
       if (data.snapshot_summary) {
         setSnapshot({
@@ -128,15 +88,15 @@ export const useOnboarding = () => {
             style_guidelines: [],
           },
           insights: {},
-          clarifying_questions: questionsToUse.map(q => ({
+          clarifying_questions: data.clarifying_questions.map(q => ({
             ...q,
             expected_response_type: q.expected_response_type as any,
           })),
         });
       }
 
-      // Store questions (generic for analytics, backend-generated for content)
-      setQuestions(questionsToUse);
+      // Store questions from backend (includes analytics questions when goal=company_analytics)
+      setQuestions(data.clarifying_questions);
 
       // Move to snapshot review step
       setCurrentStep(2);
