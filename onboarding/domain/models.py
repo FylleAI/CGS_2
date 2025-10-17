@@ -14,15 +14,18 @@ from pydantic import BaseModel, Field, field_validator
 class OnboardingGoal(str, Enum):
     """Supported onboarding goals."""
 
-    # Social Media
+    # Analytics (NEW - Primary goal for analytics dashboard)
+    COMPANY_ANALYTICS = "company_analytics"   # Company analytics report with insights
+
+    # Social Media (Legacy - for content generation)
     LINKEDIN_POST = "linkedin_post"           # Short post (200-400 words)
     LINKEDIN_ARTICLE = "linkedin_article"     # Long-form article (800-1500 words)
 
-    # Email Marketing
+    # Email Marketing (Legacy - for content generation)
     NEWSLETTER = "newsletter"                 # Standard newsletter (1000-1500 words)
     NEWSLETTER_PREMIUM = "newsletter_premium" # Premium newsletter
 
-    # Content Marketing
+    # Content Marketing (Legacy - for content generation)
     BLOG_POST = "blog_post"                   # SEO-optimized blog (1200-2000 words)
     ARTICLE = "article"                       # Generic article
 
