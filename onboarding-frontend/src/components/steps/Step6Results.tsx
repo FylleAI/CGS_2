@@ -1,6 +1,6 @@
 /**
  * Step6Results Component
- * Minimal wizard-style results display
+ * Conditional rendering: Analytics Dashboard or Content Preview
  */
 
 import React from 'react';
@@ -9,7 +9,9 @@ import { motion } from 'framer-motion';
 import { ContentCopy, Download } from '@mui/icons-material';
 import toast from 'react-hot-toast';
 import { WizardButton } from '../wizard/WizardButton';
-import type { OnboardingSession } from '@/types/onboarding';
+import { Step6Dashboard } from './Step6Dashboard';
+import type { OnboardingSession, AnalyticsData } from '@/types/onboarding';
+import { OnboardingGoal } from '@/types/onboarding';
 
 interface Step6ResultsProps {
   session: OnboardingSession;
@@ -20,9 +22,34 @@ export const Step6Results: React.FC<Step6ResultsProps> = ({
   session,
   onStartNew,
 }) => {
+  // Check if this is an analytics session
+  const isAnalytics = session.goal === OnboardingGoal.COMPANY_ANALYTICS;
+
+  // Extract analytics data from cgs_response if available
+  const analyticsData: AnalyticsData | null = React.useMemo(() => {
+    if (!isAnalytics || !session.cgs_response) return null;
+
+    const content = session.cgs_response.content;
+    if (!content || !content.analytics_data) return null;
+
+    return content.analytics_data as AnalyticsData;
+  }, [isAnalytics, session.cgs_response]);
+
+  // If analytics goal, render dashboard
+  if (isAnalytics && analyticsData) {
+    return (
+      <Step6Dashboard
+        analyticsData={analyticsData}
+        companyName={session.brand_name}
+        onReset={onStartNew}
+      />
+    );
+  }
+
+  // Otherwise, render content preview (legacy)
   const metadata = session.metadata || {};
   const contentTitle = metadata.content_title || 'Content Generated';
-  const contentPreview = metadata.content_preview || 'Your content is ready!';
+  const contentPreview = metadata.content_preview || session.cgs_response?.content?.body || 'Your content is ready!';
   const wordCount = metadata.word_count || 0;
 
   const handleCopyContent = () => {

@@ -322,3 +322,55 @@ export const STEP_CONFIGS: Record<OnboardingStep, StepConfig> = {
   },
 };
 
+// ============================================================================
+// Analytics Dashboard Types
+// ============================================================================
+
+export interface ContentOpportunity {
+  type: string;
+  count: number;
+  priority?: 'high' | 'medium' | 'low';
+}
+
+export interface Competitor {
+  name: string;
+  strength?: string;
+  weakness?: string;
+  threat_level?: 'high' | 'medium' | 'low';
+}
+
+export interface QuickWin {
+  title: string;
+  description?: string;
+  impact?: 'high' | 'medium' | 'low';
+  effort?: 'low' | 'medium' | 'high';
+}
+
+export interface OptimizationArea {
+  score?: number;
+  recommendations?: string[];
+  strengths?: string[];
+  weaknesses?: string[];
+}
+
+export interface OptimizationInsights {
+  brand_voice?: OptimizationArea;
+  seo?: OptimizationArea;
+  messaging?: OptimizationArea;
+  social_strategy?: OptimizationArea;
+}
+
+export interface ContentDistribution {
+  [key: string]: number;
+}
+
+export interface AnalyticsData {
+  company_score: number;
+  content_opportunities: ContentOpportunity[];
+  optimization_insights: OptimizationInsights;
+  competitors: Competitor[];
+  quick_wins: QuickWin[];
+  content_distribution: ContentDistribution;
+  metrics: Record<string, any>;
+  full_report: string;
+}
