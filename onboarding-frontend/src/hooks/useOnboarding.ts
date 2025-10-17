@@ -12,8 +12,45 @@ import type {
   StartOnboardingRequest,
   SubmitAnswersRequest,
   OnboardingStep,
+  QuestionResponse,
 } from '@/types/onboarding';
 import { TOAST_CONFIG } from '@/config/constants';
+import { OnboardingGoal } from '@/types/onboarding';
+
+// ============================================================================
+// Analytics Generic Questions
+// ============================================================================
+
+const ANALYTICS_GENERIC_QUESTIONS: QuestionResponse[] = [
+  {
+    id: 'variable_1',
+    question: 'What is your primary business objective?',
+    reason: 'Understanding your main goal helps us provide targeted strategic insights and recommendations.',
+    expected_response_type: 'text',
+    required: true,
+  },
+  {
+    id: 'variable_2',
+    question: 'What is your target market?',
+    reason: 'Knowing your audience allows us to analyze market positioning and competitive landscape effectively.',
+    expected_response_type: 'text',
+    required: true,
+  },
+  {
+    id: 'variable_3',
+    question: 'What is your biggest challenge?',
+    reason: 'Identifying key challenges enables us to focus on actionable solutions and quick wins.',
+    expected_response_type: 'text',
+    required: true,
+  },
+  {
+    id: 'variable_4',
+    question: 'What makes you unique?',
+    reason: 'Your unique value proposition is crucial for differentiation analysis and content strategy.',
+    expected_response_type: 'text',
+    required: true,
+  },
+];
 
 // ============================================================================
 // Hook
@@ -47,17 +84,25 @@ export const useOnboarding = () => {
       setError(null);
       setCurrentStep(1); // Move to research progress step
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
+      // Extract goal from request
+      const requestedGoal = variables.goal;
+
       // Store session data
       setSession({
         session_id: data.session_id,
         trace_id: data.trace_id,
-        brand_name: '',
-        goal: data.snapshot_summary ? 'linkedin_post' as any : 'linkedin_post' as any,
+        brand_name: variables.brand_name,
+        goal: requestedGoal,
         state: data.state,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
+
+      // Determine which questions to use
+      const questionsToUse = requestedGoal === OnboardingGoal.COMPANY_ANALYTICS
+        ? ANALYTICS_GENERIC_QUESTIONS
+        : data.clarifying_questions;
 
       // Store snapshot summary (we'll get full snapshot later)
       if (data.snapshot_summary) {
@@ -83,15 +128,15 @@ export const useOnboarding = () => {
             style_guidelines: [],
           },
           insights: {},
-          clarifying_questions: data.clarifying_questions.map(q => ({
+          clarifying_questions: questionsToUse.map(q => ({
             ...q,
             expected_response_type: q.expected_response_type as any,
           })),
         });
       }
 
-      // Store questions
-      setQuestions(data.clarifying_questions);
+      // Store questions (generic for analytics, backend-generated for content)
+      setQuestions(questionsToUse);
 
       // Move to snapshot review step
       setCurrentStep(2);

@@ -43,9 +43,10 @@ const QUESTIONS: Question[] = [
   },
   {
     id: 'goal',
-    question: 'What type of content do you want to create?',
+    question: 'What would you like to get?',
     type: 'choice',
     required: true,
+    helperText: '💡 Recommended: Start with Company Analytics to get strategic insights',
   },
   {
     id: 'user_email',
@@ -169,19 +170,59 @@ export const Step1CompanyInput: React.FC<Step1CompanyInputProps> = ({
   const renderQuestion = () => {
     if (currentQuestion.type === 'choice') {
       return (
-        <Grid container spacing={2}>
-          {GOAL_OPTIONS.map((option) => (
-            <Grid item xs={12} sm={6} key={option.value}>
-              <WizardChoice
-                label={option.label}
-                description={option.description}
-                icon={option.icon}
-                selected={false}
-                onClick={() => handleChoiceSelect(option.value as OnboardingGoal)}
-              />
-            </Grid>
-          ))}
-        </Grid>
+        <Stack spacing={2}>
+          {/* Helper text for goal selection */}
+          {currentQuestion.helperText && (
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'primary.main',
+                fontWeight: 500,
+                textAlign: 'center',
+                mb: 1,
+              }}
+            >
+              {currentQuestion.helperText}
+            </Typography>
+          )}
+
+          <Grid container spacing={2}>
+            {GOAL_OPTIONS.map((option) => {
+              const isRecommended = option.value === 'company_analytics';
+
+              return (
+                <Grid item xs={12} sm={6} key={option.value}>
+                  <Box sx={{ position: 'relative' }}>
+                    {/* Recommended badge */}
+                    {isRecommended && (
+                      <Chip
+                        label="Recommended"
+                        size="small"
+                        color="primary"
+                        sx={{
+                          position: 'absolute',
+                          top: -8,
+                          right: 8,
+                          zIndex: 1,
+                          fontWeight: 600,
+                          fontSize: '0.7rem',
+                        }}
+                      />
+                    )}
+
+                    <WizardChoice
+                      label={option.label}
+                      description={option.description}
+                      icon={option.icon}
+                      selected={false}
+                      onClick={() => handleChoiceSelect(option.value as OnboardingGoal)}
+                    />
+                  </Box>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </Stack>
       );
     }
 
