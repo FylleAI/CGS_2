@@ -34,6 +34,12 @@ export const STEP_LABELS = [
 
 export const GOAL_OPTIONS = [
   {
+    value: 'company_analytics',
+    label: 'Company Analytics',
+    icon: '📊',
+    description: 'Comprehensive analytics report with insights and recommendations'
+  },
+  {
     value: 'linkedin_post',
     label: 'LinkedIn Post',
     icon: '💼',
