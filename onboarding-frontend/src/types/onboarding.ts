@@ -8,21 +8,25 @@
 // ============================================================================
 
 export enum OnboardingGoal {
-  // Social Media
+  // Analytics (NEW - Primary goal)
+  COMPANY_ANALYTICS = 'company_analytics',
+
+  // Social Media (Legacy - for content generation)
   LINKEDIN_POST = 'linkedin_post',
   LINKEDIN_ARTICLE = 'linkedin_article',
 
-  // Email Marketing
+  // Email Marketing (Legacy - for content generation)
   NEWSLETTER = 'newsletter',
   NEWSLETTER_PREMIUM = 'newsletter_premium',
 
-  // Content Marketing
+  // Content Marketing (Legacy - for content generation)
   BLOG_POST = 'blog_post',
   ARTICLE = 'article',
 }
 
 // Labels for UI display
 export const GOAL_LABELS: Record<OnboardingGoal, string> = {
+  [OnboardingGoal.COMPANY_ANALYTICS]: 'Company Analytics',
   [OnboardingGoal.LINKEDIN_POST]: 'LinkedIn Post',
   [OnboardingGoal.LINKEDIN_ARTICLE]: 'LinkedIn Article',
   [OnboardingGoal.NEWSLETTER]: 'Newsletter',
@@ -33,6 +37,7 @@ export const GOAL_LABELS: Record<OnboardingGoal, string> = {
 
 // Descriptions for UI display
 export const GOAL_DESCRIPTIONS: Record<OnboardingGoal, string> = {
+  [OnboardingGoal.COMPANY_ANALYTICS]: 'Comprehensive analytics report with insights, opportunities, and recommendations',
   [OnboardingGoal.LINKEDIN_POST]: 'Short, engaging post (200-400 words)',
   [OnboardingGoal.LINKEDIN_ARTICLE]: 'Long-form thought leadership (800-1500 words)',
   [OnboardingGoal.NEWSLETTER]: 'Curated newsletter (1000-1500 words)',
