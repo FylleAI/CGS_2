@@ -4,7 +4,13 @@ import logging
 from typing import Any, Dict, Optional
 from uuid import UUID
 
-from onboarding.domain.models import OnboardingSession, SessionState, CompanySnapshot
+from onboarding.domain.models import (
+    OnboardingSession,
+    SessionState,
+    CompanySnapshot,
+    ClarifyingQuestion,
+    OnboardingGoal,
+)
 from onboarding.infrastructure.adapters.gemini_adapter import GeminiSynthesisAdapter
 from onboarding.infrastructure.repositories.supabase_repository import SupabaseSessionRepository
 from onboarding.infrastructure.repositories.company_context_repository import CompanyContextRepository
@@ -103,6 +109,12 @@ class SynthesizeSnapshotUseCase:
                     f"({len(snapshot.clarifying_questions)} questions)"
                 )
 
+            # Override questions for analytics goal
+            if session.goal == OnboardingGoal.COMPANY_ANALYTICS:
+                logger.info("📊 Analytics: Overriding with generic questions...")
+                snapshot.clarifying_questions = self._get_analytics_questions()
+                logger.info(f"✅ Analytics: {len(snapshot.clarifying_questions)} generic questions set")
+
                 # Save to RAG for future reuse
                 if self.context_repository:
                     try:
@@ -153,3 +165,40 @@ class SynthesizeSnapshotUseCase:
 
             raise
 
+    def _get_analytics_questions(self) -> list[ClarifyingQuestion]:
+        """
+        Get generic analytics questions for company_analytics goal.
+
+        Returns:
+            List of 4 generic clarifying questions
+        """
+        return [
+            ClarifyingQuestion(
+                id="q1",
+                question="What is your primary business objective?",
+                reason="Understanding your main goal helps us provide targeted strategic insights and recommendations.",
+                expected_response_type="text",
+                required=True,
+            ),
+            ClarifyingQuestion(
+                id="q2",
+                question="What is your target market?",
+                reason="Knowing your audience allows us to analyze market positioning and competitive landscape effectively.",
+                expected_response_type="text",
+                required=True,
+            ),
+            ClarifyingQuestion(
+                id="q3",
+                question="What is your biggest challenge?",
+                reason="Identifying key challenges enables us to focus on actionable solutions and quick wins.",
+                expected_response_type="text",
+                required=True,
+            ),
+            ClarifyingQuestion(
+                id="q4",
+                question="What makes you unique?",
+                reason="Your unique value proposition helps us highlight competitive advantages and differentiation strategies.",
+                expected_response_type="text",
+                required=True,
+            ),
+        ]
