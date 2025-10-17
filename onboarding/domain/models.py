@@ -147,7 +147,7 @@ class CompanySnapshot(BaseModel):
     insights: InsightsInfo = Field(default_factory=InsightsInfo)
     
     clarifying_questions: List[ClarifyingQuestion] = Field(
-        ..., min_length=1, max_length=3
+        ..., min_length=1, max_length=10
     )
     clarifying_answers: Dict[str, Any] = Field(default_factory=dict)
     
