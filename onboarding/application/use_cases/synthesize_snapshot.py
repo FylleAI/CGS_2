@@ -8,7 +8,6 @@ from onboarding.domain.models import (
     OnboardingSession,
     SessionState,
     CompanySnapshot,
-    ClarifyingQuestion,
     OnboardingGoal,
 )
 from onboarding.infrastructure.adapters.gemini_adapter import GeminiSynthesisAdapter
@@ -109,36 +108,31 @@ class SynthesizeSnapshotUseCase:
                     f"({len(snapshot.clarifying_questions)} questions)"
                 )
 
-            # Override questions for analytics goal
-            if session.goal == OnboardingGoal.COMPANY_ANALYTICS:
-                logger.info("📊 Analytics: Overriding with generic questions...")
-                snapshot.clarifying_questions = self._get_analytics_questions()
-                logger.info(f"✅ Analytics: {len(snapshot.clarifying_questions)} generic questions set")
+            # Save to RAG for future reuse (only for content goals, not analytics)
+            # Analytics is session-specific and benefits from fresh personalized questions
+            if self.context_repository and not is_rag_hit and session.goal != OnboardingGoal.COMPANY_ANALYTICS:
+                try:
+                    logger.info("💾 RAG: Saving context for future reuse...")
 
-                # Save to RAG for future reuse
-                if self.context_repository:
-                    try:
-                        logger.info("💾 RAG: Saving context for future reuse...")
+                    context = await self.context_repository.create_context(
+                        company_name=session.brand_name,
+                        company_display_name=session.brand_name,
+                        website=session.website,
+                        snapshot=snapshot,
+                        source_session_id=session.session_id,
+                    )
 
-                        context = await self.context_repository.create_context(
-                            company_name=session.brand_name,
-                            company_display_name=session.brand_name,
-                            website=session.website,
-                            snapshot=snapshot,
-                            source_session_id=session.session_id,
-                        )
+                    # Link session to context
+                    session.company_context_id = UUID(context["context_id"])
 
-                        # Link session to context
-                        session.company_context_id = UUID(context["context_id"])
+                    logger.info(
+                        f"✅ RAG: Context saved {context['context_id']} "
+                        f"(v{context['version']})"
+                    )
 
-                        logger.info(
-                            f"✅ RAG: Context saved {context['context_id']} "
-                            f"(v{context['version']})"
-                        )
-
-                    except Exception as e:
-                        logger.warning(f"RAG save failed (non-critical): {str(e)}")
-                        # Don't fail the whole flow if RAG save fails
+                except Exception as e:
+                    logger.warning(f"RAG save failed (non-critical): {str(e)}")
+                    # Don't fail the whole flow if RAG save fails
 
             # Update session
             session.snapshot = snapshot
@@ -164,41 +158,3 @@ class SynthesizeSnapshotUseCase:
                 )
 
             raise
-
-    def _get_analytics_questions(self) -> list[ClarifyingQuestion]:
-        """
-        Get generic analytics questions for company_analytics goal.
-
-        Returns:
-            List of 4 generic clarifying questions
-        """
-        return [
-            ClarifyingQuestion(
-                id="q1",
-                question="What is your primary business objective?",
-                reason="Understanding your main goal helps us provide targeted strategic insights and recommendations.",
-                expected_response_type="text",
-                required=True,
-            ),
-            ClarifyingQuestion(
-                id="q2",
-                question="What is your target market?",
-                reason="Knowing your audience allows us to analyze market positioning and competitive landscape effectively.",
-                expected_response_type="text",
-                required=True,
-            ),
-            ClarifyingQuestion(
-                id="q3",
-                question="What is your biggest challenge?",
-                reason="Identifying key challenges enables us to focus on actionable solutions and quick wins.",
-                expected_response_type="text",
-                required=True,
-            ),
-            ClarifyingQuestion(
-                id="q4",
-                question="What makes you unique?",
-                reason="Your unique value proposition helps us highlight competitive advantages and differentiation strategies.",
-                expected_response_type="text",
-                required=True,
-            ),
-        ]
