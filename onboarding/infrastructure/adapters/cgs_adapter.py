@@ -199,7 +199,7 @@ class CgsAdapter:
                 "include_examples": payload.input.include_examples,
                 "include_sources": payload.input.include_sources,
                 "context": payload.input.context,
-                "custom_instructions": payload.input.custom_instructions,
+                "custom_instructions": payload.input.custom_instructions or "",  # Convert None to empty string
             })
 
         elif isinstance(payload, CgsPayloadNewsletter):
@@ -211,7 +211,7 @@ class CgsAdapter:
                 "target_audience": payload.input.target_audience,
                 "target_word_count": payload.input.target_word_count,
                 "premium_sources": payload.input.premium_sources,
-                "custom_instructions": payload.input.custom_instructions,
+                "custom_instructions": payload.input.custom_instructions or "",  # Convert None to empty string
             })
 
         return request
