@@ -583,6 +583,7 @@ class PayloadBuilder:
             context=json.dumps(rich_context, default=str),  # Convert dict to JSON string
             content_type="analytics",  # Special type for analytics
             content_config={},  # No content config needed for analytics
+            custom_instructions="",  # Empty string instead of None to avoid CGS validation error
         )
 
         # Determine provider
