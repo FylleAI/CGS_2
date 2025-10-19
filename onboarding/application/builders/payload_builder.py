@@ -569,9 +569,10 @@ class PayloadBuilder:
 
         # Build metadata
         metadata = CgsPayloadMetadata(
-            session_id=str(session_id),
-            trace_id=trace_id,
+            source="onboarding_adapter",
             dry_run=dry_run,
+            requested_provider=requested_provider or "gemini",
+            language="it",
         )
 
         # Build analytics input
