@@ -21,10 +21,20 @@ logger = logging.getLogger(__name__)
 class OnboardingContentHandler(WorkflowHandler):
     """
     Generic workflow handler for onboarding content generation.
-    
+
     Routes to appropriate sub-workflow based on content_type in context.
     """
-    
+
+    def load_template(self) -> Dict[str, Any]:
+        """
+        Override to skip template loading.
+
+        This handler doesn't use a JSON template - it implements
+        the workflow logic directly in Python.
+        """
+        logger.info(f"📋 Content handler doesn't require JSON template")
+        return {}  # Return empty dict instead of loading from file
+
     def validate_inputs(self, context: Dict[str, Any]) -> None:
         """Validate inputs for onboarding content generation."""
         super().validate_inputs(context)
