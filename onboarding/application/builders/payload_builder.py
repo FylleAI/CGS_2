@@ -587,12 +587,16 @@ class PayloadBuilder:
         # Determine provider
         provider = requested_provider or settings.default_llm_provider
 
-        # Build payload
+        # Build payload with all required fields
         payload = CgsPayloadOnboardingContent(
-            workflow_type="onboarding_analytics_generator",
+            session_id=session_id,
+            goal=goal.value,  # Convert enum to string
+            workflow="onboarding_analytics_generator",
+            company_snapshot=snapshot,
+            clarifying_answers=snapshot.clarifying_answers,
             input=analytics_input,
             metadata=metadata,
-            provider=provider,
+            trace_id=trace_id,
         )
 
         logger.info(
