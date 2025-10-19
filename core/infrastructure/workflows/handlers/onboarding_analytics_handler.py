@@ -56,9 +56,22 @@ class OnboardingAnalyticsHandler(WorkflowHandler):
     def prepare_context(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare context for analytics generation."""
         context = super().prepare_context(context)
-        
-        # Extract rich context
-        rich_context = context.get("context", {})
+
+        # Extract rich context (may be JSON string or dict)
+        rich_context_raw = context.get("context", {})
+
+        # Parse JSON string if needed
+        if isinstance(rich_context_raw, str):
+            import json
+            try:
+                rich_context = json.loads(rich_context_raw)
+                logger.debug("📦 Parsed context from JSON string")
+            except json.JSONDecodeError as e:
+                logger.error(f"❌ Failed to parse context JSON: {e}")
+                rich_context = {}
+        else:
+            rich_context = rich_context_raw
+
         company_snapshot = rich_context.get("company_snapshot", {})
         variables = rich_context.get("variables", {})
         
