@@ -26,6 +26,7 @@ class OnboardingSettings(BaseSettings):
     cgs_api_url: str = Field(default="http://localhost:8000", env="CGS_API_URL")
     cgs_api_timeout: int = Field(default=600, env="CGS_API_TIMEOUT")  # 10 minutes
     cgs_api_key: Optional[str] = Field(default=None, env="CGS_API_KEY")
+    default_llm_provider: str = Field(default="gemini", env="DEFAULT_LLM_PROVIDER")
     
     # Perplexity settings (research)
     perplexity_api_key: Optional[str] = Field(default=None, env="PERPLEXITY_API_KEY")
