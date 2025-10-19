@@ -3,6 +3,7 @@
 Intelligent mapping from CompanySnapshot + answers to CGS input parameters.
 """
 
+import json
 import logging
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -574,10 +575,11 @@ class PayloadBuilder:
         )
 
         # Build analytics input
+        # Note: context must be a JSON string, not a dict
         analytics_input = OnboardingContentInput(
             topic=f"Company analytics for {snapshot.company.name}",
             client_name=snapshot.company.name,
-            context=rich_context,
+            context=json.dumps(rich_context, default=str),  # Convert dict to JSON string
             content_type="analytics",  # Special type for analytics
             content_config={},  # No content config needed for analytics
         )
