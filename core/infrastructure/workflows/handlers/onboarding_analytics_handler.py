@@ -24,10 +24,20 @@ logger = logging.getLogger(__name__)
 class OnboardingAnalyticsHandler(WorkflowHandler):
     """
     Analytics workflow handler for onboarding.
-    
+
     Generates strategic insights and recommendations instead of content.
     """
-    
+
+    def load_template(self) -> Dict[str, Any]:
+        """
+        Override to skip template loading.
+
+        This handler doesn't use a JSON template - it implements
+        the workflow logic directly in Python.
+        """
+        logger.info(f"📋 Analytics handler doesn't require JSON template")
+        return {}  # Return empty dict instead of loading from file
+
     def validate_inputs(self, context: Dict[str, Any]) -> None:
         """Validate inputs for analytics generation."""
         super().validate_inputs(context)
