@@ -118,6 +118,7 @@ class OnboardingAnalyticsHandler(WorkflowHandler):
                 "title": f"Company Analytics Report: {context['company_name']}",
                 "body": analytics_report.get("full_report", ""),
                 "format": "json",
+                "display_type": "analytics_dashboard",  # ← Frontend rendering type
                 "metadata": {
                     "company_score": analytics_report.get("company_score", 0),
                     "total_opportunities": len(analytics_report.get("content_opportunities", [])),
