@@ -123,11 +123,15 @@ class WorkflowMetrics(BaseModel):
 
 class ContentResult(BaseModel):
     """Content result from CGS workflow."""
-    
+
     content_id: Optional[UUID] = None
     title: str
     body: str
     format: str = Field(default="markdown")
+    display_type: str = Field(
+        default="content_preview",
+        description="Frontend display type: content_preview, analytics_dashboard, etc."
+    )
     word_count: int = Field(default=0, ge=0)
     character_count: int = Field(default=0, ge=0)
     reading_time_minutes: Optional[float] = Field(default=None, ge=0.0)

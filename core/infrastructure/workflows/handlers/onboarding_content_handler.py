@@ -311,7 +311,13 @@ class OnboardingContentHandler(WorkflowHandler):
         """Execute standard content generation workflow."""
         # This will use the parent class's execute_workflow method
         # which orchestrates agents based on client_profile
-        return await self.execute_workflow(context)
+        result = await self.execute_workflow(context)
+
+        # Set display_type for frontend rendering
+        if "content" in result and isinstance(result["content"], dict):
+            result["content"]["display_type"] = "content_preview"
+
+        return result
 
     # ========================================================================
     # Instruction Builders
