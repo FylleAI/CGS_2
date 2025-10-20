@@ -138,18 +138,47 @@ class OnboardingAnalyticsHandler(WorkflowHandler):
     
     async def _generate_analytics_report(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Generate comprehensive analytics report using LLM."""
-        
+
         # Build analytics prompt
         prompt = self._build_analytics_prompt(context)
-        
-        # Call LLM
-        llm_response = await self.call_llm(
-            prompt=prompt,
-            context=context,
+
+        # Get LLM provider from context
+        llm_provider = context.get("llm_provider")
+        provider_config = context.get("provider_config")
+
+        if not llm_provider or not provider_config:
+            logger.error("❌ LLM provider or config not found in context")
+            # Return fallback analytics
+            return self._create_fallback_analytics(context, "LLM provider not available")
+
+        # Update provider config for analytics generation
+        from ....domain.value_objects.provider_config import ProviderConfig
+
+        analytics_config = ProviderConfig(
+            provider=provider_config.provider,
+            model=provider_config.model,
+            api_key=provider_config.api_key,
             temperature=0.7,
             max_tokens=8000,
+            top_p=provider_config.top_p,
+            frequency_penalty=provider_config.frequency_penalty,
+            presence_penalty=provider_config.presence_penalty,
         )
-        
+
+        # Call LLM
+        try:
+            logger.info(f"🧠 Calling LLM for analytics: {analytics_config.provider.value}/{analytics_config.model}")
+            llm_response = await llm_provider.generate_content(
+                prompt=prompt,
+                config=analytics_config,
+                system_message="You are a strategic business analyst generating comprehensive company analytics reports in JSON format."
+            )
+            logger.info(f"✅ LLM response received: {len(llm_response)} characters")
+        except Exception as e:
+            logger.error(f"❌ LLM call failed: {e}")
+            # Return fallback analytics
+            return self._create_fallback_analytics(context, f"LLM error: {str(e)}")
+
         # Parse JSON response
         try:
             analytics_data = self._parse_analytics_response(llm_response)
@@ -157,7 +186,7 @@ class OnboardingAnalyticsHandler(WorkflowHandler):
             logger.error(f"Failed to parse analytics response: {e}")
             # Fallback to basic structure
             analytics_data = self._create_fallback_analytics(context, llm_response)
-        
+
         return analytics_data
     
     def _build_analytics_prompt(self, context: Dict[str, Any]) -> str:
