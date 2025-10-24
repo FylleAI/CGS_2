@@ -135,3 +135,11 @@ content_debug_results.json
 secrets/
 web/react-app/.env
 web/react-app/build/
+
+# GCP credentials and sensitive config
+*-credentials.json
+startup-program-*.json
+.env.
+onboarding/.env
+onboarding/.env.backup
+*.env.backup

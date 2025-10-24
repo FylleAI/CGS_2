@@ -1,0 +1,22 @@
+# Onboarding Service Dependencies
+
+# Core dependencies (already in CGS)
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+
+# HTTP client
+httpx>=0.25.0
+
+# Supabase
+supabase>=2.0.0
+
+# FastAPI (for API endpoints)
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Note: The following are already available from CGS core:
+# - Core infrastructure adapters are reused from CGS
+# - No need to reinstall OpenAI, Anthropic, etc.
+# - Perplexity and Gemini adapters wrap existing CGS tools
+
