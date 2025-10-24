@@ -198,6 +198,38 @@ class GenerateContentUseCase:
                 )
 
             # 7. Create response
+            # Merge workflow metadata with standard metadata
+            response_metadata = {
+                "workflow_type": request.workflow_type,
+                "client_profile": request.client_profile,
+                "provider": (
+                    request.provider_config.provider.value
+                    if request.provider_config
+                    else None
+                ),
+                "dynamic_workflow": True,
+                "workflow_summary": workflow_result.get("workflow_summary", {}),
+                "html_email_container": workflow_result.get("html_email_container"),
+                "compliance_markdown": workflow_result.get("compliance_markdown"),
+                "workflow_output_format": workflow_result.get(
+                    "workflow_output_format"
+                ),
+                "generated_image": workflow_result.get("generated_image"),
+                "image_metadata": workflow_result.get("image_metadata"),
+                "image_generation_failed": workflow_result.get(
+                    "image_generation_failed"
+                ),
+                "image_generation_warning": workflow_result.get(
+                    "image_generation_warning"
+                ),
+            }
+
+            # Merge workflow-specific metadata (e.g., display_type, analytics_data)
+            workflow_metadata = workflow_result.get("metadata", {})
+            if workflow_metadata:
+                response_metadata.update(workflow_metadata)
+                logger.info(f"📦 Merged workflow metadata: {list(workflow_metadata.keys())}")
+
             response = ContentGenerationResponse(
                 content_id=saved_content.id,
                 title=saved_content.title,
@@ -213,30 +245,7 @@ class GenerateContentUseCase:
                 total_tasks=workflow_result.get("total_tasks", 0),
                 success=True,
                 workflow_metrics=workflow_metrics,
-                metadata={
-                    "workflow_type": request.workflow_type,
-                    "client_profile": request.client_profile,
-                    "provider": (
-                        request.provider_config.provider.value
-                        if request.provider_config
-                        else None
-                    ),
-                    "dynamic_workflow": True,
-                    "workflow_summary": workflow_result.get("workflow_summary", {}),
-                    "html_email_container": workflow_result.get("html_email_container"),
-                    "compliance_markdown": workflow_result.get("compliance_markdown"),
-                    "workflow_output_format": workflow_result.get(
-                        "workflow_output_format"
-                    ),
-                    "generated_image": workflow_result.get("generated_image"),
-                    "image_metadata": workflow_result.get("image_metadata"),
-                    "image_generation_failed": workflow_result.get(
-                        "image_generation_failed"
-                    ),
-                    "image_generation_warning": workflow_result.get(
-                        "image_generation_warning"
-                    ),
-                },
+                metadata=response_metadata,
                 generated_image=workflow_result.get("generated_image"),
                 image_metadata=workflow_result.get("image_metadata"),
             )

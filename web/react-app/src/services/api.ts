@@ -134,41 +134,18 @@ export const apiService = {
 
   // Client profiles endpoints
   async getClientProfiles(): Promise<ClientProfile[]> {
-    // For now, return mock data - will be replaced with real API
-    return [
-      {
-        id: 'siebert',
-        name: 'siebert',
-        displayName: 'Siebert Financial',
-        description: 'Financial services company focused on empowering individual investors',
-        brandVoice: 'Professional yet accessible, empowering, educational, trustworthy',
-        targetAudience: 'Gen Z and young professionals interested in financial literacy',
-        industry: 'Financial Services',
-        ragEnabled: true,
-        knowledgeBasePath: 'data/knowledge_base/siebert'
-      },
-      {
-        id: 'reopla',
-        name: 'reopla',
-        displayName: 'Reopla',
-        description: 'Innovative real estate technology platform delivering data-driven property insights',
-        brandVoice: 'Professional yet approachable, data-driven, innovative, customer-centric',
-        targetAudience: 'Real estate professionals, property investors, homebuyers and sellers',
-        industry: 'Real Estate Technology',
-        ragEnabled: true,
-        knowledgeBasePath: 'data/profiles/reopla/knowledge_base'
-      },
-      {
-        id: 'default',
-        name: 'default',
-        displayName: 'Default Profile',
-        description: 'General purpose content generation profile',
-        brandVoice: 'Professional and informative',
-        targetAudience: 'General audience',
-        industry: 'General',
-        ragEnabled: false
-      }
-    ];
+    try {
+      console.log('📋 Fetching client profiles from knowledge base API');
+
+      const response = await api.get('/api/v1/knowledge-base/profiles');
+
+      console.log(`✅ Received ${response.data.length} client profiles from Supabase`);
+
+      return response.data;
+    } catch (error) {
+      console.error('❌ Error fetching client profiles:', error);
+      throw new Error('Failed to fetch client profiles from Supabase');
+    }
   },
 
   // Workflow endpoints
