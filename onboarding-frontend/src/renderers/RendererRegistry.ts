@@ -17,8 +17,8 @@ class RendererRegistry {
 
   /**
    * Register a renderer for a specific display type.
-   * 
-   * @param displayType - Display type from backend (e.g., "analytics_dashboard", "content_preview")
+   *
+   * @param displayType - Display type from backend (e.g., "company_snapshot", "content_preview")
    * @param component - React component to render
    * @param dataExtractor - Function to extract data from session
    */
@@ -28,7 +28,6 @@ class RendererRegistry {
     dataExtractor: (session: OnboardingSession) => any
   ): void {
     this.renderers.set(displayType, { component, dataExtractor });
-    console.log(`✅ Renderer registered: ${displayType}`);
   }
 
   /**

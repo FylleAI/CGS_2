@@ -17,6 +17,8 @@ class ContentType(Enum):
     EMAIL = "email"
     REPORT = "report"
     SUMMARY = "summary"
+    ANALYTICS = "analytics"  # ✅ Analytics dashboard content
+    COMPANY_SNAPSHOT = "company_snapshot"  # ✅ Company snapshot card view
     OTHER = "other"
 
 

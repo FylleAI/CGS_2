@@ -32,48 +32,23 @@ export const STEP_LABELS = [
   'Results',
 ] as const;
 
+/**
+ * SIMPLIFIED: Only 2 goal options
+ * - Company Snapshot: Visual card of company profile
+ * - Content Generation: Generic content generation
+ */
 export const GOAL_OPTIONS = [
   {
-    value: 'company_analytics',
-    label: 'Company Analytics',
-    icon: '📊',
-    description: 'Comprehensive analytics report with insights and recommendations'
+    value: 'company_snapshot',
+    label: 'Company Snapshot',
+    icon: '🏢',
+    description: 'Beautiful card view of your company profile, voice, audience, and positioning'
   },
   {
-    value: 'linkedin_post',
-    label: 'LinkedIn Post',
-    icon: '💼',
-    description: 'Short, engaging post (200-400 words)'
-  },
-  {
-    value: 'linkedin_article',
-    label: 'LinkedIn Article',
-    icon: '📄',
-    description: 'Long-form thought leadership (800-1500 words)'
-  },
-  {
-    value: 'newsletter',
-    label: 'Newsletter',
-    icon: '📧',
-    description: 'Curated newsletter (1000-1500 words)'
-  },
-  {
-    value: 'newsletter_premium',
-    label: 'Premium Newsletter',
-    icon: '⭐',
-    description: 'Premium newsletter with research'
-  },
-  {
-    value: 'blog_post',
-    label: 'Blog Post',
+    value: 'content_generation',
+    label: 'Content Generation',
     icon: '✍️',
-    description: 'SEO-optimized blog article (1200-2000 words)'
-  },
-  {
-    value: 'article',
-    label: 'Article',
-    icon: '📝',
-    description: 'Generic article'
+    description: 'Generate custom content based on your company profile'
   },
 ] as const;
 

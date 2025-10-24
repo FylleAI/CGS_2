@@ -101,7 +101,16 @@ class ExecuteOnboardingUseCase:
             # Store CGS response
             session.cgs_run_id = result.cgs_run_id
             session.cgs_response = result.model_dump(mode="json")
-            
+
+            # Debug: Log the serialized response
+            logger.info(f"📦 Serialized CGS response keys: {list(session.cgs_response.keys())}")
+            if session.cgs_response.get("content"):
+                content_keys = list(session.cgs_response["content"].keys())
+                logger.info(f"📦 Content keys: {content_keys}")
+                if "metadata" in session.cgs_response["content"]:
+                    metadata = session.cgs_response["content"]["metadata"]
+                    logger.info(f"📦 Content metadata: {metadata}")
+
             if self.repository:
                 await self.repository.save_session(session)
             

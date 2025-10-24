@@ -108,9 +108,8 @@ class SynthesizeSnapshotUseCase:
                     f"({len(snapshot.clarifying_questions)} questions)"
                 )
 
-            # Save to RAG for future reuse (only for content goals, not analytics)
-            # Analytics is session-specific and benefits from fresh personalized questions
-            if self.context_repository and not is_rag_hit and session.goal != OnboardingGoal.COMPANY_ANALYTICS:
+            # Save to RAG for future reuse
+            if self.context_repository and not is_rag_hit:
                 try:
                     logger.info("💾 RAG: Saving context for future reuse...")
 

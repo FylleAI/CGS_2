@@ -133,29 +133,62 @@ export const useOnboarding = () => {
       setError(null);
       setCurrentStep(4); // Move to execution step
     },
-    onSuccess: (data) => {
-      // Update session with results
-      setSession({
-        ...session!,
-        state: data.state,
-        cgs_run_id: data.cgs_run_id,
-        delivery_status: data.delivery_status,
-        updated_at: new Date().toISOString(),
-        metadata: {
-          content_title: data.content_title,
-          content_preview: data.content_preview,
-          word_count: data.word_count,
-          execution_metrics: data.execution_metrics,
-        },
-      });
+    onSuccess: async (data) => {
+      // ✨ CRITICAL FIX: Fetch full session details to get cgs_response
+      // The /answers endpoint only returns a summary, but we need the full cgs_response
+      // for metadata-driven rendering (display_type, company_snapshot, etc.)
+      try {
+        const sessionDetails = await onboardingApi.getSessionDetails(data.session_id);
 
-      // Move to results step
-      setCurrentStep(5);
-      setLoading(false);
+        // Update session with FULL details including cgs_response
+        setSession({
+          ...session!,
+          state: sessionDetails.state,
+          cgs_run_id: sessionDetails.cgs_run_id,
+          cgs_response: sessionDetails.cgs_response, // ✨ This is the key field!
+          delivery_status: sessionDetails.delivery_status,
+          updated_at: sessionDetails.updated_at,
+          metadata: {
+            content_title: data.content_title,
+            content_preview: data.content_preview,
+            word_count: data.word_count,
+            execution_metrics: data.execution_metrics,
+          },
+        });
 
-      toast.success('Content generated successfully!', {
-        duration: TOAST_CONFIG.SUCCESS_DURATION,
-      });
+        // Move to results step
+        setCurrentStep(5);
+        setLoading(false);
+
+        toast.success('Content generated successfully!', {
+          duration: TOAST_CONFIG.SUCCESS_DURATION,
+        });
+      } catch (err: any) {
+        // If fetching details fails, fall back to summary data
+        console.error('Failed to fetch session details:', err);
+
+        setSession({
+          ...session!,
+          state: data.state,
+          cgs_run_id: data.cgs_run_id,
+          delivery_status: data.delivery_status,
+          updated_at: new Date().toISOString(),
+          metadata: {
+            content_title: data.content_title,
+            content_preview: data.content_preview,
+            word_count: data.word_count,
+            execution_metrics: data.execution_metrics,
+          },
+        });
+
+        // Move to results step anyway
+        setCurrentStep(5);
+        setLoading(false);
+
+        toast.warning('Content generated, but some details may be missing', {
+          duration: TOAST_CONFIG.SUCCESS_DURATION,
+        });
+      }
     },
     onError: (err: any) => {
       setError({

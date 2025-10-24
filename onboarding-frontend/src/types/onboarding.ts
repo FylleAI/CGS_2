@@ -7,43 +7,26 @@
 // Enums
 // ============================================================================
 
+/**
+ * SIMPLIFIED: Only 2 goal types
+ * 1. company_snapshot: Visual card of company profile
+ * 2. content_generation: Generic content generation
+ */
 export enum OnboardingGoal {
-  // Analytics (NEW - Primary goal)
-  COMPANY_ANALYTICS = 'company_analytics',
-
-  // Social Media (Legacy - for content generation)
-  LINKEDIN_POST = 'linkedin_post',
-  LINKEDIN_ARTICLE = 'linkedin_article',
-
-  // Email Marketing (Legacy - for content generation)
-  NEWSLETTER = 'newsletter',
-  NEWSLETTER_PREMIUM = 'newsletter_premium',
-
-  // Content Marketing (Legacy - for content generation)
-  BLOG_POST = 'blog_post',
-  ARTICLE = 'article',
+  COMPANY_SNAPSHOT = 'company_snapshot',
+  CONTENT_GENERATION = 'content_generation',
 }
 
 // Labels for UI display
 export const GOAL_LABELS: Record<OnboardingGoal, string> = {
-  [OnboardingGoal.COMPANY_ANALYTICS]: 'Company Analytics',
-  [OnboardingGoal.LINKEDIN_POST]: 'LinkedIn Post',
-  [OnboardingGoal.LINKEDIN_ARTICLE]: 'LinkedIn Article',
-  [OnboardingGoal.NEWSLETTER]: 'Newsletter',
-  [OnboardingGoal.NEWSLETTER_PREMIUM]: 'Premium Newsletter',
-  [OnboardingGoal.BLOG_POST]: 'Blog Post',
-  [OnboardingGoal.ARTICLE]: 'Article',
+  [OnboardingGoal.COMPANY_SNAPSHOT]: 'Company Snapshot',
+  [OnboardingGoal.CONTENT_GENERATION]: 'Content Generation',
 };
 
 // Descriptions for UI display
 export const GOAL_DESCRIPTIONS: Record<OnboardingGoal, string> = {
-  [OnboardingGoal.COMPANY_ANALYTICS]: 'Comprehensive analytics report with insights, opportunities, and recommendations',
-  [OnboardingGoal.LINKEDIN_POST]: 'Short, engaging post (200-400 words)',
-  [OnboardingGoal.LINKEDIN_ARTICLE]: 'Long-form thought leadership (800-1500 words)',
-  [OnboardingGoal.NEWSLETTER]: 'Curated newsletter (1000-1500 words)',
-  [OnboardingGoal.NEWSLETTER_PREMIUM]: 'Premium newsletter with research',
-  [OnboardingGoal.BLOG_POST]: 'SEO-optimized blog article (1200-2000 words)',
-  [OnboardingGoal.ARTICLE]: 'Generic article',
+  [OnboardingGoal.COMPANY_SNAPSHOT]: 'Beautiful card view of your company profile, voice, audience, and positioning',
+  [OnboardingGoal.CONTENT_GENERATION]: 'Generate custom content based on your company profile',
 };
 
 export enum SessionState {
@@ -137,6 +120,7 @@ export interface OnboardingSession {
   updated_at: string;
   snapshot?: CompanySnapshot;
   cgs_run_id?: string;
+  cgs_response?: any; // ✨ CRITICAL: Full CGS response with content.metadata.display_type
   delivery_status?: string;
   error_message?: string;
   metadata?: Record<string, any>;
@@ -231,8 +215,22 @@ export interface SessionStatusResponse {
 }
 
 export interface SessionDetailResponse {
-  session: OnboardingSession;
+  session_id: string;
+  trace_id: string;
+  brand_name: string;
+  website?: string;
+  goal: OnboardingGoal;
+  user_email?: string;
+  state: SessionState;
+  created_at: string;
+  updated_at: string;
   snapshot?: CompanySnapshot;
+  cgs_run_id?: string;
+  cgs_response?: any; // ✨ CRITICAL: Full CGS response with content.metadata.display_type
+  delivery_status?: string;
+  delivery_message_id?: string;
+  error_message?: string;
+  metadata: Record<string, any>;
 }
 
 // ============================================================================
@@ -373,4 +371,29 @@ export interface AnalyticsData {
   content_distribution: ContentDistribution;
   metrics: Record<string, any>;
   full_report: string;
+}
+
+// ============================================================================
+// Company Snapshot Card Types
+// ============================================================================
+
+/**
+ * Normalized data structure for CompanySnapshotCard UI component.
+ * This is the format expected by the card after mapping from CompanySnapshot.
+ */
+export interface CompanySnapshotCardData {
+  name: string;
+  website: string | null;
+  industry: string;
+  description: string;
+  voiceTone: string;
+  voiceStyle: string[];
+  primaryAudience: string;
+  painPoints: string[];
+  desiredOutcomes: string[];
+  positioning: string;
+  differentiators: string[];
+  recentNews: string[];
+  aiSummary: string;
+  snapshotId: string;
 }

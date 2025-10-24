@@ -1,6 +1,10 @@
 /**
  * Step6Results Component
  * Metadata-driven rendering using Renderer Registry
+ *
+ * STABLE VERSION - Supports:
+ * - company_snapshot: Full company profile card
+ * - content_preview: Generic JSON fallback
  */
 
 import React from 'react';
@@ -9,8 +13,8 @@ import { rendererRegistry } from '@/renderers/RendererRegistry';
 import type { OnboardingSession } from '@/types/onboarding';
 
 // Import renderers to auto-register them
-import '@/renderers/AnalyticsRenderer';
 import '@/renderers/ContentRenderer';
+import '@/renderers/CompanySnapshotRenderer';
 
 interface Step6ResultsProps {
   session: OnboardingSession;
@@ -21,17 +25,17 @@ export const Step6Results: React.FC<Step6ResultsProps> = ({
   session,
   onStartNew,
 }) => {
-  // Get display_type from CGS response (metadata-driven!)
-  const displayType = session.cgs_response?.content?.display_type || 'content_preview';
+  // Get display_type from CGS response content metadata (metadata-driven!)
+  const displayType = session.cgs_response?.content?.metadata?.display_type || 'content_preview';
 
-  console.log(`🎨 Rendering with display_type: ${displayType}`);
+  console.log(`🎨 Step6Results: Rendering display_type="${displayType}"`);
 
   // Get renderer from registry
   const renderer = rendererRegistry.getRenderer(displayType);
 
   // Fallback if renderer not found
   if (!renderer) {
-    console.warn(`⚠️ No renderer found for display_type: ${displayType}, using fallback`);
+    console.warn(`⚠️ No renderer for "${displayType}", using content_preview fallback`);
 
     const fallbackRenderer = rendererRegistry.getRenderer('content_preview');
 
