@@ -25,6 +25,37 @@ Riferimenti codice:
 
 ---
 
+## 📚 Onboarding System v2.0
+
+Il sistema di onboarding è stato **semplificato da 8 a 2 goal types** (-75% complessità), mantenendo un'architettura metadata-driven robusta e scalabile.
+
+### Quick Start Onboarding
+
+```bash
+# Backend Onboarding
+cd onboarding && python3 -m uvicorn onboarding.api.main:app --reload --port 8001
+
+# Frontend Onboarding
+cd onboarding-frontend && npm run dev
+```
+
+### Documentazione Completa
+
+- **📖 Indice Principale**: [`ONBOARDING_DOCUMENTATION.md`](./ONBOARDING_DOCUMENTATION.md)
+- **📊 Executive Summary**: [`EXECUTIVE_SUMMARY_ONBOARDING.md`](./EXECUTIVE_SUMMARY_ONBOARDING.md)
+- **🔍 Analisi Tecnica**: [`ONBOARDING_FLOW_ANALYSIS.md`](./ONBOARDING_FLOW_ANALYSIS.md)
+- **⚡ Quick Reference**: [`QUICK_REFERENCE.md`](./QUICK_REFERENCE.md)
+- **💻 Code Examples**: [`CODE_EXAMPLES.md`](./CODE_EXAMPLES.md)
+
+### Goal Types Supportati
+
+1. **Company Snapshot** → Card visuale del profilo aziendale
+2. **Content Generation** → Generazione contenuto generico (blog post)
+
+**Status**: ✅ Stabile e Funzionante
+
+---
+
 ## Avvio rapido
 
 ### 1) Backend (locale)

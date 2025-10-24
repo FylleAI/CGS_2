@@ -40,9 +40,13 @@ class PayloadBuilder:
         goal: OnboardingGoal,
         dry_run: bool = False,
         requested_provider: Optional[str] = None,
-    ) -> CgsPayloadOnboardingContent | CgsPayloadLinkedInPost | CgsPayloadNewsletter:
+    ) -> CgsPayloadOnboardingContent:
         """
         Build CGS payload based on goal.
+
+        SIMPLIFIED VERSION - Only 2 goals:
+        1. company_snapshot: Returns company snapshot card
+        2. content_generation: Generic content generation
 
         Args:
             session_id: Session ID
@@ -53,26 +57,16 @@ class PayloadBuilder:
             requested_provider: Optional LLM provider override
 
         Returns:
-            CgsPayload (Unified Onboarding Content, LinkedIn, or Newsletter)
+            CgsPayloadOnboardingContent (unified payload)
         """
         logger.info(f"Building payload for goal: {goal}")
 
-        # NEW: Analytics workflow
-        if goal == OnboardingGoal.COMPANY_ANALYTICS:
-            return self._build_analytics_payload(
+        if goal == OnboardingGoal.COMPANY_SNAPSHOT:
+            return self._build_company_snapshot_payload(
                 session_id, trace_id, snapshot, goal, dry_run, requested_provider
             )
-
-        # Unified onboarding content workflow for content goals
-        elif goal in {
-            OnboardingGoal.LINKEDIN_POST,
-            OnboardingGoal.LINKEDIN_ARTICLE,
-            OnboardingGoal.BLOG_POST,
-            OnboardingGoal.NEWSLETTER,
-            OnboardingGoal.NEWSLETTER_PREMIUM,
-            OnboardingGoal.ARTICLE,
-        }:
-            return self._build_onboarding_content_payload(
+        elif goal == OnboardingGoal.CONTENT_GENERATION:
+            return self._build_content_generation_payload(
                 session_id, trace_id, snapshot, goal, dry_run, requested_provider
             )
         else:
@@ -341,7 +335,7 @@ class PayloadBuilder:
     # NEW: Unified Onboarding Content Payload Builder
     # ========================================================================
 
-    def _build_onboarding_content_payload(
+    def _build_content_generation_payload(
         self,
         session_id: UUID,
         trace_id: str,
@@ -351,12 +345,11 @@ class PayloadBuilder:
         requested_provider: Optional[str],
     ) -> CgsPayloadOnboardingContent:
         """
-        Build unified onboarding content payload.
+        Build content generation payload for content_generation goal.
 
-        This method builds a single unified payload that works for all content types
-        via the onboarding_content_generator workflow.
+        SIMPLIFIED VERSION - Generic content generation.
         """
-        logger.info(f"Building unified onboarding content payload for goal: {goal}")
+        logger.info(f"Building content generation payload for goal: {goal}")
 
         # Get settings
         settings = get_onboarding_settings()
@@ -429,53 +422,25 @@ class PayloadBuilder:
     def _extract_content_config_from_answers(
         self, snapshot: CompanySnapshot, content_type: str
     ) -> Dict[str, Any]:
-        """Extract content-specific config from clarifying answers."""
+        """Extract content-specific config from clarifying answers.
 
+        SIMPLIFIED VERSION - Generic content configuration.
+        """
         custom_params = {}
-        answers = snapshot.clarifying_answers
 
         # Extract word count if specified
-        word_count = self._extract_word_count(snapshot, default=None)
-        if word_count:
-            custom_params["word_count"] = word_count
-
-        # Content type specific extractions
-        if content_type == "linkedin_post":
-            # Check if user wants emoji/hashtags
-            custom_params["include_emoji"] = self._extract_boolean_answer(
-                snapshot, "emoji", default=True
-            )
-            custom_params["include_hashtags"] = self._extract_boolean_answer(
-                snapshot, "hashtag", default=True
-            )
-
-        elif content_type == "linkedin_article":
-            # Check if user wants statistics/examples
-            custom_params["include_statistics"] = self._extract_boolean_answer(
-                snapshot, "statistic", default=True
-            )
-            custom_params["include_examples"] = self._extract_boolean_answer(
-                snapshot, "example", default=True
-            )
-
-        elif content_type == "newsletter":
-            # Check number of sections
-            num_sections = self._extract_number_answer(snapshot, "section", default=4)
-            custom_params["num_sections"] = num_sections
-
-        elif content_type == "blog_post":
-            # Check if SEO optimized
-            custom_params["seo_optimized"] = self._extract_boolean_answer(
-                snapshot, "seo", default=True
-            )
+        word_count = self._extract_word_count(snapshot, default=800)
+        custom_params["word_count"] = word_count
 
         return custom_params
 
     def _build_custom_instructions(
         self, snapshot: CompanySnapshot, content_type: str
     ) -> Optional[str]:
-        """Build custom instructions from snapshot and content type."""
+        """Build custom instructions from snapshot.
 
+        SIMPLIFIED VERSION - Generic instructions.
+        """
         instructions = []
 
         # Add differentiators if available
@@ -492,16 +457,6 @@ class PayloadBuilder:
         if snapshot.voice.style_guidelines:
             style_text = ", ".join(snapshot.voice.style_guidelines[:2])
             instructions.append(f"Follow these style guidelines: {style_text}")
-
-        # Content type specific instructions
-        if content_type == "linkedin_post":
-            instructions.append("Focus on engagement and virality")
-        elif content_type == "linkedin_article":
-            instructions.append("Establish thought leadership and expertise")
-        elif content_type == "newsletter":
-            instructions.append("Provide curated, actionable insights")
-        elif content_type == "blog_post":
-            instructions.append("Optimize for search engines and comprehensive value")
 
         return " | ".join(instructions) if instructions else None
 
@@ -542,7 +497,7 @@ class PayloadBuilder:
 
         return default
 
-    def _build_analytics_payload(
+    def _build_company_snapshot_payload(
         self,
         session_id: UUID,
         trace_id: str,
@@ -552,19 +507,15 @@ class PayloadBuilder:
         requested_provider: Optional[str],
     ) -> CgsPayloadOnboardingContent:
         """
-        Build analytics payload for company_analytics goal.
+        Build company snapshot payload for company_snapshot goal.
 
-        Uses generic variables instead of content-specific questions.
+        Returns company snapshot data for card visualization.
         """
         settings = get_onboarding_settings()
 
-        # Extract generic variables from clarifying answers
-        variables = self._extract_analytics_variables(snapshot)
-
-        # Build rich context with company snapshot + variables
+        # Build rich context with company snapshot
         rich_context = {
             "company_snapshot": snapshot.model_dump(),
-            "variables": variables,
         }
 
         # Build metadata
@@ -575,14 +526,14 @@ class PayloadBuilder:
             language="it",
         )
 
-        # Build analytics input
+        # Build company snapshot input
         # Note: context must be a JSON string, not a dict
-        analytics_input = OnboardingContentInput(
-            topic=f"Company analytics for {snapshot.company.name}",
+        snapshot_input = OnboardingContentInput(
+            topic=f"Company snapshot for {snapshot.company.name}",
             client_name=snapshot.company.name,
             context=json.dumps(rich_context, default=str),  # Convert dict to JSON string
-            content_type="analytics",  # Special type for analytics
-            content_config={},  # No content config needed for analytics
+            content_type="company_snapshot",  # Special type for company snapshot
+            content_config={},  # No content config needed for snapshot
             custom_instructions="",  # Empty string instead of None to avoid CGS validation error
         )
 
@@ -590,20 +541,20 @@ class PayloadBuilder:
         provider = requested_provider or settings.default_llm_provider
 
         # Build payload with all required fields
+        # Use the unified onboarding_content_generator workflow with content_type="company_snapshot"
         payload = CgsPayloadOnboardingContent(
             session_id=session_id,
             goal=goal.value,  # Convert enum to string
-            workflow="onboarding_analytics_generator",
+            workflow="onboarding_content_generator",  # ← Unified workflow
             company_snapshot=snapshot,
             clarifying_answers=snapshot.clarifying_answers,
-            input=analytics_input,
+            input=snapshot_input,
             metadata=metadata,
             trace_id=trace_id,
         )
 
         logger.info(
-            f"✅ Built analytics payload: {snapshot.company.name}, "
-            f"variables={len(variables)}, provider={provider}"
+            f"✅ Built company snapshot payload: {snapshot.company.name}, provider={provider}"
         )
 
         return payload

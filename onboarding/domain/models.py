@@ -12,22 +12,15 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class OnboardingGoal(str, Enum):
-    """Supported onboarding goals."""
+    """Supported onboarding goals.
 
-    # Analytics (NEW - Primary goal for analytics dashboard)
-    COMPANY_ANALYTICS = "company_analytics"   # Company analytics report with insights
+    SIMPLIFIED VERSION - Only 2 goals:
+    1. company_snapshot: Visual card of company profile
+    2. content_generation: Generic content generation (unified)
+    """
 
-    # Social Media (Legacy - for content generation)
-    LINKEDIN_POST = "linkedin_post"           # Short post (200-400 words)
-    LINKEDIN_ARTICLE = "linkedin_article"     # Long-form article (800-1500 words)
-
-    # Email Marketing (Legacy - for content generation)
-    NEWSLETTER = "newsletter"                 # Standard newsletter (1000-1500 words)
-    NEWSLETTER_PREMIUM = "newsletter_premium" # Premium newsletter
-
-    # Content Marketing (Legacy - for content generation)
-    BLOG_POST = "blog_post"                   # SEO-optimized blog (1200-2000 words)
-    ARTICLE = "article"                       # Generic article
+    COMPANY_SNAPSHOT = "company_snapshot"     # Visual card view of company profile
+    CONTENT_GENERATION = "content_generation" # Generic content generation
 
 
 class SessionState(str, Enum):

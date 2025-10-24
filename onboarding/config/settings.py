@@ -104,32 +104,20 @@ class OnboardingSettings(BaseSettings):
     )
     
     # Default workflow mappings (goal -> CGS workflow_type)
+    # SIMPLIFIED: Only 2 goals
     default_workflow_mappings: dict = Field(
         default={
-            # Analytics workflow (NEW)
-            "company_analytics": "onboarding_analytics_generator",
-            # Content workflows (Legacy)
-            "linkedin_post": "onboarding_content_generator",
-            "linkedin_article": "onboarding_content_generator",
-            "newsletter": "onboarding_content_generator",
-            "newsletter_premium": "onboarding_content_generator",
-            "blog_post": "onboarding_content_generator",
-            "article": "onboarding_content_generator",
+            "company_snapshot": "onboarding_content_generator",
+            "content_generation": "onboarding_content_generator",
         }
     )
 
     # Content type mappings (goal -> content_type)
+    # SIMPLIFIED: Only 2 content types
     content_type_mappings: dict = Field(
         default={
-            # Analytics (no content_type needed)
-            "company_analytics": "analytics",  # Special type for analytics
-            # Content types (Legacy)
-            "linkedin_post": "linkedin_post",
-            "linkedin_article": "linkedin_article",
-            "newsletter": "newsletter",
-            "newsletter_premium": "newsletter",
-            "blog_post": "blog_post",
-            "article": "blog_post",  # Fallback to blog_post
+            "company_snapshot": "company_snapshot",  # Returns snapshot card
+            "content_generation": "blog_post",  # Generic content (using blog_post as most flexible)
         }
     )
     

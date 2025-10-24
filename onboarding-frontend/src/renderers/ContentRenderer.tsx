@@ -27,12 +27,10 @@ const extractContentData = (session: OnboardingSession): {
   };
 };
 
-// Register content preview renderer
+// Register content preview renderer (fallback for unknown display types)
 rendererRegistry.register(
   'content_preview',
   ContentPreview,
   extractContentData
 );
-
-console.log('📄 Content renderer registered');
 

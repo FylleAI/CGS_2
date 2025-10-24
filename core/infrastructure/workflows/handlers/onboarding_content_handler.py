@@ -8,6 +8,7 @@ Generic workflow for onboarding content generation supporting multiple content t
 - blog_post: SEO-optimized blog article (1200-2000 words)
 """
 
+import json
 import logging
 from typing import Dict, Any, Optional
 
@@ -38,36 +39,61 @@ class OnboardingContentHandler(WorkflowHandler):
     def validate_inputs(self, context: Dict[str, Any]) -> None:
         """Validate inputs for onboarding content generation."""
         super().validate_inputs(context)
-        
-        # Validate content_type
-        rich_context = context.get("context", {})
-        content_type = rich_context.get("content_type")
-        
+
+        # CRITICAL FIX: Look for content_type at root level first
+        # because prepare_context() hasn't been called yet
+        content_type = context.get("content_type")
+
+        # Fallback to context["context"] if it's already a dict (shouldn't happen in normal flow)
+        if not content_type:
+            rich_context = context.get("context", {})
+            if isinstance(rich_context, dict):
+                content_type = rich_context.get("content_type")
+
+        # Convert ContentType enum to string if needed (BEFORE checking if it exists)
+        if hasattr(content_type, 'value'):
+            content_type = content_type.value
+
         if not content_type:
             raise ValueError("content_type is required in context")
-        
-        valid_types = ["linkedin_post", "linkedin_article", "newsletter", "blog_post"]
+
+        valid_types = ["linkedin_post", "linkedin_article", "newsletter", "blog_post", "analytics", "company_snapshot"]
         if content_type not in valid_types:
             raise ValueError(
                 f"Invalid content_type: {content_type}. "
                 f"Must be one of: {', '.join(valid_types)}"
             )
-        
+
         # Validate required fields
-        if not context.get("topic"):
+        if not context.get("topic") and content_type not in ["analytics", "company_snapshot"]:
             raise ValueError("topic is required")
-        
+
         if not context.get("client_name"):
             raise ValueError("client_name is required")
-        
+
         logger.info(f"✅ Onboarding content validation passed (type: {content_type})")
     
     def prepare_context(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Prepare context for onboarding content generation."""
         context = super().prepare_context(context)
-        
-        # Extract rich context
-        rich_context = context.get("context", {})
+
+        # Extract rich context (parse JSON if needed)
+        rich_context_raw = context.get("context", {})
+
+        # Parse JSON if it's a string
+        if isinstance(rich_context_raw, str):
+            try:
+                rich_context = json.loads(rich_context_raw)
+                logger.debug("✅ Parsed context from JSON string in prepare_context")
+                # CRITICAL FIX: Update context["context"] with parsed dictionary
+                # This ensures template engine can access context.get() without errors
+                context["context"] = rich_context
+            except json.JSONDecodeError as e:
+                logger.error(f"❌ Failed to parse context JSON in prepare_context: {e}")
+                rich_context = {}
+        else:
+            rich_context = rich_context_raw
+
         content_type = rich_context.get("content_type", "linkedin_post")
         content_config = rich_context.get("content_config", {})
         
@@ -113,16 +139,20 @@ class OnboardingContentHandler(WorkflowHandler):
     async def execute(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Execute onboarding content generation workflow.
-        
+
         Routes to appropriate sub-workflow based on content_type.
         """
         logger.info("🚀 Executing onboarding_content_generator workflow")
-        
+
         # Get content type
         content_type = context.get("content_type", "linkedin_post")
-        
+
+        # Convert ContentType enum to string if needed
+        if hasattr(content_type, 'value'):
+            content_type = content_type.value
+
         logger.info(f"📝 Content type: {content_type}")
-        
+
         # Route to appropriate sub-workflow
         if content_type == "linkedin_post":
             return await self._generate_linkedin_post(context)
@@ -132,13 +162,17 @@ class OnboardingContentHandler(WorkflowHandler):
             return await self._generate_newsletter(context)
         elif content_type == "blog_post":
             return await self._generate_blog_post(context)
+        elif content_type == "analytics":
+            return await self._generate_analytics(context)
+        elif content_type == "company_snapshot":
+            return await self._generate_company_snapshot(context)
         else:
             raise ValueError(f"Unsupported content type: {content_type}")
     
     async def _generate_linkedin_post(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate LinkedIn post (200-400 words).
-        
+
         Structure:
         - Hook (1 sentence, max 15 words)
         - Problem statement (2-3 sentences)
@@ -148,9 +182,21 @@ class OnboardingContentHandler(WorkflowHandler):
         - Hashtags (3-5 relevant)
         """
         logger.info("📱 Generating LinkedIn post")
-        
-        # Extract company snapshot
-        rich_context = context.get("context", {})
+
+        # Extract company snapshot (parse JSON if needed)
+        rich_context_raw = context.get("context", {})
+
+        # Parse JSON if it's a string
+        if isinstance(rich_context_raw, str):
+            try:
+                rich_context = json.loads(rich_context_raw)
+                logger.debug("✅ Parsed context from JSON string")
+            except json.JSONDecodeError as e:
+                logger.error(f"❌ Failed to parse context JSON: {e}")
+                rich_context = {}
+        else:
+            rich_context = rich_context_raw
+
         company_snapshot = rich_context.get("company_snapshot", {})
         
         # Extract key information
@@ -190,7 +236,7 @@ class OnboardingContentHandler(WorkflowHandler):
     async def _generate_linkedin_article(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate LinkedIn article (800-1500 words).
-        
+
         Structure:
         - Title (SEO-friendly)
         - Intro (Hook + context)
@@ -201,9 +247,21 @@ class OnboardingContentHandler(WorkflowHandler):
         - Conclusion (Recap + CTA)
         """
         logger.info("📄 Generating LinkedIn article")
-        
-        # Extract company snapshot
-        rich_context = context.get("context", {})
+
+        # Extract company snapshot (parse JSON if needed)
+        rich_context_raw = context.get("context", {})
+
+        # Parse JSON if it's a string
+        if isinstance(rich_context_raw, str):
+            try:
+                rich_context = json.loads(rich_context_raw)
+                logger.debug("✅ Parsed context from JSON string")
+            except json.JSONDecodeError as e:
+                logger.error(f"❌ Failed to parse context JSON: {e}")
+                rich_context = {}
+        else:
+            rich_context = rich_context_raw
+
         company_snapshot = rich_context.get("company_snapshot", {})
         
         # Extract key information
@@ -309,13 +367,19 @@ class OnboardingContentHandler(WorkflowHandler):
 
     async def _execute_standard_workflow(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Execute standard content generation workflow."""
-        # This will use the parent class's execute_workflow method
+        # This will use the parent class's execute method
         # which orchestrates agents based on client_profile
-        result = await self.execute_workflow(context)
+        # NOTE: parent class will call prepare_context() automatically
+        result = await super().execute(context)
 
-        # Set display_type for frontend rendering
+        # Set display_type for frontend rendering in metadata
         if "content" in result and isinstance(result["content"], dict):
-            result["content"]["display_type"] = "content_preview"
+            if "metadata" not in result["content"]:
+                result["content"]["metadata"] = {}
+            result["content"]["metadata"]["display_type"] = "content_preview"
+
+            # CRITICAL: Also add to root metadata for CGS use case to pick up
+            result["metadata"] = result["content"]["metadata"].copy()
 
         return result
 
@@ -502,4 +566,319 @@ GOAL: Rank well in search and provide comprehensive value
 """
 
         return instructions.strip()
+
+    async def _generate_analytics(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate company analytics report.
+
+        Uses the standard workflow system with a specialized analytics agent.
+        Returns structured analytics data with display_type for dashboard rendering.
+        """
+        logger.info("📊 Generating company analytics")
+
+        # Extract company snapshot (parse JSON if needed)
+        rich_context_raw = context.get("context", {})
+
+        # Parse JSON if it's a string
+        if isinstance(rich_context_raw, str):
+            try:
+                rich_context = json.loads(rich_context_raw)
+                logger.debug("✅ Parsed context from JSON string")
+                # CRITICAL FIX: Update context["context"] with parsed dictionary
+                # This ensures prepare_context() can work with it later
+                context["context"] = rich_context
+            except json.JSONDecodeError as e:
+                logger.error(f"❌ Failed to parse context JSON: {e}")
+                rich_context = {}
+        else:
+            rich_context = rich_context_raw
+
+        company_snapshot = rich_context.get("company_snapshot", {})
+
+        # Extract key information
+        company_name = context.get("client_name", "")
+        company_info = company_snapshot.get("company", {})
+        industry = company_info.get("industry", "Unknown")
+        description = company_info.get("description", "")
+        differentiators = company_info.get("differentiators", [])
+
+        # Extract audience info
+        audience_info = company_snapshot.get("audience", {})
+        target_audience = audience_info.get("primary", "General audience")
+        pain_points = audience_info.get("pain_points", [])
+
+        # Extract user variables from clarifying answers
+        variables = rich_context.get("variables", {})
+
+        # Build analytics instructions
+        custom_instructions = self._build_analytics_instructions(
+            company_name=company_name,
+            industry=industry,
+            description=description,
+            differentiators=differentiators,
+            target_audience=target_audience,
+            pain_points=pain_points,
+            user_variables=variables,
+        )
+
+        # Add to context
+        context["custom_instructions"] = custom_instructions
+        context["content_format"] = "analytics"
+        context["topic"] = f"Company Analytics Report: {company_name}"
+
+        # Execute standard workflow
+        result = await self._execute_standard_workflow(context)
+
+        # Parse analytics JSON from body and add to metadata
+        if "content" in result and isinstance(result["content"], dict):
+            # Initialize metadata if not present
+            if "metadata" not in result["content"]:
+                result["content"]["metadata"] = {}
+
+            # Try to parse JSON from body
+            try:
+                body = result["content"].get("body", "")
+
+                # Remove markdown code blocks if present
+                if body.strip().startswith("```"):
+                    # Extract JSON from markdown code block
+                    lines = body.strip().split("\n")
+                    # Remove first line (```json or ```)
+                    if lines[0].startswith("```"):
+                        lines = lines[1:]
+                    # Remove last line (```)
+                    if lines and lines[-1].strip() == "```":
+                        lines = lines[:-1]
+                    body = "\n".join(lines)
+
+                # Parse JSON
+                analytics_data = json.loads(body.strip())
+
+                # Validate structure
+                required_keys = ["company_score", "content_opportunities", "optimization_insights"]
+                if not all(k in analytics_data for k in required_keys):
+                    logger.warning(f"⚠️ Analytics JSON missing required keys: {required_keys}")
+                    # Still use it, but log warning
+
+                # Add to metadata (both in content.metadata and root metadata)
+                result["content"]["metadata"]["analytics_data"] = analytics_data
+                result["content"]["metadata"]["display_type"] = "analytics_dashboard"
+
+                # CRITICAL: Also add to root metadata for CGS use case to pick up
+                result["metadata"] = result["content"]["metadata"].copy()
+
+                logger.info("✅ Analytics JSON parsed successfully")
+                logger.info(f"📦 Analytics data keys: {list(analytics_data.keys())}")
+
+            except json.JSONDecodeError as e:
+                logger.error(f"❌ Failed to parse analytics JSON: {e}")
+                logger.error(f"Body preview: {body[:200]}...")
+                # Fallback: keep as text, use content_preview
+                result["content"]["metadata"]["display_type"] = "content_preview"
+                result["metadata"] = {"display_type": "content_preview"}
+            except Exception as e:
+                logger.error(f"❌ Unexpected error parsing analytics: {e}")
+                result["content"]["metadata"]["display_type"] = "content_preview"
+                result["metadata"] = {"display_type": "content_preview"}
+
+        logger.info("✅ Analytics generated successfully")
+
+        return result
+
+    def _build_analytics_instructions(
+        self,
+        company_name: str,
+        industry: str,
+        description: str,
+        differentiators: list,
+        target_audience: str,
+        pain_points: list,
+        user_variables: dict,
+    ) -> str:
+        """Build custom instructions for analytics generation."""
+
+        instructions = f"""
+Create a comprehensive company analytics report for {company_name}.
+
+COMPANY INFORMATION:
+- Name: {company_name}
+- Industry: {industry}
+- Description: {description}
+- Key Differentiators: {', '.join(differentiators) if differentiators else 'Not specified'}
+- Target Audience: {target_audience}
+- Audience Pain Points: {', '.join(pain_points) if pain_points else 'Not specified'}
+
+USER CONTEXT:
+"""
+
+        # Add user variables dynamically
+        for key, value in user_variables.items():
+            instructions += f"- {key}: {value}\n"
+
+        instructions += """
+
+TASK:
+Generate a comprehensive analytics report in JSON format with the following structure:
+
+{
+  "company_score": <integer 0-100>,
+  "content_opportunities": [
+    {
+      "type": "linkedin_post|blog_post|newsletter|linkedin_article",
+      "topic": "specific topic suggestion",
+      "priority": "high|medium|low",
+      "estimated_reach": <integer>,
+      "engagement_potential": <float 0-10>,
+      "rationale": "why this is valuable"
+    }
+  ],
+  "optimization_insights": {
+    "brand_voice": {
+      "score": <integer 0-100>,
+      "status": "strong|good|needs_improvement",
+      "recommendation": "specific recommendation",
+      "quick_wins": ["action 1", "action 2"]
+    },
+    "seo": {
+      "score": <integer 0-100>,
+      "status": "strong|good|needs_improvement",
+      "recommendation": "specific recommendation",
+      "quick_wins": ["action 1", "action 2"]
+    },
+    "messaging": {
+      "score": <integer 0-100>,
+      "status": "strong|good|needs_improvement",
+      "recommendation": "specific recommendation",
+      "quick_wins": ["action 1", "action 2"]
+    },
+    "social_strategy": {
+      "score": <integer 0-100>,
+      "status": "strong|good|needs_improvement",
+      "recommendation": "specific recommendation",
+      "quick_wins": ["action 1", "action 2"]
+    }
+  },
+  "competitors": [
+    {
+      "name": "competitor name",
+      "market_position": "leader|challenger|niche",
+      "strengths": ["strength 1", "strength 2"],
+      "weaknesses": ["weakness 1", "weakness 2"],
+      "your_advantage": "how you differentiate"
+    }
+  ],
+  "quick_wins": [
+    {
+      "action": "specific actionable task",
+      "estimated_time": "X hours",
+      "impact": "high|medium|low",
+      "difficulty": "low|medium|high",
+      "category": "seo|content|social|analytics"
+    }
+  ],
+  "full_report": "# Company Analytics Report\\n\\n[Full markdown report with all sections]"
+}
+
+REQUIREMENTS:
+1. Company Score: Calculate based on brand voice, SEO, messaging, social strategy
+2. Content Opportunities: Suggest 8-12 specific content pieces across different types
+3. Optimization Insights: Analyze 4 areas with scores and actionable recommendations
+4. Competitors: Identify 3-5 main competitors with analysis
+5. Quick Wins: List 6-8 actionable tasks with time estimates
+6. Full Report: Comprehensive markdown report (1500-2000 words) with:
+   - Executive Summary
+   - Content Opportunities Analysis
+   - Optimization Insights (detailed)
+   - Competitor Intelligence
+   - Actionable Recommendations
+   - KPIs to track
+
+Be specific, actionable, and data-driven. Use the user variables to personalize recommendations.
+
+CRITICAL OUTPUT INSTRUCTIONS:
+- Return ONLY valid JSON
+- Do NOT wrap in markdown code blocks (no ```json or ```)
+- Do NOT add any explanatory text before or after the JSON
+- Start directly with { and end with }
+- Ensure all strings are properly escaped
+- Use double quotes for all keys and string values
+"""
+
+        return instructions.strip()
+
+    async def _generate_company_snapshot(self, context: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate company snapshot card view.
+
+        This method doesn't generate new content - it prepares the existing
+        company snapshot for display in the CompanySnapshotCard UI component.
+
+        Use case: Show company snapshot in a beautiful card format instead of
+        raw text/markdown.
+        """
+        logger.info("🏢 Generating company snapshot card view")
+
+        # Extract company snapshot from context
+        rich_context_raw = context.get("context", {})
+
+        # Parse JSON if it's a string
+        if isinstance(rich_context_raw, str):
+            try:
+                rich_context = json.loads(rich_context_raw)
+                logger.debug("✅ Parsed context from JSON string")
+            except json.JSONDecodeError as e:
+                logger.error(f"❌ Failed to parse context JSON: {e}")
+                rich_context = {}
+        else:
+            rich_context = rich_context_raw
+
+        company_snapshot = rich_context.get("company_snapshot", {})
+
+        if not company_snapshot:
+            logger.warning("⚠️ No company snapshot found in context")
+            # Return minimal result
+            return {
+                "content": {
+                    "title": "Company Snapshot",
+                    "body": "No company snapshot available.",
+                    "metadata": {
+                        "display_type": "content_preview"
+                    }
+                },
+                "metadata": {
+                    "display_type": "content_preview"
+                },
+                "workflow_id": context.get("run_id", "dynamic")
+            }
+
+        # Extract company name for title
+        company_name = company_snapshot.get("company", {}).get("name", "Unknown Company")
+
+        # Prepare result with metadata for frontend
+        result = {
+            "content": {
+                "title": f"Company Snapshot: {company_name}",
+                "body": "Company snapshot loaded successfully. View the card below.",
+                "metadata": {
+                    "display_type": "company_snapshot",
+                    "company_snapshot": company_snapshot,
+                    "view_mode": "card",
+                    "interactive": True,
+                }
+            },
+            "metadata": {
+                "display_type": "company_snapshot",
+                "company_snapshot": company_snapshot,
+                "view_mode": "card",
+                "interactive": True,
+            },
+            "workflow_id": context.get("run_id", "dynamic"),  # Include workflow_id for tracking
+            "final_output": f"Company Snapshot: {company_name}\n\nCompany snapshot loaded successfully. View the card below."  # ← ADDED: Required for Content entity creation
+        }
+
+        logger.info(f"✅ Company snapshot card view prepared for: {company_name}")
+        logger.info(f"📦 Snapshot ID: {company_snapshot.get('snapshot_id', 'N/A')}")
+        logger.info(f"📦 Workflow ID: {context.get('run_id', 'dynamic')}")
+
+        return result
 

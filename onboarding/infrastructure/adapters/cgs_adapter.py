@@ -181,6 +181,7 @@ class CgsAdapter:
                 "tone": payload.input.tone,
                 "context": payload.input.context,
                 "custom_instructions": payload.input.custom_instructions,
+                "content_type": payload.input.content_type,  # ✅ FIX: Add content_type to request
             })
             logger.info(
                 f"✅ Mapped CgsPayloadOnboardingContent to request "
@@ -225,19 +226,24 @@ class CgsAdapter:
         # Determine status
         success = cgs_response.get("success", False)
         status = "completed" if success else "failed"
-        
+
         # Extract content
         content = None
         if success and cgs_response.get("body"):
+            # Extract display_type from metadata (for analytics dashboard, etc.)
+            metadata = cgs_response.get("metadata", {})
+            display_type = metadata.get("display_type", "content_preview")
+
             content = ContentResult(
                 content_id=cgs_response.get("content_id"),
                 title=cgs_response.get("title", ""),
                 body=cgs_response.get("body", ""),
                 format=cgs_response.get("content_format", "markdown"),
+                display_type=display_type,  # ← Extract from metadata
                 word_count=cgs_response.get("word_count", 0),
                 character_count=cgs_response.get("character_count", 0),
                 reading_time_minutes=cgs_response.get("reading_time_minutes"),
-                metadata=cgs_response.get("metadata", {}),
+                metadata=metadata,
                 generated_image=cgs_response.get("generated_image"),
                 image_metadata=cgs_response.get("image_metadata"),
             )
@@ -257,13 +263,24 @@ class CgsAdapter:
                 "retryable": False,
             }
         
+        # Extract workflow_id and convert to UUID or None
+        workflow_id_raw = cgs_response.get("workflow_id")
+        cgs_run_id = None
+        if workflow_id_raw and workflow_id_raw != "dynamic":
+            try:
+                from uuid import UUID
+                cgs_run_id = UUID(workflow_id_raw) if isinstance(workflow_id_raw, str) else workflow_id_raw
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid workflow_id format: {workflow_id_raw}, setting to None")
+                cgs_run_id = None
+
         return ResultEnvelope(
             session_id=payload.session_id,
             trace_id=payload.trace_id,
             workflow=payload.workflow,
             goal=payload.goal,
             status=status,
-            cgs_run_id=cgs_response.get("workflow_id"),
+            cgs_run_id=cgs_run_id,
             error=error,
             content=content,
             workflow_metrics=workflow_metrics,

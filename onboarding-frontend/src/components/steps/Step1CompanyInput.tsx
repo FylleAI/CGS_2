@@ -188,7 +188,7 @@ export const Step1CompanyInput: React.FC<Step1CompanyInputProps> = ({
 
           <Grid container spacing={2}>
             {GOAL_OPTIONS.map((option) => {
-              const isRecommended = option.value === 'company_analytics';
+              const isRecommended = option.value === 'company_snapshot';
 
               return (
                 <Grid item xs={12} sm={6} key={option.value}>
