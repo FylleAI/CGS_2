@@ -8,6 +8,7 @@ from onboarding.infrastructure.adapters.perplexity_adapter import PerplexityAdap
 from onboarding.infrastructure.adapters.gemini_adapter import GeminiSynthesisAdapter
 from onboarding.infrastructure.adapters.cgs_adapter import CgsAdapter
 from onboarding.infrastructure.adapters.brevo_adapter import BrevoAdapter
+from onboarding.infrastructure.adapters.card_service_adapter import CardServiceAdapter
 from onboarding.infrastructure.repositories.supabase_repository import (
     SupabaseSessionRepository,
     get_session_repository,
@@ -62,6 +63,15 @@ def get_brevo_adapter() -> Optional[BrevoAdapter]:
     if not settings.is_brevo_configured():
         return None
     return BrevoAdapter(settings)
+
+
+@lru_cache()
+def get_card_service_adapter() -> Optional[CardServiceAdapter]:
+    """Get Card Service adapter."""
+    settings = get_settings()
+    if not settings.is_card_service_configured():
+        return None
+    return CardServiceAdapter(settings)
 
 
 @lru_cache()
@@ -130,5 +140,6 @@ def get_execute_onboarding_use_case() -> ExecuteOnboardingUseCase:
         brevo_adapter=get_brevo_adapter(),
         repository=get_repository(),
         auto_delivery=settings.enable_auto_delivery,
+        card_service_client=get_card_service_adapter(),
     )
 
