@@ -17,6 +17,7 @@ from .v1.endpoints import content, workflows, agents, system, knowledge_base
 from .endpoints import logging as logging_endpoints
 from .middleware import LoggingMiddleware
 from .exceptions import setup_exception_handlers
+from core.card_service.api import card_router, integration_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -94,6 +95,10 @@ def create_app() -> FastAPI:
     app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
     app.include_router(knowledge_base.router, prefix="/api/v1", tags=["knowledge-base"])
     app.include_router(logging_endpoints.router, tags=["logging"])
+
+    # Card Service routers
+    app.include_router(card_router, tags=["cards"])
+    app.include_router(integration_router, tags=["cards-integration"])
 
     # Health check endpoint
     @app.get("/health")
