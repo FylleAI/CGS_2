@@ -15,6 +15,7 @@ from core.infrastructure.external_services.openai_adapter import OpenAIAdapter
 from core.infrastructure.factories.provider_factory import LLMProviderFactory
 from core.infrastructure.config.settings import get_settings
 from core.domain.value_objects.provider_config import LLMProvider
+from core.card_service.infrastructure.card_repository import CardRepository
 
 
 @lru_cache()
@@ -36,6 +37,35 @@ def get_workflow_repository() -> FileWorkflowRepository:
     """Get workflow repository instance."""
     settings = get_settings()
     return FileWorkflowRepository(settings.workflows_dir)
+
+
+@lru_cache()
+def get_card_repository() -> Optional[CardRepository]:
+    """Get card repository instance for Card Service integration."""
+    try:
+        # Import here to avoid circular imports
+        from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+        from sqlalchemy.orm import sessionmaker
+
+        settings = get_settings()
+
+        # Get database URL from settings (Supabase)
+        db_url = settings.database_url
+        if not db_url:
+            return None
+
+        # Create async engine
+        engine = create_async_engine(db_url, echo=False)
+        async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+        # Return card repository with session
+        return CardRepository(async_session())
+    except Exception as e:
+        # If card repository setup fails, continue without it
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Failed to initialize card repository: {str(e)}")
+        return None
 
 
 def get_llm_provider(provider_type: Optional[str] = None):
@@ -101,4 +131,5 @@ def get_content_use_case(
         rag_service=None,  # Would be implemented later
         serper_api_key=settings.serper_api_key,
         perplexity_api_key=settings.perplexity_api_key,
+        card_repository=get_card_repository(),  # Card Service integration
     )

@@ -31,6 +31,8 @@ from ...infrastructure.workflows.registry import (
 )
 from ...infrastructure.database.supabase_tracker import get_tracker, SupabaseTracker
 from ...infrastructure import workflows as _workflows  # Ensure handlers are registered
+from ...card_service.application.get_cards_for_context_use_case import GetCardsForContextUseCase
+from ...card_service.infrastructure.card_repository import CardRepository
 
 
 logger = logging.getLogger(__name__)
@@ -54,6 +56,7 @@ class GenerateContentUseCase:
         rag_service: Optional[RAGInterface] = None,
         serper_api_key: Optional[str] = None,
         perplexity_api_key: Optional[str] = None,
+        card_repository: Optional[CardRepository] = None,
     ):
         self.content_repository = content_repository
         self.workflow_repository = workflow_repository
@@ -61,6 +64,7 @@ class GenerateContentUseCase:
         self.llm_provider = llm_provider
         self.provider_config = provider_config
         self.rag_service = rag_service
+        self.card_repository = card_repository
 
         # Initialize orchestration components
         self.task_orchestrator = TaskOrchestrator(workflow_repository)
@@ -342,6 +346,23 @@ class GenerateContentUseCase:
         # Add agent executor and repository to context for task execution
         context["agent_executor"] = self.agent_executor
         context["agent_repository"] = self.agent_repository
+
+        # Add Card Service context if available
+        if self.card_repository and request.client_profile:
+            try:
+                # Use client_profile as tenant_id (email)
+                tenant_id = request.client_profile
+                get_cards_uc = GetCardsForContextUseCase(self.card_repository)
+                cards_context = await get_cards_uc.get_as_rag_context(tenant_id)
+
+                if cards_context:
+                    context["cards_context"] = cards_context
+                    logger.info(f"✨ Added card context ({len(cards_context)} chars) for tenant {tenant_id}")
+                else:
+                    logger.info(f"ℹ️ No cards found for tenant {tenant_id}")
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to retrieve card context: {str(e)}")
+                # Continue without card context - not a blocker
 
         logger.info(f"🔧 Built dynamic context with {len(context)} variables")
         logger.debug(f"📊 Context keys: {list(context.keys())}")
