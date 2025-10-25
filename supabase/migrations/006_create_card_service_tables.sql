@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS context_cards (
   updated_by UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  
+
   -- Constraints
   CONSTRAINT valid_card_type CHECK (card_type IN ('product', 'persona', 'campaign', 'topic'))
 );
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS card_relationships (
   relationship_type VARCHAR(50) NOT NULL,
   strength FLOAT DEFAULT 1.0 CHECK (strength >= 0.0 AND strength <= 1.0),
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  
+
   -- Constraints
   CONSTRAINT no_self_reference CHECK (source_card_id != target_card_id),
   CONSTRAINT valid_relationship_type CHECK (relationship_type IN (
@@ -182,4 +182,3 @@ COMMENT ON COLUMN card_relationships.source_card_id IS 'Source card ID';
 COMMENT ON COLUMN card_relationships.target_card_id IS 'Target card ID';
 COMMENT ON COLUMN card_relationships.relationship_type IS 'Type of relationship';
 COMMENT ON COLUMN card_relationships.strength IS 'Strength of relationship (0.0 to 1.0)';
-
