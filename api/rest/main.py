@@ -18,6 +18,7 @@ from .endpoints import logging as logging_endpoints
 from .middleware import LoggingMiddleware
 from .exceptions import setup_exception_handlers
 from core.card_service.api import card_router, integration_router
+from onboarding.api.endpoints import router as onboarding_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -95,6 +96,9 @@ def create_app() -> FastAPI:
     app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
     app.include_router(knowledge_base.router, prefix="/api/v1", tags=["knowledge-base"])
     app.include_router(logging_endpoints.router, tags=["logging"])
+
+    # Onboarding router
+    app.include_router(onboarding_router, tags=["onboarding"])
 
     # Card Service routers
     app.include_router(card_router, tags=["cards"])
