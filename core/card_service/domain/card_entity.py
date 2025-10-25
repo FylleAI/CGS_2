@@ -3,7 +3,7 @@ Card Service Domain - Card Entities
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, validator
@@ -44,14 +44,14 @@ class ProductContent(BaseModel):
 
 class ProductCard(BaseCard):
     """Product/Service card"""
-    
-    card_type: CardType = Field(default=CardType.PRODUCT, const=True)
+
+    card_type: Literal[CardType.PRODUCT] = CardType.PRODUCT
     content: ProductContent
 
 
 class PersonaContent(BaseModel):
     """Content schema for PersonaCard"""
-    
+
     icp_profile: str = Field(..., min_length=1, max_length=1000)
     pain_points: List[str] = Field(default_factory=list)
     goals: List[str] = Field(default_factory=list)
@@ -63,14 +63,14 @@ class PersonaContent(BaseModel):
 
 class PersonaCard(BaseCard):
     """Persona/Target card"""
-    
-    card_type: CardType = Field(default=CardType.PERSONA, const=True)
+
+    card_type: Literal[CardType.PERSONA] = CardType.PERSONA
     content: PersonaContent
 
 
 class CampaignContent(BaseModel):
     """Content schema for CampaignCard"""
-    
+
     objective: str = Field(..., min_length=1, max_length=1000)
     key_messages: List[str] = Field(default_factory=list)
     tone: str = Field(default="", max_length=200)
@@ -82,14 +82,14 @@ class CampaignContent(BaseModel):
 
 class CampaignCard(BaseCard):
     """Campaign/Project card"""
-    
-    card_type: CardType = Field(default=CardType.CAMPAIGN, const=True)
+
+    card_type: Literal[CardType.CAMPAIGN] = CardType.CAMPAIGN
     content: CampaignContent
 
 
 class TopicContent(BaseModel):
     """Content schema for TopicCard"""
-    
+
     keywords: List[str] = Field(default_factory=list)
     angles: List[str] = Field(default_factory=list)
     related_content: List[str] = Field(default_factory=list)
@@ -100,8 +100,8 @@ class TopicContent(BaseModel):
 
 class TopicCard(BaseCard):
     """Topic/Theme card"""
-    
-    card_type: CardType = Field(default=CardType.TOPIC, const=True)
+
+    card_type: Literal[CardType.TOPIC] = CardType.TOPIC
     content: TopicContent
 
 
