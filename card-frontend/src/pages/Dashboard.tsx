@@ -2,7 +2,7 @@
  * Dashboard Page - Main card overview
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Box,
@@ -11,12 +11,17 @@ import {
   Tab,
   Button,
   Alert,
+  Switch,
+  FormControlLabel,
+  TextField,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import toast from 'react-hot-toast';
 import { CardGrid } from '../components/CardGrid';
 import { useCards, useDeleteCard, useCardsByType } from '../hooks';
+import { cardApi } from '../services/cardApi';
 import type { CardType } from '../types/card';
 
 const CARD_TYPES: CardType[] = ['product', 'persona', 'campaign', 'topic'];
@@ -24,9 +29,36 @@ const CARD_TYPES: CardType[] = ['product', 'persona', 'campaign', 'topic'];
 export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<CardType>('product');
-  
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [customTenantId, setCustomTenantId] = useState('');
+
+  useEffect(() => {
+    setIsSuperAdmin(cardApi.isSuperAdmin());
+  }, []);
+
   const { data: allCards, isLoading, error } = useCards();
   const { mutate: deleteCard, isPending: isDeleting } = useDeleteCard();
+
+  const handleSuperAdminToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const enabled = event.target.checked;
+    setIsSuperAdmin(enabled);
+    cardApi.setSuperAdminMode(enabled);
+    if (enabled) {
+      toast.success('Super Admin mode enabled - viewing all profiles');
+    } else {
+      toast.success('Super Admin mode disabled');
+    }
+    // Refresh data
+    window.location.reload();
+  };
+
+  const handleSetTenantId = () => {
+    if (customTenantId.trim()) {
+      localStorage.setItem('tenant_id', customTenantId);
+      toast.success(`Tenant ID set to: ${customTenantId}`);
+      window.location.reload();
+    }
+  };
   
   const cardsByType = allCards?.filter(card => card.card_type === activeTab) || [];
 
@@ -52,9 +84,15 @@ export const Dashboard: React.FC = () => {
         <Box>
           <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 1 }}>
             📇 Card Dashboard
+            {isSuperAdmin && (
+              <AdminPanelSettingsIcon sx={{ ml: 1, color: 'warning.main', verticalAlign: 'middle' }} />
+            )}
           </Typography>
           <Typography variant="body2" color="textSecondary">
-            Manage your company cards: Product, Persona, Campaign, and Topics
+            {isSuperAdmin
+              ? '🔓 Super Admin Mode - Viewing all profiles'
+              : 'Manage your company cards: Product, Persona, Campaign, and Topics'
+            }
           </Typography>
         </Box>
         <Button
@@ -64,6 +102,39 @@ export const Dashboard: React.FC = () => {
         >
           New Card
         </Button>
+      </Box>
+
+      {/* Super Admin Controls */}
+      <Box sx={{ mb: 4, p: 2, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={isSuperAdmin}
+                onChange={handleSuperAdminToggle}
+              />
+            }
+            label="Super Admin Mode (View All Profiles)"
+          />
+        </Box>
+
+        {isSuperAdmin && (
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <TextField
+              size="small"
+              placeholder="Enter tenant ID (email)"
+              value={customTenantId}
+              onChange={(e) => setCustomTenantId(e.target.value)}
+              sx={{ flex: 1 }}
+            />
+            <Button
+              variant="outlined"
+              onClick={handleSetTenantId}
+            >
+              Set Tenant
+            </Button>
+          </Box>
+        )}
       </Box>
 
       {/* Stats */}

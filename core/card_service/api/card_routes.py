@@ -2,8 +2,9 @@
 Card Service API - FastAPI Routes
 """
 
-from typing import List, Optional
+from typing import List, Optional, Union
 from uuid import UUID
+import hashlib
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,6 +38,36 @@ async def get_db_session() -> AsyncSession:
     pass
 
 
+def normalize_tenant_id(tenant_id: str) -> str:
+    """
+    Normalize tenant_id to handle both email and UUID formats.
+
+    - If it's a valid UUID, return as-is
+    - If it's an email or string, convert to deterministic UUID v5
+    - If it's 'admin', return as-is for super admin mode
+    """
+    if not tenant_id or tenant_id.strip() == '':
+        raise ValueError("tenant_id cannot be empty")
+
+    tenant_id = tenant_id.strip()
+
+    # Allow 'admin' for super admin mode
+    if tenant_id.lower() == 'admin':
+        return tenant_id
+
+    # Check if it's already a valid UUID
+    try:
+        UUID(tenant_id)
+        return tenant_id
+    except ValueError:
+        pass
+
+    # Convert email or string to deterministic UUID v5
+    # Using a namespace UUID for Fylle
+    FYLLE_NAMESPACE = UUID('6ba7b810-9dad-11d1-80b4-00c04fd430c8')
+    return str(UUID(hashlib.md5(f"fylle:{tenant_id}".encode()).hexdigest()))
+
+
 # ============================================================================
 # Card CRUD Endpoints
 # ============================================================================
@@ -44,19 +75,27 @@ async def get_db_session() -> AsyncSession:
 
 @router.post("", response_model=CardResponseSchema, status_code=status.HTTP_201_CREATED)
 async def create_card(
-    tenant_id: UUID = Query(..., description="Tenant ID"),
+    tenant_id: str = Query(..., description="Tenant ID (email or UUID)"),
     request: CreateCardRequestSchema = None,
     session: AsyncSession = Depends(get_db_session),
 ) -> CardResponseSchema:
     """
     Create a new card.
-    
+
     If a card of the same type already exists for the tenant, it will be soft-deleted.
+
+    tenant_id can be:
+    - Email address (e.g., user@example.com)
+    - UUID (e.g., 550e8400-e29b-41d4-a716-446655440000)
+    - 'admin' for super admin mode
     """
-    
+
     try:
+        # Normalize tenant_id
+        normalized_tenant_id = normalize_tenant_id(tenant_id)
+
         use_case = CreateCardUseCase(session)
-        
+
         card_request = CreateCardRequest(
             card_type=request.card_type,
             title=request.title,
@@ -64,8 +103,8 @@ async def create_card(
             metrics=request.metrics,
             notes=request.notes,
         )
-        
-        card = await use_case.execute(tenant_id, card_request)
+
+        card = await use_case.execute(normalized_tenant_id, card_request)
         
         return CardResponseSchema(
             id=card.id,
@@ -91,17 +130,25 @@ async def create_card(
 
 @router.get("", response_model=List[CardResponseSchema])
 async def list_cards(
-    tenant_id: UUID = Query(..., description="Tenant ID"),
+    tenant_id: str = Query(..., description="Tenant ID (email or UUID)"),
     card_type: Optional[str] = Query(None, description="Filter by card type"),
     session: AsyncSession = Depends(get_db_session),
 ) -> List[CardResponseSchema]:
     """
     List all cards for a tenant, optionally filtered by type.
+
+    tenant_id can be:
+    - Email address (e.g., user@example.com)
+    - UUID (e.g., 550e8400-e29b-41d4-a716-446655440000)
+    - 'admin' for super admin mode (returns all cards)
     """
-    
+
     try:
+        # Normalize tenant_id
+        normalized_tenant_id = normalize_tenant_id(tenant_id)
+
         use_case = ListCardsUseCase(session)
-        cards = await use_case.execute(tenant_id, card_type)
+        cards = await use_case.execute(normalized_tenant_id, card_type)
         
         return [
             CardResponseSchema(
@@ -132,16 +179,24 @@ async def list_cards(
 @router.get("/{card_id}", response_model=CardResponseSchema)
 async def get_card(
     card_id: UUID,
-    tenant_id: UUID = Query(..., description="Tenant ID"),
+    tenant_id: str = Query(..., description="Tenant ID (email or UUID)"),
     session: AsyncSession = Depends(get_db_session),
 ) -> CardResponseSchema:
     """
     Get a specific card by ID with all its relationships.
+
+    tenant_id can be:
+    - Email address (e.g., user@example.com)
+    - UUID (e.g., 550e8400-e29b-41d4-a716-446655440000)
+    - 'admin' for super admin mode
     """
-    
+
     try:
+        # Normalize tenant_id
+        normalized_tenant_id = normalize_tenant_id(tenant_id)
+
         use_case = GetCardUseCase(session)
-        card = await use_case.execute(card_id, tenant_id)
+        card = await use_case.execute(card_id, normalized_tenant_id)
         
         if not card:
             raise HTTPException(status_code=404, detail="Card not found")
@@ -170,25 +225,33 @@ async def get_card(
 @router.patch("/{card_id}", response_model=CardResponseSchema)
 async def update_card(
     card_id: UUID,
-    tenant_id: UUID = Query(..., description="Tenant ID"),
+    tenant_id: str = Query(..., description="Tenant ID (email or UUID)"),
     request: UpdateCardRequestSchema = None,
     session: AsyncSession = Depends(get_db_session),
 ) -> CardResponseSchema:
     """
     Update a card. Only provided fields will be updated.
+
+    tenant_id can be:
+    - Email address (e.g., user@example.com)
+    - UUID (e.g., 550e8400-e29b-41d4-a716-446655440000)
+    - 'admin' for super admin mode
     """
-    
+
     try:
+        # Normalize tenant_id
+        normalized_tenant_id = normalize_tenant_id(tenant_id)
+
         use_case = UpdateCardUseCase(session)
-        
+
         card_request = UpdateCardRequest(
             title=request.title,
             content=request.content,
             metrics=request.metrics,
             notes=request.notes,
         )
-        
-        card = await use_case.execute(card_id, tenant_id, card_request)
+
+        card = await use_case.execute(card_id, normalized_tenant_id, card_request)
         
         if not card:
             raise HTTPException(status_code=404, detail="Card not found")
@@ -219,16 +282,24 @@ async def update_card(
 @router.delete("/{card_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_card(
     card_id: UUID,
-    tenant_id: UUID = Query(..., description="Tenant ID"),
+    tenant_id: str = Query(..., description="Tenant ID (email or UUID)"),
     session: AsyncSession = Depends(get_db_session),
 ) -> None:
     """
     Soft delete a card.
+
+    tenant_id can be:
+    - Email address (e.g., user@example.com)
+    - UUID (e.g., 550e8400-e29b-41d4-a716-446655440000)
+    - 'admin' for super admin mode
     """
-    
+
     try:
+        # Normalize tenant_id
+        normalized_tenant_id = normalize_tenant_id(tenant_id)
+
         repository = CardRepository(session)
-        success = await repository.soft_delete(card_id, tenant_id)
+        success = await repository.soft_delete(card_id, normalized_tenant_id)
         
         if not success:
             raise HTTPException(status_code=404, detail="Card not found")

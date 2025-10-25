@@ -27,10 +27,40 @@ class CardApiClient {
 
   /**
    * Get tenant ID from URL or localStorage
+   * If not found, returns 'admin' for super admin view
    */
   private getTenantId(): string {
     const params = new URLSearchParams(window.location.search);
-    return params.get('tenant_id') || localStorage.getItem('tenant_id') || '';
+    const tenantId = params.get('tenant_id') || localStorage.getItem('tenant_id');
+
+    // If no tenant_id, check if we're in super admin mode
+    if (!tenantId) {
+      const isSuperAdmin = params.get('admin') === 'true' || localStorage.getItem('admin_mode') === 'true';
+      if (isSuperAdmin) {
+        return 'admin';
+      }
+    }
+
+    return tenantId || '';
+  }
+
+  /**
+   * Check if in super admin mode
+   */
+  isSuperAdmin(): boolean {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('admin') === 'true' || localStorage.getItem('admin_mode') === 'true';
+  }
+
+  /**
+   * Set super admin mode
+   */
+  setSuperAdminMode(enabled: boolean): void {
+    if (enabled) {
+      localStorage.setItem('admin_mode', 'true');
+    } else {
+      localStorage.removeItem('admin_mode');
+    }
   }
 
   /**
