@@ -2,6 +2,7 @@
 
 import logging
 from typing import Optional
+from uuid import UUID
 
 from onboarding.domain.models import OnboardingSession, SessionState
 from onboarding.domain.cgs_contracts import ResultEnvelope
@@ -27,22 +28,25 @@ class ExecuteOnboardingUseCase:
         brevo_adapter: Optional[BrevoAdapter] = None,
         repository: Optional[SupabaseSessionRepository] = None,
         auto_delivery: bool = True,
+        card_service_client: Optional[object] = None,
     ):
         """
         Initialize use case.
-        
+
         Args:
             payload_builder: Payload builder
             cgs_adapter: CGS adapter for workflow execution
             brevo_adapter: Optional Brevo adapter for email delivery
             repository: Optional repository for persistence
             auto_delivery: Whether to auto-deliver via email
+            card_service_client: Optional Card Service HTTP client for creating cards
         """
         self.payload_builder = payload_builder
         self.cgs = cgs_adapter
         self.brevo = brevo_adapter
         self.repository = repository
         self.auto_delivery = auto_delivery
+        self.card_service_client = card_service_client
     
     async def execute(
         self,
@@ -128,10 +132,45 @@ class ExecuteOnboardingUseCase:
                 return result
             
             logger.info(f"CGS execution successful: run_id={result.cgs_run_id}")
-            
-            # Step 3: Deliver via email (if configured and enabled)
+
+            # Step 3: Create atomic cards from snapshot (if Card Service is available)
+            card_ids = []
+            if self.card_service_client and session.snapshot:
+                logger.info("Step 3: Creating atomic cards from snapshot...")
+                try:
+                    # Get tenant_id from session (user_email is used as tenant_id)
+                    tenant_id = session.user_email
+
+                    # Call Card Service to create cards from snapshot
+                    cards_response = await self.card_service_client.create_cards_from_snapshot(
+                        tenant_id=tenant_id,
+                        snapshot=session.snapshot.model_dump(mode="json"),
+                    )
+
+                    # Extract card IDs
+                    if isinstance(cards_response, list):
+                        card_ids = [str(card.get("id")) for card in cards_response]
+                    elif isinstance(cards_response, dict) and "cards" in cards_response:
+                        card_ids = [str(card.get("id")) for card in cards_response["cards"]]
+
+                    logger.info(f"✨ Created {len(card_ids)} cards: {card_ids}")
+
+                    # Store card IDs in session metadata
+                    session.metadata["card_ids"] = card_ids
+
+                    if self.repository:
+                        await self.repository.save_session(session)
+
+                except Exception as e:
+                    logger.warning(f"Card creation failed (non-blocking): {str(e)}")
+                    # Don't fail the whole workflow for card creation issues
+                    session.metadata["card_creation_error"] = str(e)
+            else:
+                logger.info("Step 3: Skipping card creation (Card Service not configured)")
+
+            # Step 4: Deliver via email (if configured and enabled)
             if self.auto_delivery and self.brevo and session.user_email and result.content:
-                logger.info("Step 3: Delivering content via email...")
+                logger.info("Step 4: Delivering content via email...")
                 session.update_state(SessionState.DELIVERING)
                 
                 if self.repository:
@@ -162,9 +201,9 @@ class ExecuteOnboardingUseCase:
                     session.delivery_status = "failed"
                     session.error_message = f"Email delivery failed: {str(e)}"
             else:
-                logger.info("Step 3: Skipping email delivery (not configured or disabled)")
-            
-            # Step 4: Mark as done
+                logger.info("Step 4: Skipping email delivery (not configured or disabled)")
+
+            # Step 5: Mark as done
             session.update_state(SessionState.DONE)
             
             if self.repository:
