@@ -25,8 +25,7 @@ CREATE TABLE IF NOT EXISTS context_cards (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   
   -- Constraints
-  CONSTRAINT valid_card_type CHECK (card_type IN ('product', 'persona', 'campaign', 'topic')),
-  CONSTRAINT unique_active_card_per_type UNIQUE (tenant_id, card_type) WHERE is_active = true
+  CONSTRAINT valid_card_type CHECK (card_type IN ('product', 'persona', 'campaign', 'topic'))
 );
 
 -- Indexes for context_cards
@@ -36,6 +35,11 @@ CREATE INDEX IF NOT EXISTS idx_cards_active ON context_cards(is_active);
 CREATE INDEX IF NOT EXISTS idx_cards_created_at ON context_cards(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_cards_updated_at ON context_cards(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_cards_content ON context_cards USING GIN(content);
+
+-- Partial unique index: Only one active card per type per tenant
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_active_card_per_type
+ON context_cards(tenant_id, card_type)
+WHERE is_active = true;
 
 -- ============================================================================
 -- Table: card_relationships
