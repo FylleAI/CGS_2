@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 import httpx
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential_jitter
+from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential_jitter
 
 from fylle_cards_client.models import (
     CardBatchResponse,
@@ -24,6 +24,37 @@ from fylle_cards_client.models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _should_retry_on_error(exception: Exception) -> bool:
+    """
+    Determine if request should be retried based on exception.
+
+    Retry on:
+    - Timeout exceptions
+    - 429 (rate limit)
+    - 5xx (server errors)
+
+    Do NOT retry on:
+    - 4xx (client errors, except 429)
+
+    Args:
+        exception: Exception raised during request
+
+    Returns:
+        True if should retry, False otherwise
+    """
+    # Always retry on timeout
+    if isinstance(exception, httpx.TimeoutException):
+        return True
+
+    # Retry on specific HTTP status codes
+    if isinstance(exception, httpx.HTTPStatusError):
+        status_code = exception.response.status_code
+        # Retry on 429 (rate limit) and 5xx (server errors)
+        return status_code == 429 or status_code >= 500
+
+    return False
 
 
 class CardsAPIError(Exception):
@@ -110,7 +141,7 @@ class CardsClient:
         return response.json()
     
     @retry(
-        retry=retry_if_exception_type((httpx.HTTPStatusError, httpx.TimeoutException)),
+        retry=retry_if_exception(_should_retry_on_error),
         stop=stop_after_attempt(3),
         wait=wait_exponential_jitter(initial=0.1, max=2.0),
         reraise=True,

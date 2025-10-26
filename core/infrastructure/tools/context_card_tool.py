@@ -5,9 +5,10 @@ Replaces file-based RAG with card-based context retrieval.
 Implements LRU cache with TTL and usage tracking.
 """
 
+import asyncio
 import logging
 import time
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple, Set
 from uuid import UUID
 from datetime import datetime, timedelta
 from collections import OrderedDict
@@ -64,21 +65,27 @@ class ContextCardTool:
     ):
         """
         Initialize ContextCardTool.
-        
+
         Args:
             cards_client: Cards API client
             max_cache_size: Maximum number of cards in cache
         """
         self.cards_client = cards_client
         self.max_cache_size = max_cache_size
-        
+
         # LRU cache: (tenant_id, card_id) -> CacheEntry
         self.cache: OrderedDict[Tuple[str, UUID], CacheEntry] = OrderedDict()
-        
+
+        # Usage tracking dedup: (workflow_id, card_id) -> bool
+        # Prevents duplicate usage events for same card in same workflow run
+        self.usage_tracked: Set[Tuple[UUID, UUID]] = set()
+
         # Metrics
         self.cache_hits = 0
         self.cache_misses = 0
         self.total_retrievals = 0
+        self.usage_events_sent = 0
+        self.usage_events_failed = 0
     
     def get_cache_hit_rate(self) -> float:
         """Calculate cache hit rate."""
@@ -110,33 +117,31 @@ class ContextCardTool:
     ) -> Optional[ContextCard]:
         """
         Get card from cache.
-        
+
         Args:
             tenant_id: Tenant ID
             card_id: Card ID
-        
+
         Returns:
             Card if found and not expired, None otherwise
         """
+        # Evict expired entries first
+        self._evict_expired()
+
         key = (tenant_id, card_id)
-        
+
         if key not in self.cache:
             return None
-        
+
         entry = self.cache[key]
-        
-        if entry.is_expired():
-            del self.cache[key]
-            logger.debug(f"🗑️ Cache entry expired: {key}")
-            return None
-        
+
         # Move to end (most recently used)
         self.cache.move_to_end(key)
         entry.record_hit()
-        
+
         self.cache_hits += 1
         logger.debug(f"✅ Cache HIT: {key} (hits: {entry.hit_count})")
-        
+
         return entry.card
     
     def _put_in_cache(
@@ -151,7 +156,7 @@ class ContextCardTool:
             tenant_id: Tenant ID
             card: Context card
         """
-        key = (tenant_id, card.id)
+        key = (tenant_id, card.card_id)
         
         # Get TTL for card type
         ttl = CACHE_TTL_BY_TYPE.get(card.card_type, DEFAULT_CACHE_TTL)
@@ -231,22 +236,26 @@ class ContextCardTool:
         if missing_card_ids:
             try:
                 response = self.cards_client.retrieve_cards(missing_card_ids)
-                
+
                 # Add retrieved cards to cache and list
                 for card in response.cards:
                     self._put_in_cache(tenant_id, card)
                     cards.append(card)
-                
+
+                # Check if partial result (fewer cards than requested)
+                is_partial = len(response.cards) < len(missing_card_ids)
+
                 logger.info(
                     f"✅ Retrieved {len(response.cards)} cards from API",
                     extra={
                         "retrieved_count": len(response.cards),
-                        "partial_result": response.partial_result,
+                        "requested_count": len(missing_card_ids),
+                        "partial_result": is_partial,
                     },
                 )
-                
+
                 # Log if partial result
-                if response.partial_result:
+                if is_partial:
                     logger.warning(
                         f"⚠️ Partial result: some cards not found",
                         extra={
@@ -263,9 +272,14 @@ class ContextCardTool:
                 )
                 # Continue with cached cards only
         
-        # Step 3: Track usage for each card
-        # TODO: Implement usage tracking in next iteration
-        
+        # Step 3: Track usage for each card (fire-and-forget with dedup)
+        await self._track_usage_batch(
+            cards=cards,
+            workflow_id=workflow_id,
+            workflow_type=workflow_type,
+            trace_id=trace_id,
+        )
+
         # Step 4: Format context by card type
         context = self._format_context(cards)
         
@@ -281,7 +295,118 @@ class ContextCardTool:
         )
         
         return context
-    
+
+    async def _track_usage_batch(
+        self,
+        cards: List[ContextCard],
+        workflow_id: UUID,
+        workflow_type: str,
+        trace_id: Optional[str] = None,
+    ):
+        """
+        Track usage for all cards in batch (fire-and-forget with dedup).
+
+        Does not block workflow execution if tracking fails.
+        Deduplicates by (workflow_id, card_id) to avoid duplicate events.
+
+        Args:
+            cards: List of cards to track
+            workflow_id: Workflow ID
+            workflow_type: Workflow type
+            trace_id: Trace ID for logging
+        """
+        tasks = []
+
+        for card in cards:
+            # Dedup: skip if already tracked for this workflow run
+            dedup_key = (workflow_id, card.card_id)
+            if dedup_key in self.usage_tracked:
+                logger.debug(
+                    f"⏭️ Skipping duplicate usage tracking",
+                    extra={
+                        "workflow_id": str(workflow_id),
+                        "card_id": str(card.card_id),
+                    },
+                )
+                continue
+
+            # Mark as tracked
+            self.usage_tracked.add(dedup_key)
+
+            # Create fire-and-forget task
+            task = asyncio.create_task(
+                self._track_usage_single(
+                    card_id=card.card_id,
+                    workflow_id=workflow_id,
+                    workflow_type=workflow_type,
+                    trace_id=trace_id,
+                )
+            )
+            tasks.append(task)
+
+        # Fire-and-forget: don't await, just log if fails
+        if tasks:
+            logger.debug(
+                f"🔥 Firing {len(tasks)} usage tracking events",
+                extra={
+                    "workflow_id": str(workflow_id),
+                    "card_count": len(tasks),
+                },
+            )
+
+    async def _track_usage_single(
+        self,
+        card_id: UUID,
+        workflow_id: UUID,
+        workflow_type: str,
+        trace_id: Optional[str] = None,
+    ):
+        """
+        Track usage for a single card (async, non-blocking).
+
+        Logs warning if fails, does not raise exception.
+
+        Args:
+            card_id: Card ID
+            workflow_id: Workflow ID
+            workflow_type: Workflow type
+            trace_id: Trace ID for logging
+        """
+        try:
+            # Run in thread pool since cards_client is sync
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                self.cards_client.track_usage,
+                card_id,
+                workflow_id,
+                workflow_type,
+                {"trace_id": trace_id} if trace_id else {},
+            )
+
+            self.usage_events_sent += 1
+
+            logger.debug(
+                f"✅ Usage tracked",
+                extra={
+                    "card_id": str(card_id),
+                    "workflow_id": str(workflow_id),
+                    "workflow_type": workflow_type,
+                },
+            )
+
+        except Exception as e:
+            self.usage_events_failed += 1
+
+            logger.warning(
+                f"⚠️ Usage tracking failed (non-blocking): {str(e)}",
+                extra={
+                    "card_id": str(card_id),
+                    "workflow_id": str(workflow_id),
+                    "error": str(e),
+                },
+            )
+
     def _format_context(self, cards: List[ContextCard]) -> Dict[str, Any]:
         """
         Format cards as context for agents.
@@ -305,10 +430,10 @@ class ContextCardTool:
             card_type_key = card.card_type.value
             if card_type_key in context:
                 context[card_type_key].append({
-                    "id": str(card.id),
+                    "id": str(card.card_id),
                     "title": card.title,
                     "content": card.content,
-                    "metadata": card.metadata,
+                    "tags": card.tags,
                 })
         
         return context
