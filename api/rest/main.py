@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=Path(".env"), override=False)
 
 from core.infrastructure.config.settings import get_settings
-from .v1.endpoints import content, workflows, agents, system, knowledge_base, workflow_v1, metrics
+from .v1.endpoints import content, workflows, agents, system, knowledge_base, workflow_v1, metrics, onboarding_v1
 from .endpoints import logging as logging_endpoints
 from .middleware import LoggingMiddleware
 from .exceptions import setup_exception_handlers
@@ -59,9 +59,13 @@ async def lifespan(app: FastAPI):
         # Initialize workflow v1 endpoint with dependencies
         workflow_v1.init_workflow_v1(workflow_registry, cards_api_url)
         logger.info("✅ Workflow v1 endpoint initialized")
+
+        # Initialize onboarding v1 endpoint with dependencies
+        onboarding_v1.init_onboarding_v1(cards_api_url)
+        logger.info("✅ Onboarding v1 endpoint initialized")
     except Exception as e:
-        logger.error(f"❌ Failed to initialize workflow v1: {e}", exc_info=True)
-        # Continue startup - workflow v1 will return 500 if not initialized
+        logger.error(f"❌ Failed to initialize v1 endpoints: {e}", exc_info=True)
+        # Continue startup - endpoints will return 500 if not initialized
 
     yield
 
@@ -105,6 +109,7 @@ def create_app() -> FastAPI:
     app.include_router(content.router, prefix="/api/v1/content", tags=["content"])
     app.include_router(workflows.router, prefix="/api/v1/workflows", tags=["workflows"])
     app.include_router(workflow_v1.router, prefix="/api/v1/workflow", tags=["workflow-v1"])
+    app.include_router(onboarding_v1.router, prefix="/api/v1/onboarding", tags=["onboarding-v1"])
     app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])
     app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
     app.include_router(knowledge_base.router, prefix="/api/v1", tags=["knowledge-base"])
