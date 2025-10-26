@@ -10,15 +10,15 @@ import hashlib
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from services.content_workflow.card_service.api.card_schemas import CardResponseSchema
-from services.content_workflow.card_service.application.create_cards_from_snapshot_use_case import (
+from services.card_service.api.card_schemas import CardResponseSchema
+from services.card_service.application.create_cards_from_snapshot_use_case import (
     CreateCardsFromSnapshotUseCase,
 )
-from services.content_workflow.card_service.application.get_cards_for_context_use_case import (
+from services.card_service.application.get_cards_for_context_use_case import (
     GetCardsForContextUseCase,
 )
-from services.content_workflow.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
-from services.content_workflow.card_service.api.dependencies import get_card_repository
+from services.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
+from services.card_service.api.dependencies import get_card_repository
 
 logger = logging.getLogger(__name__)
 

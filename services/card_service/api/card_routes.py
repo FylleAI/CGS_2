@@ -9,21 +9,21 @@ import hashlib
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from services.content_workflow.card_service.api.card_schemas import (
+from services.card_service.api.card_schemas import (
     CardResponseSchema,
     CreateCardRequestSchema,
     CreateRelationshipRequestSchema,
     RelationshipResponseSchema,
     UpdateCardRequestSchema,
 )
-from services.content_workflow.card_service.application.create_card_use_case import CreateCardUseCase
-from services.content_workflow.card_service.application.get_card_use_case import GetCardUseCase
-from services.content_workflow.card_service.application.link_cards_use_case import LinkCardsUseCase
-from services.content_workflow.card_service.application.list_cards_use_case import ListCardsUseCase
-from services.content_workflow.card_service.application.update_card_use_case import UpdateCardUseCase
-from services.content_workflow.card_service.domain.card_entity import CreateCardRequest, UpdateCardRequest
-from services.content_workflow.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
-from services.content_workflow.card_service.api.dependencies import get_card_repository
+from services.card_service.application.create_card_use_case import CreateCardUseCase
+from services.card_service.application.get_card_use_case import GetCardUseCase
+from services.card_service.application.link_cards_use_case import LinkCardsUseCase
+from services.card_service.application.list_cards_use_case import ListCardsUseCase
+from services.card_service.application.update_card_use_case import UpdateCardUseCase
+from services.card_service.domain.card_entity import CreateCardRequest, UpdateCardRequest
+from services.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
+from services.card_service.api.dependencies import get_card_repository
 
 logger = logging.getLogger(__name__)
 
