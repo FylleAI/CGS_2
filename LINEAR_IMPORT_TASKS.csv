@@ -1,0 +1,44 @@
+ID,Title,Description,Priority,Estimate,Status,Milestone,Epic,Dependencies,Assignee
+1.1.1,Design context_cards table schema,"Design the core context_cards table with multi-tenant support, card type taxonomy, JSONB content, versioning, performance metrics, and quality signals",P0,2,Backlog,M1: Foundation,E1.1: Database Schema,,Backend Lead
+1.1.2,Design card_relationships table,"Design relationship table to link cards with source/target references, relationship types, and strength",P0,1,Backlog,M1: Foundation,E1.1: Database Schema,1.1.1,Backend Lead
+1.1.3,Design card_feedback table,"Design feedback collection table with source types, feedback types, and applied status tracking",P1,1,Backlog,M1: Foundation,E1.1: Database Schema,1.1.1,Backend Lead
+1.1.4,Design card_performance_events table,"Design performance tracking table with event types, metrics, and time-series data structure",P1,1,Backlog,M1: Foundation,E1.1: Database Schema,1.1.1,Backend Lead
+1.2.1,Create migration script for new tables,"Create Supabase migration script (004_create_adaptive_cards.sql) for all 4 new tables with indexes and helper functions",P0,2,Backlog,M1: Foundation,E1.2: Database Migration,"1.1.1,1.1.2,1.1.3,1.1.4",Backend Engineer
+1.2.2,Add tenant_id to existing tables,"Add multi-tenancy support to existing tables (onboarding_sessions, company_contexts) and backfill data",P0,2,Backlog,M1: Foundation,E1.2: Database Migration,1.2.1,Backend Engineer
+1.2.3,Migrate company_contexts to granular cards,"Create migration script to decompose existing CompanySnapshot into granular cards (Product, Persona, BrandVoice, Insight)",P1,3,Backlog,M1: Foundation,E1.2: Database Migration,1.2.2,Backend Engineer
+1.3.1,Define TypeScript card type definitions,"Create TypeScript interfaces for all 8 card types with Zod schemas for validation",P0,2,Backlog,M1: Foundation,E1.3: Domain Models,1.1.1,Frontend Lead
+1.3.2,Define Python Pydantic models,"Create Pydantic models for all 8 card types with validation rules and JSON serialization",P0,2,Backlog,M1: Foundation,E1.3: Domain Models,1.1.1,Backend Engineer
+1.4.1,Implement ContextCardRepository,"Create repository for CRUD operations on context_cards with multi-tenant filtering and versioning",P0,5,Backlog,M1: Foundation,E1.4: Repository Layer,"1.2.1,1.3.2",Backend Engineer
+1.4.2,Implement CardRelationshipRepository,"Create repository for card relationships with bidirectional queries and graph traversal",P1,3,Backlog,M1: Foundation,E1.4: Repository Layer,1.4.1,Backend Engineer
+1.4.3,Implement CardFeedbackRepository,"Create repository for feedback with filtering by source_type and feedback_type",P1,2,Backlog,M1: Foundation,E1.4: Repository Layer,1.4.1,Backend Engineer
+1.5.1,Implement Card CRUD endpoints,"Create FastAPI endpoints for card CRUD operations with multi-tenant auth middleware",P0,5,Backlog,M1: Foundation,E1.5: API Endpoints,1.4.1,Backend Engineer
+1.5.2,Implement Card Relationship endpoints,"Create relationship endpoints for creating, listing, and deleting card relationships",P1,3,Backlog,M1: Foundation,E1.5: API Endpoints,1.4.2,Backend Engineer
+1.5.3,Implement Feedback endpoints,"Create feedback endpoints for submitting and retrieving card feedback",P1,2,Backlog,M1: Foundation,E1.5: API Endpoints,1.4.3,Backend Engineer
+2.1.1,Create InteractiveCard base component,"Create reusable InteractiveCard component with view/edit modes, save/cancel actions, and optimistic updates",P0,5,Backlog,M2: Interactive Cards,E2.1: Frontend Components,"1.3.1,1.5.1",Frontend Engineer
+2.1.2,Create CardEditor for each card type,"Create specialized editors for all 8 card types with form validation and rich text editing",P0,8,Backlog,M2: Interactive Cards,E2.1: Frontend Components,2.1.1,Frontend Engineer
+2.1.3,Implement card state management,"Create Zustand store for card management with optimistic updates and cache invalidation",P0,3,Backlog,M2: Interactive Cards,E2.1: Frontend Components,2.1.1,Frontend Engineer
+2.2.1,Create FeedbackButtons component,"Create feedback UI component with thumbs up/down, suggest edit, and visual feedback",P1,2,Backlog,M2: Interactive Cards,E2.2: Feedback System,1.5.3,Frontend Engineer
+2.2.2,Implement feedback modal,"Create modal for detailed feedback with feedback type selection and text input",P1,3,Backlog,M2: Interactive Cards,E2.2: Feedback System,2.2.1,Frontend Engineer
+2.3.1,Implement WebSocket connection for card updates,"Add real-time updates with WebSocket server and client connection management",P2,5,Backlog,M2: Interactive Cards,E2.3: Real-time Updates,2.1.3,Full-stack Engineer
+2.3.2,Add optimistic UI updates,"Implement optimistic updates with rollback on error and visual save indicators",P2,3,Backlog,M2: Interactive Cards,E2.3: Real-time Updates,2.1.3,Frontend Engineer
+3.1.1,Create ContextCardTool for agents,"Create tool for agents to read, update, and create cards with automatic feedback creation",P0,5,Backlog,M3: Agent Integration,E3.1: Agent Tools,"1.4.1,1.4.2",Backend Engineer
+3.1.2,Integrate ContextCardTool into agent executor,"Make ContextCardTool available to all agents and update agent prompts",P0,3,Backlog,M3: Agent Integration,E3.1: Agent Tools,3.1.1,Backend Engineer
+3.1.3,Update workflow handlers to write to cards,"Modify OnboardingContentHandler to create/update cards automatically",P1,5,Backlog,M3: Agent Integration,E3.1: Agent Tools,3.1.2,Backend Engineer
+3.2.1,Create InsightGeneratorAgent,"Create specialized agent for generating insights from multiple cards",P1,5,Backlog,M3: Agent Integration,E3.2: Insight Generation,3.1.2,Backend Engineer
+3.2.2,Implement periodic insight generation,"Create background job to generate insights weekly/monthly",P2,3,Backlog,M3: Agent Integration,E3.2: Insight Generation,3.2.1,Backend Engineer
+3.3.1,Implement automatic relationship detection,"Automatically detect relationships between cards using semantic similarity and references",P2,5,Backlog,M3: Agent Integration,E3.3: Relationship Tracking,1.4.2,Backend Engineer
+3.3.2,Create relationship visualization,"Create interactive graph visualization for card relationships",P2,5,Backlog,M3: Agent Integration,E3.3: Relationship Tracking,1.5.2,Frontend Engineer
+4.1.1,Implement performance event tracking,"Track performance events for cards (generation, publication, engagement, conversion)",P1,5,Backlog,M4: Auto-Evolution,E4.1: Performance Tracking,1.4.3,Backend Engineer
+4.1.2,Create performance dashboard,"Create dashboard to view card performance with metrics, trends, and filters",P2,5,Backlog,M4: Auto-Evolution,E4.1: Performance Tracking,4.1.1,Frontend Engineer
+4.2.1,Create CardEvolutionWorker,"Background worker to process feedback queue and update cards automatically",P1,5,Backlog,M4: Auto-Evolution,E4.2: Feedback Automation,1.4.3,Backend Engineer
+4.2.2,Implement quality score calculation,"Calculate quality score for cards based on performance, feedback, and confidence",P1,3,Backlog,M4: Auto-Evolution,E4.2: Feedback Automation,"4.1.1,4.2.1",Backend Engineer
+4.2.3,Implement auto-update triggers,"Automatically update cards based on quality score, performance, and feedback signals",P2,5,Backlog,M4: Auto-Evolution,E4.2: Feedback Automation,4.2.2,Backend Engineer
+4.3.1,Design A/B testing framework,"Design framework for A/B testing cards with variant creation and winner selection",P2,3,Backlog,M4: Auto-Evolution,E4.3: A/B Testing,4.1.1,Backend Lead
+4.3.2,Implement A/B testing API,"Implement A/B testing endpoints for variant creation, assignment, and performance tracking",P2,5,Backlog,M4: Auto-Evolution,E4.3: A/B Testing,4.3.1,Backend Engineer
+5.1.1,Create card analytics dashboard,"Comprehensive analytics dashboard with usage stats, trends, and quality distribution",P2,5,Backlog,M5: Advanced Features,E5.1: Analytics,4.1.2,Frontend Engineer
+5.1.2,Implement card recommendation engine,"Recommend cards to users based on context, usage patterns, and performance",P2,5,Backlog,M5: Advanced Features,E5.1: Analytics,4.1.1,Backend Engineer
+5.2.1,Create card template system,"Template system for quick card creation with pre-defined and industry-specific templates",P3,5,Backlog,M5: Advanced Features,E5.2: Templates,1.5.1,Backend Engineer
+5.2.2,Create template gallery UI,"UI for browsing and using templates with preview and customization",P3,3,Backlog,M5: Advanced Features,E5.2: Templates,5.2.1,Frontend Engineer
+5.3.1,Implement bulk card operations API,"Bulk operations for cards (update, delete, tag assignment, export/import)",P3,3,Backlog,M5: Advanced Features,E5.3: Bulk Operations,1.5.1,Backend Engineer
+5.3.2,Create bulk operations UI,"UI for bulk operations with multi-select, progress indicator, and undo",P3,3,Backlog,M5: Advanced Features,E5.3: Bulk Operations,5.3.1,Frontend Engineer
+

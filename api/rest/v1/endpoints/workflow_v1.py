@@ -28,15 +28,15 @@ router = APIRouter()
 
 # Global instances (initialized on startup)
 _workflow_registry: Optional[WorkflowRegistry] = None
-_cards_client: Optional[CardsClient] = None
+_cards_api_url: Optional[str] = None
 
 
-def init_workflow_v1(workflow_registry: WorkflowRegistry, cards_client: CardsClient):
+def init_workflow_v1(workflow_registry: WorkflowRegistry, cards_api_url: str):
     """Initialize workflow v1 dependencies."""
-    global _workflow_registry, _cards_client
+    global _workflow_registry, _cards_api_url
     _workflow_registry = workflow_registry
-    _cards_client = cards_client
-    logger.info("✅ Workflow v1 initialized with registry and cards client")
+    _cards_api_url = cards_api_url
+    logger.info(f"✅ Workflow v1 initialized with registry and Cards API URL: {cards_api_url}")
 
 
 # Response Models (matching OpenAPI contract)
@@ -170,15 +170,23 @@ async def execute_workflow_v1(
                 },
             )
 
-            # Initialize ContextCardTool
-            if not _cards_client:
+            # Initialize Cards client for this request
+            if not _cards_api_url:
                 raise HTTPException(
                     status_code=500,
-                    detail="Cards client not initialized",
+                    detail="Cards API URL not initialized",
                 )
 
+            # Create CardsClient with tenant_id for this request
+            cards_client = CardsClient(
+                base_url=_cards_api_url,
+                tenant_id=x_tenant_id,
+                trace_id=x_trace_id,
+                session_id=x_session_id,
+            )
+
             context_tool = ContextCardTool(
-                cards_client=_cards_client,
+                cards_client=cards_client,
             )
 
             try:

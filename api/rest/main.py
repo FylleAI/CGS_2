@@ -48,18 +48,16 @@ async def lifespan(app: FastAPI):
     if not settings.has_any_provider():
         logger.warning("No AI providers configured. Some features may not work.")
 
-    # Initialize workflow registry and cards client
+    # Initialize workflow registry and Cards API URL
     try:
         from core.infrastructure.workflows.registry import workflow_registry
-        from fylle_cards_client import CardsClient
 
-        # Initialize Cards client
+        # Get Cards API URL from environment
         cards_api_url = os.getenv("CARDS_API_URL", "http://localhost:8002/api/v1")
-        cards_client = CardsClient(base_url=cards_api_url)
-        logger.info(f"✅ Cards client initialized: {cards_api_url}")
+        logger.info(f"✅ Cards API URL configured: {cards_api_url}")
 
         # Initialize workflow v1 endpoint with dependencies
-        workflow_v1.init_workflow_v1(workflow_registry, cards_client)
+        workflow_v1.init_workflow_v1(workflow_registry, cards_api_url)
         logger.info("✅ Workflow v1 endpoint initialized")
     except Exception as e:
         logger.error(f"❌ Failed to initialize workflow v1: {e}", exc_info=True)
