@@ -1,0 +1,248 @@
+"""Image generation tool supporting multiple providers."""
+
+from __future__ import annotations
+
+import logging
+import os
+from typing import Any, Dict, Optional
+
+from ..config.settings import Settings
+from ..external_services.openai_adapter import OpenAIAdapter
+from ..external_services.gemini_adapter import GeminiAdapter
+from ...domain.value_objects.provider_config import ProviderConfig, LLMProvider
+
+logger = logging.getLogger(__name__)
+
+
+class ImageGenerationTool:
+    """High-level helper that orchestrates image generation across providers."""
+
+    def __init__(self, settings: Optional[Settings] = None) -> None:
+        self.settings = settings
+        self._openai_api_key = (
+            settings.openai_api_key if settings else os.getenv("OPENAI_API_KEY")
+        )
+        self._gemini_api_key = (
+            settings.gemini_api_key if settings else os.getenv("GEMINI_API_KEY")
+        )
+        self._openai_adapter: Optional[OpenAIAdapter] = None
+        self._gemini_adapter: Optional[GeminiAdapter] = None
+        self.openai_image_cost, self.openai_cost_source = self._resolve_cost_from_env(
+            "OPENAI_IMAGE_COST_USD"
+        )
+        # Optional tiered OpenAI image pricing
+        self.openai_image_cost_low, self.openai_low_source = self._resolve_cost_from_env(
+            "OPENAI_IMAGE_COST_LOW_USD"
+        )
+        self.openai_image_cost_medium, self.openai_medium_source = self._resolve_cost_from_env(
+            "OPENAI_IMAGE_COST_MEDIUM_USD"
+        )
+        self.openai_image_cost_high, self.openai_high_source = self._resolve_cost_from_env(
+            "OPENAI_IMAGE_COST_HIGH_USD"
+        )
+        self.gemini_image_cost, self.gemini_cost_source = self._resolve_cost_from_env(
+            "GEMINI_IMAGE_COST_USD"
+        )
+
+    @staticmethod
+    def _resolve_cost_from_env(env_var: str) -> tuple[float, str]:
+        value = os.getenv(env_var)
+        if value:
+            try:
+                return float(value), f"env:{env_var}"
+            except ValueError:  # pragma: no cover - defensive
+                logger.warning(
+                    "Invalid %s value for image generation cost: %s",
+                    env_var,
+                    value,
+                )
+        return 0.0, "default"
+
+
+    def _resolve_openai_image_cost_for(self, size: str, quality: str) -> tuple[float, str]:
+        s = (size or "").lower()
+        q = (quality or "").lower()
+        # High tier: explicit 2048 size or HD quality
+        if "2048" in s or q == "hd":
+            if self.openai_image_cost_high:
+                return self.openai_image_cost_high, self.openai_high_source
+        # Medium tier: common 512 or 1024 defaults
+        if s in ("512x512", "1024x1024"):
+            if self.openai_image_cost_medium:
+                return self.openai_image_cost_medium, self.openai_medium_source
+        # Low tier: small size
+        if s in ("256x256",):
+            if self.openai_image_cost_low:
+                return self.openai_image_cost_low, self.openai_low_source
+        # Fallback to single-tier env if provided
+        if self.openai_image_cost:
+            return self.openai_image_cost, self.openai_cost_source
+        return 0.0, "default"
+
+    def _get_openai_adapter(self) -> OpenAIAdapter:
+        if self._openai_adapter is None:
+            self._openai_adapter = OpenAIAdapter(self._openai_api_key)
+        return self._openai_adapter
+
+    def _get_gemini_adapter(self) -> GeminiAdapter:
+        if self._gemini_adapter is None:
+            self._gemini_adapter = GeminiAdapter(self._gemini_api_key)
+        return self._gemini_adapter
+
+    async def generate_image(
+        self,
+        prompt: str,
+        provider: str = "openai",
+        style: str = "professional",
+        size: str = "1024x1024",
+        quality: str = "standard",
+    ) -> Dict[str, Any]:
+        """Generate an image using the requested provider."""
+
+        provider_normalized = (provider or "openai").lower()
+        logger.info(
+            "🖼️ Generating image with provider=%s style=%s size=%s",
+            provider_normalized,
+            style,
+            size,
+        )
+
+        try:
+            if provider_normalized == "openai":
+                return await self._generate_with_openai(prompt, style, size, quality)
+            if provider_normalized == "gemini":
+                return await self._generate_with_gemini(prompt, style, size)
+
+            raise ValueError(f"Unsupported image provider: {provider}")
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.error("❌ Image generation failed: %s", exc)
+            return {
+                "success": False,
+                "error": str(exc),
+                "provider": provider_normalized,
+            }
+
+    async def _generate_with_openai(
+        self,
+        prompt: str,
+        style: str,
+        size: str,
+        quality: str,
+    ) -> Dict[str, Any]:
+        adapter = self._get_openai_adapter()
+        config = ProviderConfig(
+            provider=LLMProvider.OPENAI,
+            model="dall-e-3",
+            api_key=self._openai_api_key,
+            additional_params={
+                "size": size,
+                "quality": quality,
+                "style": "vivid" if style == "creative" else "natural",
+            },
+        )
+
+        result = await adapter.generate_image(prompt, config)
+        cost_usd, cost_source = self._resolve_openai_image_cost_for(size, quality)
+        return {
+            "success": True,
+            "provider": "openai",
+            "model": "dall-e-3",
+            "image_url": result.get("url"),
+            "image_data": result.get("b64_json"),
+            "revised_prompt": result.get("revised_prompt"),
+            "prompt": prompt,
+            "style": style,
+            "size": size,
+            "quality": quality,
+            "cost_usd": cost_usd,
+            "cost_source": cost_source,
+        }
+
+    async def _generate_with_gemini(
+        self,
+        prompt: str,
+        style: str,
+        size: str,
+    ) -> Dict[str, Any]:
+        adapter = self._get_gemini_adapter()
+        config = ProviderConfig(
+            provider=LLMProvider.GEMINI,
+            model="gemini-pro-vision",
+            api_key=self._gemini_api_key,
+            additional_params={
+                "size": size,
+                "style": style,
+            },
+        )
+
+        result = await adapter.generate_image(prompt, config)
+        return {
+            "success": True,
+            "provider": "gemini",
+            "model": "gemini-pro-vision",
+            "image_url": result.get("url"),
+            "image_data": result.get("data"),
+            "prompt": prompt,
+            "style": style,
+            "size": size,
+            "cost_usd": self.gemini_image_cost,
+            "cost_source": self.gemini_cost_source,
+        }
+
+
+async def image_generation_tool(
+    article_content: str,
+    image_style: str = "professional",
+    image_provider: str = "openai",
+    topic: Optional[str] = None,
+    target_audience: Optional[str] = None,
+    image_focus: Optional[str] = None,
+    image_size: str = "1024x1024",
+    image_quality: str = "standard",
+) -> str:
+    """Agent-facing wrapper that builds an image prompt from article content.
+
+    Enriches the image prompt with topic/target audience and optional image_focus
+    to improve contextual relevance and reduce generic outputs.
+    """
+
+    tool = ImageGenerationTool()
+
+    excerpt = (article_content or "").strip()
+    if len(excerpt) > 600:
+        excerpt = excerpt[:600] + "..."
+
+    # Build a richer, directive prompt for the image model
+    extra_context_parts = []
+    if topic:
+        extra_context_parts.append(f"Topic: {topic}")
+    if target_audience:
+        extra_context_parts.append(f"Target audience: {target_audience}")
+    if image_focus:
+        extra_context_parts.append(f"Required visual focus: {image_focus}")
+    extra_context = ("\n".join(extra_context_parts)).strip()
+
+    prompt_sections = [
+        "Create a brand-safe, contextual image that directly reflects the core message of the article below.",
+        f"Style: {image_style}. Avoid generic stock imagery. No text overlays. Respect compliance.",
+    ]
+    if extra_context:
+        prompt_sections.append(extra_context)
+    prompt_sections.append("Article excerpt (use key motifs, settings, and symbols mentioned):\n" + excerpt)
+
+    prompt = "\n\n".join(prompt_sections)
+
+    result = await tool.generate_image(
+        prompt=prompt,
+        provider=image_provider,
+        style=image_style,
+        size=image_size,
+        quality=image_quality,
+    )
+
+    payload = {
+        "prompt": prompt,
+        **result,
+    }
+
+    return payload

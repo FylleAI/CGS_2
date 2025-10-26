@@ -1,0 +1,98 @@
+{
+  "name": "enhanced_article",
+  "version": "1.0",
+  "description": "Enhanced article generation workflow with research and content creation",
+  "handler": "enhanced_article_handler",
+  "variables": [
+    {
+      "name": "topic",
+      "type": "string",
+      "required": true,
+      "description": "Main topic for the article"
+    },
+    {
+      "name": "client_name",
+      "type": "string", 
+      "required": true,
+      "description": "Client name for brand voice and guidelines"
+    },
+    {
+      "name": "target_audience",
+      "type": "string",
+      "required": false,
+      "default": "general",
+      "description": "Target audience for the content"
+    },
+    {
+      "name": "context",
+      "type": "string",
+      "required": false,
+      "description": "Additional context or background information"
+    },
+    {
+      "name": "tone",
+      "type": "string",
+      "required": false,
+      "default": "professional",
+      "description": "Tone of voice for the content"
+    },
+    {
+      "name": "target_word_count",
+      "type": "integer",
+      "required": false,
+      "default": 500,
+      "description": "Target word count for the article"
+    },
+    {
+      "name": "include_statistics",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Whether to include statistics and data"
+    },
+    {
+      "name": "include_examples",
+      "type": "boolean", 
+      "required": false,
+      "default": false,
+      "description": "Whether to include examples and case studies"
+    },
+    {
+      "name": "include_sources",
+      "type": "boolean",
+      "required": false,
+      "default": true,
+      "description": "Whether to include source citations"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task1_brief",
+      "name": "Brief Creation",
+      "agent": "rag_specialist",
+      "dependencies": [],
+      "prompt_id": "enhanced_article_task1_brief"
+    },
+    {
+      "id": "task2_research",
+      "name": "Web Research & Brief Enhancement",
+      "agent": "research_specialist",
+      "dependencies": ["task1_brief"],
+      "prompt_id": "enhanced_article_task2_research"
+    },
+    {
+      "id": "task3_content",
+      "name": "Article Content Creation",
+      "agent": "copywriter",
+      "dependencies": ["task2_research"],
+      "prompt_id": "enhanced_article_task3_content"
+    },
+    {
+      "id": "task4_compliance_review",
+      "name": "FINRA/SEC Compliance Review & Validation",
+      "agent": "compliance_specialist",
+      "dependencies": ["task3_content"],
+      "prompt_id": "enhanced_article_task4_compliance_review"
+    }
+  ]
+}

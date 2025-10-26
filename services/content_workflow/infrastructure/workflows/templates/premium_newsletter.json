@@ -1,0 +1,82 @@
+{
+  "name": "premium_newsletter",
+  "version": "1.0",
+  "description": "Premium newsletter generation with advanced source analysis and client-specific brand integration",
+  "handler": "premium_newsletter_handler",
+  "variables": [
+    {
+      "name": "topic",
+      "type": "string",
+      "required": true,
+      "description": "Main theme for the newsletter edition"
+    },
+    {
+      "name": "premium_sources",
+      "type": "array",
+      "required": false,
+      "default": ["https://example.com/financial-news"],
+      "description": "Array of premium source URLs (max 10)"
+    },
+    {
+      "name": "target_audience",
+      "type": "string",
+      "required": true,
+      "description": "Specific target audience for this edition"
+    },
+    {
+      "name": "target_word_count",
+      "type": "integer",
+      "required": false,
+      "default": 1200,
+      "description": "Total target word count for newsletter"
+    },
+    {
+      "name": "edition_number",
+      "type": "integer",
+      "required": false,
+      "default": 1,
+      "description": "Newsletter edition number"
+    },
+    {
+      "name": "exclude_topics",
+      "type": "array",
+      "required": false,
+      "description": "Topics to exclude from analysis"
+    },
+    {
+      "name": "priority_sections",
+      "type": "array",
+      "required": false,
+      "description": "Newsletter sections to prioritize"
+    },
+    {
+      "name": "custom_instructions",
+      "type": "string",
+      "required": false,
+      "description": "Additional custom instructions"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "task1_enhanced_context",
+      "name": "Enhanced Context & Brand Integration",
+      "agent": "rag_specialist",
+      "dependencies": [],
+      "prompt_id": "premium_newsletter_task1_enhanced_context"
+    },
+    {
+      "id": "task2_premium_analysis",
+      "name": "Premium Sources Analysis & Content Extraction",
+      "agent": "rag_specialist",
+      "dependencies": ["task1_enhanced_context"],
+      "prompt_id": "premium_newsletter_task2_premium_analysis"
+    },
+    {
+      "id": "task3_newsletter_creation",
+      "name": "Precision Newsletter Creation",
+      "agent": "copywriter",
+      "dependencies": ["task2_premium_analysis"],
+      "prompt_id": "premium_newsletter_task3_newsletter_creation"
+    }
+  ]
+}
