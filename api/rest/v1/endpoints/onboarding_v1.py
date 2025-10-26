@@ -230,25 +230,17 @@ async def submit_answers(
         # In production, this would come from Perplexity + Gemini
         snapshot = _build_snapshot_from_answers(session, request.answers)
 
-        # Create 4 cards using CardCreationService
-        card_requests = _card_service.create_cards_from_snapshot(
-            snapshot=snapshot,
-            tenant_id=UUID(x_tenant_id),
-            session_id=session_id,
-            created_by="onboarding-api",
-        )
-
         logger.info(
             json.dumps({
-                "event": "cards_prepared",
+                "event": "snapshot_created",
                 "trace_id": trace_id,
                 "tenant_id": x_tenant_id,
                 "session_id": str(session_id),
-                "cards_count": len(card_requests),
+                "snapshot_id": str(snapshot.snapshot_id),
             })
         )
 
-        # Call Cards API to create cards
+        # Call Cards API batch endpoint to create 4 cards atomically
         cards_client = CardsClient(
             base_url=_cards_api_url,
             tenant_id=x_tenant_id,
@@ -256,64 +248,87 @@ async def submit_answers(
             session_id=str(session_id),
         )
 
-        created_card_ids = []
-        for i, card_req in enumerate(card_requests):
-            try:
-                # Create card via Cards API
-                # Note: create_card doesn't support idempotency_key yet
-                # TODO: Add idempotency support to Cards API
-                card = cards_client.create_card(
-                    card_type=card_req["card_type"],
-                    title=card_req["title"],
-                    description=card_req["description"],
-                    content=card_req["content"],
-                    tags=card_req["tags"],
-                    source_session_id=UUID(card_req["source_session_id"]),
-                    created_by=card_req["created_by"],
-                )
-                created_card_ids.append(card.card_id)
+        # Use batch creation with idempotency
+        # Convert snapshot to dict with proper JSON serialization
+        snapshot_dict = json.loads(snapshot.model_dump_json())
 
-                # Metrics per card type
-                onboarding_cards_created_total.labels(
-                    tenant_id=x_tenant_id,
-                    card_type=card_req["card_type"],
-                ).inc()
+        try:
+            batch_response = cards_client.create_cards_batch(
+                company_snapshot=snapshot_dict,
+                source_session_id=session_id,
+                created_by="onboarding-api",
+                idempotency_key=idem_key,
+            )
+        except CardsAPIError as e:
+            logger.error(
+                json.dumps({
+                    "event": "cards_batch_error",
+                    "trace_id": trace_id,
+                    "tenant_id": x_tenant_id,
+                    "session_id": str(session_id),
+                    "error": str(e),
+                })
+            )
+            # Update session to failed
+            storage.update_session(session_id=session_id, status=SessionStatus.FAILED)
+            onboarding_errors_total.labels(tenant_id=x_tenant_id, error_type="cards_api").inc()
+            raise HTTPException(
+                status_code=502,
+                detail={
+                    "error": "BadGateway",
+                    "detail": f"Cards API error: {str(e)}",
+                    "request_id": trace_id,
+                },
+            )
 
-                logger.info(
-                    json.dumps({
-                        "event": "card_created",
-                        "trace_id": trace_id,
-                        "tenant_id": x_tenant_id,
-                        "session_id": str(session_id),
-                        "card_id": str(card.card_id),
-                        "card_type": card_req["card_type"],
-                        "card_index": i + 1,
-                        "total_cards": len(card_requests),
-                    })
-                )
+        created_card_ids = [card.card_id for card in batch_response.cards]
+        created_count = batch_response.created_count
 
-            except CardsAPIError as e:
-                logger.error(
-                    json.dumps({
-                        "event": "card_create_error",
-                        "trace_id": trace_id,
-                        "tenant_id": x_tenant_id,
-                        "session_id": str(session_id),
-                        "card_index": i + 1,
-                        "error": str(e),
-                    })
-                )
-                # Update session to failed
-                storage.update_session(session_id=session_id, status=SessionStatus.FAILED)
-                onboarding_errors_total.labels(tenant_id=x_tenant_id, error_type="cards_api").inc()
-                raise HTTPException(
-                    status_code=502,
-                    detail={
-                        "error": "BadGateway",
-                        "detail": f"Cards API error: {e.error.detail}",
-                        "request_id": trace_id,
-                    },
-                )
+        # Check if partial creation (should be 4 cards)
+        if created_count < 4:
+            logger.warning(
+                json.dumps({
+                    "event": "cards_batch_partial",
+                    "trace_id": trace_id,
+                    "tenant_id": x_tenant_id,
+                    "session_id": str(session_id),
+                    "created_count": created_count,
+                    "expected_count": 4,
+                })
+            )
+            # Update session to partial status
+            storage.update_session(
+                session_id=session_id,
+                status=SessionStatus.FAILED,  # Or create a PARTIAL status
+                card_ids=created_card_ids,
+                cards_created_count=created_count,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail={
+                    "error": "PartialCreation",
+                    "detail": f"Only {created_count}/4 cards created",
+                    "request_id": trace_id,
+                },
+            )
+
+        logger.info(
+            json.dumps({
+                "event": "cards_batch_created",
+                "trace_id": trace_id,
+                "tenant_id": x_tenant_id,
+                "session_id": str(session_id),
+                "created_count": created_count,
+                "idempotency_key": idem_key,
+            })
+        )
+
+        # Metrics per card type
+        for card in batch_response.cards:
+            onboarding_cards_created_total.labels(
+                tenant_id=x_tenant_id,
+                card_type=card.card_type,
+            ).inc()
 
         # Calculate duration
         duration_ms = int((time.time() - start_time) * 1000)

@@ -71,7 +71,13 @@ class RetrieveCardsResponse(BaseModel):
 
 
 # Mock card database (using valid UUIDs)
-MOCK_CARDS: Dict[str, ContextCard] = {
+MOCK_CARDS: Dict[str, ContextCard] = {}
+
+# Idempotency storage: {idempotency_key: response_payload}
+IDEMPOTENCY_STORE: Dict[str, Dict[str, Any]] = {}
+
+# Initialize with mock cards
+_INITIAL_MOCK_CARDS: Dict[str, ContextCard] = {
     "550e8400-e29b-41d4-a716-446655440001": ContextCard(
         card_id="550e8400-e29b-41d4-a716-446655440001",
         tenant_id="123e4567-e89b-12d3-a456-426614174000",
@@ -184,6 +190,144 @@ MOCK_CARDS: Dict[str, ContextCard] = {
         created_by="analytics-service",
     ),
 }
+
+# Copy initial mocks to MOCK_CARDS
+MOCK_CARDS.update(_INITIAL_MOCK_CARDS)
+
+
+# Batch creation models
+class CreateCardsBatchRequest(BaseModel):
+    """Request to create multiple cards from CompanySnapshot."""
+
+    tenant_id: str
+    company_snapshot: Dict[str, Any]
+    source_session_id: str
+    created_by: str = "onboarding-api"
+
+
+class CardBatchResponse(BaseModel):
+    """Response from batch card creation."""
+
+    cards: List[ContextCard]
+    created_count: int
+
+
+@app.post("/api/v1/cards/batch", response_model=CardBatchResponse, status_code=201)
+async def create_cards_batch(
+    request: CreateCardsBatchRequest,
+    x_tenant_id: str = Header(..., alias="X-Tenant-ID"),
+    x_trace_id: str = Header(None, alias="X-Trace-ID"),
+    idempotency_key: str = Header(None, alias="Idempotency-Key"),
+) -> CardBatchResponse:
+    """
+    Create multiple cards from CompanySnapshot (idempotent).
+
+    If Idempotency-Key is provided and matches a previous request,
+    returns the same cards without creating duplicates.
+    """
+    logger.info(f"📦 Batch card creation request (idempotency_key={idempotency_key})")
+
+    # Check idempotency
+    if idempotency_key and idempotency_key in IDEMPOTENCY_STORE:
+        logger.info(f"♻️  Idempotent replay detected - returning cached response")
+        cached = IDEMPOTENCY_STORE[idempotency_key]
+        return CardBatchResponse(**cached)
+
+    # Extract snapshot sections
+    snapshot = request.company_snapshot
+    company = snapshot.get("company", {})
+    audience = snapshot.get("audience", {})
+    voice = snapshot.get("voice", {})
+    insights = snapshot.get("insights", {})
+
+    # Create 4 atomic cards
+    cards = []
+
+    # 1. Company Card
+    company_card = ContextCard(
+        card_id=str(uuid4()),
+        tenant_id=request.tenant_id,
+        card_type="company",
+        title=company.get("name", "Company Profile"),
+        description=company.get("description", ""),
+        content=company,
+        tags=["company", "profile"],
+        is_active=True,
+        created_at=datetime.utcnow().isoformat(),
+        updated_at=datetime.utcnow().isoformat(),
+        created_by=request.created_by,
+    )
+    MOCK_CARDS[company_card.card_id] = company_card
+    cards.append(company_card)
+    logger.info(f"✅ Created company card: {company_card.card_id}")
+
+    # 2. Audience Card
+    audience_card = ContextCard(
+        card_id=str(uuid4()),
+        tenant_id=request.tenant_id,
+        card_type="audience",
+        title=audience.get("primary", "Target Audience"),
+        description=f"Primary audience: {audience.get('primary', 'N/A')}",
+        content=audience,
+        tags=["audience", "targeting"],
+        is_active=True,
+        created_at=datetime.utcnow().isoformat(),
+        updated_at=datetime.utcnow().isoformat(),
+        created_by=request.created_by,
+    )
+    MOCK_CARDS[audience_card.card_id] = audience_card
+    cards.append(audience_card)
+    logger.info(f"✅ Created audience card: {audience_card.card_id}")
+
+    # 3. Voice Card
+    voice_card = ContextCard(
+        card_id=str(uuid4()),
+        tenant_id=request.tenant_id,
+        card_type="voice",
+        title=f"Brand Voice: {voice.get('tone', 'Professional')}",
+        description=f"Tone: {voice.get('tone', 'N/A')}",
+        content=voice,
+        tags=["voice", "tone", "style"],
+        is_active=True,
+        created_at=datetime.utcnow().isoformat(),
+        updated_at=datetime.utcnow().isoformat(),
+        created_by=request.created_by,
+    )
+    MOCK_CARDS[voice_card.card_id] = voice_card
+    cards.append(voice_card)
+    logger.info(f"✅ Created voice card: {voice_card.card_id}")
+
+    # 4. Insight Card
+    insight_card = ContextCard(
+        card_id=str(uuid4()),
+        tenant_id=request.tenant_id,
+        card_type="insight",
+        title="Market Insights",
+        description="Key market insights and positioning",
+        content=insights,
+        tags=["insights", "market", "positioning"],
+        is_active=True,
+        created_at=datetime.utcnow().isoformat(),
+        updated_at=datetime.utcnow().isoformat(),
+        created_by=request.created_by,
+    )
+    MOCK_CARDS[insight_card.card_id] = insight_card
+    cards.append(insight_card)
+    logger.info(f"✅ Created insight card: {insight_card.card_id}")
+
+    # Build response
+    response = CardBatchResponse(
+        cards=cards,
+        created_count=len(cards),
+    )
+
+    # Store for idempotency
+    if idempotency_key:
+        IDEMPOTENCY_STORE[idempotency_key] = response.model_dump()
+        logger.info(f"💾 Stored response for idempotency key: {idempotency_key}")
+
+    logger.info(f"🎉 Batch creation complete: {len(cards)} cards created")
+    return response
 
 
 @app.post("/api/v1/cards/retrieve", response_model=RetrieveCardsResponse)

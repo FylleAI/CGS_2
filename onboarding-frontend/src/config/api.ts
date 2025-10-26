@@ -20,14 +20,14 @@ export const API_CONFIG = {
 } as const;
 
 export const API_ENDPOINTS = {
-  // Onboarding endpoints
+  // Onboarding endpoints (updated for new API v1)
   ONBOARDING: {
-    START: '/api/v1/onboarding/start',
-    SUBMIT_ANSWERS: (sessionId: string) => `/api/v1/onboarding/${sessionId}/answers`,
-    GET_STATUS: (sessionId: string) => `/api/v1/onboarding/${sessionId}/status`,
-    GET_DETAILS: (sessionId: string) => `/api/v1/onboarding/${sessionId}`,
+    START: '/api/v1/onboarding/sessions',
+    SUBMIT_ANSWERS: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}/answers`,
+    GET_STATUS: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}/status`,
+    GET_DETAILS: (sessionId: string) => `/api/v1/onboarding/sessions/${sessionId}`,
   },
-  
+
   // Health checks
   HEALTH: {
     ONBOARDING: '/health',

@@ -131,11 +131,9 @@ export interface OnboardingSession {
 // ============================================================================
 
 export interface StartOnboardingRequest {
-  brand_name: string;
-  website?: string;
-  goal: OnboardingGoal;
+  tenant_id: string;
+  company_domain: string;
   user_email: string;
-  additional_context?: string;
 }
 
 export interface SnapshotSummary {
@@ -172,31 +170,26 @@ export interface Question {
 
 export interface StartOnboardingResponse {
   session_id: string;
-  trace_id: string;
-  state: SessionState;
-  snapshot_summary: SnapshotSummary;
-  clarifying_questions: QuestionResponse[];
-  message: string;
-  next_action: string;
+  tenant_id: string;
+  company_domain: string;
+  user_email: string;
+  status: string;
+  created_at: string;
 }
 
 export interface SubmitAnswersRequest {
-  answers: Record<string, any>;
+  answers: Array<{
+    question_id: string;
+    answer: string;
+  }>;
 }
 
 export interface SubmitAnswersResponse {
   session_id: string;
-  state: SessionState;
-  content_title?: string;
-  content_preview?: string;
-  word_count?: number;
-  delivery_status?: string;
-  cgs_run_id?: string;
-  execution_metrics?: {
-    duration_seconds: number;
-    [key: string]: any;
-  };
-  message: string;
+  status: string;
+  card_ids: string[];
+  cards_created_count: number;
+  updated_at: string;
 }
 
 export interface SessionStatusResponse {
