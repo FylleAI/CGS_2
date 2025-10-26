@@ -156,6 +156,11 @@ async def execute_workflow_v1(
         workflow_context["trace_id"] = x_trace_id
         workflow_context["session_id"] = x_session_id
 
+        # Add agent_repository to context (required by workflow execution)
+        if "agent_repository" not in workflow_context:
+            from core.infrastructure.repositories.yaml_agent_repository import YamlAgentRepository
+            workflow_context["agent_repository"] = YamlAgentRepository()
+
         cache_hit_rate = 0.0
         cards_used = 0
         partial_result = False
@@ -277,16 +282,30 @@ async def execute_workflow_v1(
             )
             workflow_context.update(getattr(request, "context", {}))
 
-        # Execute workflow
+        # Execute workflow using execute_dynamic_workflow (handles agent_executor setup)
         if not _workflow_registry:
             raise HTTPException(
                 status_code=500,
                 detail="Workflow registry not initialized",
             )
 
+        logger.info(
+            f"🎯 Executing workflow",
+            extra={
+                "workflow_id": str(workflow_id),
+                "workflow_type": request.workflow_type.value,
+                "using_cards": bool(request.card_ids),
+            },
+        )
+
         try:
-            handler = _workflow_registry.get_handler(request.workflow_type.value)
-            result = await handler.execute(workflow_context)
+            # Use execute_dynamic_workflow which handles agent_executor initialization
+            from core.infrastructure.workflows.registry import execute_dynamic_workflow
+
+            result = await execute_dynamic_workflow(
+                workflow_type=request.workflow_type.value,
+                context=workflow_context,
+            )
 
             execution_time_ms = int((time.time() - start_time) * 1000)
 

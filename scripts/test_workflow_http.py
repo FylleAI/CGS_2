@@ -4,10 +4,13 @@ HTTP test for Workflow API v1 with real CGS infrastructure.
 
 This script:
 1. Starts the FastAPI server in background
-2. Creates sample cards via mock Cards API
-3. Calls POST /api/v1/workflow/execute with card_ids
-4. Verifies the workflow executes with full CGS infrastructure
-5. Checks metrics endpoint
+2. Calls POST /api/v1/workflow/execute with legacy context (deprecated path)
+3. Verifies the workflow executes with full CGS infrastructure
+4. Checks metrics endpoint
+5. Validates deprecation headers
+
+Note: This tests the LEGACY path since Cards API is not yet implemented.
+Once Cards API is available (Sprint 3), we can test the card_ids path.
 """
 
 import asyncio
