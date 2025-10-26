@@ -41,12 +41,17 @@ class CreateCardsFromSnapshotUseCase:
     ) -> List[BaseCard]:
         """
         Create 4 atomic cards from CompanySnapshot and auto-link them.
-        
+
         Args:
             tenant_id: Tenant identifier
-            snapshot: CompanySnapshot dict with company_info, audience_info, goal, insights
+            snapshot: CompanySnapshot dict with new schema:
+                - company: CompanyInfo (name, description, key_offerings, differentiators)
+                - audience: AudienceInfo (primary, secondary, pain_points, desired_outcomes)
+                - voice: VoiceInfo (tone, style_guidelines, cta_preferences)
+                - insights: InsightsInfo (positioning, key_messages, recent_news, competitors)
+                - clarifying_answers: Dict with user answers to clarifying questions
             created_by: User who created the cards
-            
+
         Returns:
             List of created cards [ProductCard, PersonaCard, CampaignCard, TopicCard]
         """
@@ -85,26 +90,36 @@ class CreateCardsFromSnapshotUseCase:
     async def _create_product_card(
         self, tenant_id: UUID, snapshot: dict, created_by: Optional[UUID]
     ) -> BaseCard:
-        """Create ProductCard from company_info"""
-        
-        company_info = snapshot.get("company_info", {})
-        
+        """Create ProductCard from company info"""
+
+        # Read from new schema: snapshot.company
+        company = snapshot.get("company", {})
+        insights = snapshot.get("insights", {})
+
+        # Fallback to old schema for backwards compatibility
+        if not company:
+            company = snapshot.get("company_info", {})
+
         request = CreateCardRequest(
             card_type=CardType.PRODUCT,
-            title=company_info.get("company_name", "Product"),
+            title=company.get("name", "Product"),
             content={
-                "value_proposition": company_info.get("value_proposition", ""),
-                "features": company_info.get("features", []),
-                "differentiators": company_info.get("differentiators", []),
-                "use_cases": company_info.get("use_cases", []),
-                "target_market": company_info.get("target_market", ""),
+                "value_proposition": insights.get("positioning", "") or company.get("description", ""),
+                "features": company.get("key_offerings", []),
+                "differentiators": company.get("differentiators", []),
+                "use_cases": [],  # Not in new schema, can be populated from clarifying_answers
+                "target_market": company.get("industry", ""),
+                "description": company.get("description", ""),
+                "website": company.get("website", ""),
+                "headquarters": company.get("headquarters", ""),
+                "size_range": company.get("size_range", ""),
             },
             metrics={
-                "conversion_rate": company_info.get("conversion_rate"),
-                "avg_deal_size": company_info.get("avg_deal_size"),
+                "industry": company.get("industry"),
+                "size_range": company.get("size_range"),
             },
         )
-        
+
         return await self.create_card_use_case.execute(
             tenant_id, request, created_by
         )
@@ -112,24 +127,30 @@ class CreateCardsFromSnapshotUseCase:
     async def _create_persona_card(
         self, tenant_id: UUID, snapshot: dict, created_by: Optional[UUID]
     ) -> BaseCard:
-        """Create PersonaCard from audience_info"""
-        
-        audience_info = snapshot.get("audience_info", {})
-        
+        """Create PersonaCard from audience info"""
+
+        # Read from new schema: snapshot.audience
+        audience = snapshot.get("audience", {})
+
+        # Fallback to old schema for backwards compatibility
+        if not audience:
+            audience = snapshot.get("audience_info", {})
+
         request = CreateCardRequest(
             card_type=CardType.PERSONA,
-            title=audience_info.get("persona_name", "Target Audience"),
+            title=audience.get("primary", "Target Audience"),
             content={
-                "icp_profile": audience_info.get("icp_profile", ""),
-                "pain_points": audience_info.get("pain_points", []),
-                "goals": audience_info.get("goals", []),
-                "preferred_language": audience_info.get("preferred_language", ""),
-                "communication_channels": audience_info.get("communication_channels", []),
-                "demographics": audience_info.get("demographics"),
-                "psychographics": audience_info.get("psychographics"),
+                "icp_profile": audience.get("primary", ""),
+                "pain_points": audience.get("pain_points", []),
+                "goals": audience.get("desired_outcomes", []),
+                "preferred_language": "",  # Not in new schema
+                "communication_channels": [],  # Not in new schema
+                "demographics": {},
+                "psychographics": {},
+                "secondary_audiences": audience.get("secondary", []),
             },
         )
-        
+
         return await self.create_card_use_case.execute(
             tenant_id, request, created_by
         )
@@ -137,17 +158,25 @@ class CreateCardsFromSnapshotUseCase:
     async def _create_campaign_card(
         self, tenant_id: UUID, snapshot: dict, created_by: Optional[UUID]
     ) -> BaseCard:
-        """Create CampaignCard from goal"""
-        
+        """Create CampaignCard from voice and insights"""
+
+        # Read from new schema: snapshot.voice and snapshot.insights
+        voice = snapshot.get("voice", {})
+        insights = snapshot.get("insights", {})
+        company = snapshot.get("company", {})
+
+        # Fallback to old schema for backwards compatibility
         goal = snapshot.get("goal", {})
-        
+
         request = CreateCardRequest(
             card_type=CardType.CAMPAIGN,
-            title=goal.get("campaign_name", "Campaign"),
+            title=goal.get("campaign_name", f"{company.get('name', 'Campaign')} Campaign"),
             content={
-                "objective": goal.get("objective", ""),
-                "key_messages": goal.get("key_messages", []),
-                "tone": goal.get("tone", ""),
+                "objective": goal.get("objective", insights.get("positioning", "")),
+                "key_messages": insights.get("key_messages", []),
+                "tone": voice.get("tone", ""),
+                "style_guidelines": voice.get("style_guidelines", []),
+                "cta_preferences": voice.get("cta_preferences", []),
                 "target_personas": [],  # Will be linked
                 "assets_produced": goal.get("assets_produced", []),
                 "results": None,
@@ -159,7 +188,7 @@ class CreateCardsFromSnapshotUseCase:
                 "roi": goal.get("roi"),
             },
         )
-        
+
         return await self.create_card_use_case.execute(
             tenant_id, request, created_by
         )
@@ -168,26 +197,31 @@ class CreateCardsFromSnapshotUseCase:
         self, tenant_id: UUID, snapshot: dict, created_by: Optional[UUID]
     ) -> BaseCard:
         """Create TopicCard from insights"""
-        
+
+        # Read from new schema: snapshot.insights
         insights = snapshot.get("insights", {})
-        
+        company = snapshot.get("company", {})
+
         request = CreateCardRequest(
             card_type=CardType.TOPIC,
-            title=insights.get("topic_name", "Topics"),
+            title=f"{company.get('name', 'Topics')} - Key Topics",
             content={
-                "keywords": insights.get("keywords", []),
-                "angles": insights.get("angles", []),
-                "related_content": insights.get("related_content", []),
-                "trend_status": insights.get("trend_status", "stable"),
-                "frequency": insights.get("frequency", ""),
-                "audience_interest": insights.get("audience_interest", ""),
+                "keywords": [],  # Not in new schema, can be extracted from key_messages
+                "angles": [],  # Not in new schema
+                "related_content": insights.get("recent_news", []),
+                "key_messages": insights.get("key_messages", []),
+                "positioning": insights.get("positioning", ""),
+                "competitors": insights.get("competitors", []),
+                "trend_status": "stable",  # Not in new schema
+                "frequency": "",  # Not in new schema
+                "audience_interest": "",  # Not in new schema
             },
             metrics={
-                "search_volume": insights.get("search_volume"),
-                "trend_score": insights.get("trend_score"),
+                "search_volume": None,
+                "trend_score": None,
             },
         )
-        
+
         return await self.create_card_use_case.execute(
             tenant_id, request, created_by
         )

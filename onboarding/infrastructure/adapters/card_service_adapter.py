@@ -51,14 +51,19 @@ class CardServiceAdapter:
     ) -> List[Dict[str, Any]]:
         """
         Create atomic cards from CompanySnapshot.
-        
+
         Args:
             tenant_id: Tenant identifier (user email)
-            snapshot: CompanySnapshot dict with company_info, audience_info, goal, insights
-            
+            snapshot: CompanySnapshot dict with new schema:
+                - company: CompanyInfo (name, description, key_offerings, differentiators, website, industry, headquarters, size_range)
+                - audience: AudienceInfo (primary, secondary, pain_points, desired_outcomes)
+                - voice: VoiceInfo (tone, style_guidelines, cta_preferences)
+                - insights: InsightsInfo (positioning, key_messages, recent_news, competitors)
+                - clarifying_answers: Dict with user answers to clarifying questions
+
         Returns:
             List of created cards with id, card_type, title, content
-            
+
         Raises:
             httpx.HTTPError: If API request fails
             ValueError: If response is invalid
