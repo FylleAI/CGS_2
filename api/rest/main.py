@@ -10,7 +10,9 @@ from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
 # Make .env values visible to os.environ (tools read env directly)
-load_dotenv(dotenv_path=Path(".env"), override=False)
+# Load from root directory (where .env is located)
+env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=env_path, override=False)
 
 from services.content_workflow.infrastructure.config.settings import get_settings
 from api.rest.v1.endpoints import content, workflows, agents, system, knowledge_base
