@@ -1,10 +1,10 @@
 """Tests for the SimpleSystemPromptBuilder."""
 
-from core.domain.entities.agent import Agent, AgentRole
-from core.infrastructure.orchestration.simple_system_prompt_builder import (
+from services.content_workflow.domain.entities.agent import Agent, AgentRole
+from services.content_workflow.infrastructure.orchestration.simple_system_prompt_builder import (
     SimpleSystemPromptBuilder,
 )
-from core.infrastructure.tools.tool_names import ToolNames
+from services.content_workflow.infrastructure.tools.tool_names import ToolNames
 
 
 def legacy_system_prompt(agent: Agent, context, tool_descriptions: str) -> str:

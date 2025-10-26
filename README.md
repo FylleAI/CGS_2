@@ -11,17 +11,17 @@ CGS_2 è un sistema di content generation multi‑agent con:
 - API layer: FastAPI (api/rest), WebSocket, tracking opzionale su Supabase
 - Orchestrazione: Workflow handler + AgentExecutor (registry tool, parsing tool call, logging/costi)
 - Agents: YAML con system_message, tools, goal/backstory
-- Prompt: template Markdown per task (core/prompts/*.md), renderizzati con Jinja2 se disponibile
+- Prompt: template Markdown per task (`services/content_workflow/prompts/*.md`), renderizzati con Jinja2 se disponibile
 - Storage & Tracking: Supabase (opzionale) o filesystem locale
 - Frontend: web/react-app (dev locale)
 
 Riferimenti codice:
-- core/infrastructure/workflows/handlers/* (logica di workflow)
-- core/infrastructure/workflows/templates/*.json (task graph e mapping agent)
-- core/infrastructure/orchestration/agent_executor.py (esecuzione agent + system message)
-- core/infrastructure/orchestration/prompt_builder.py (render prompt)
-- core/infrastructure/tools/* (Perplexity, RAG, WebSearch)
-- core/infrastructure/config/settings.py (settings/env)
+- `services/content_workflow/infrastructure/workflows/handlers/*` (logica di workflow)
+- `services/content_workflow/infrastructure/workflows/templates/*.json` (task graph e mapping agent)
+- `services/content_workflow/infrastructure/orchestration/agent_executor.py` (esecuzione agent + system message)
+- `services/content_workflow/infrastructure/orchestration/prompt_builder.py` (render prompt)
+- `services/content_workflow/infrastructure/tools/*` (Perplexity, RAG, WebSearch)
+- `services/content_workflow/infrastructure/config/settings.py` (settings/env)
 
 ---
 
@@ -253,22 +253,22 @@ DEBUG=false uvicorn api.rest.main:app --host 0.0.0.0 --port 8000 --reload
 python3 start_backend_debug.py
 ```
 
-Questo imposta livelli di log più verbosi su FastAPI, moduli core e provider.
+Questo imposta livelli di log più verbosi su FastAPI, moduli `services.content_workflow` e provider.
 
 
 ## Come funzionano workflow, task, agent e system message
 
 ### Esempio: workflow "enhanced_article"
-- Definito in: core/infrastructure/workflows/templates/enhanced_article.json
+- Definito in: `services/content_workflow/infrastructure/workflows/templates/enhanced_article.json`
 - Sequenza task → agent:
-  - task1_brief → agent: rag_specialist → prompt: core/prompts/enhanced_article_task1_brief.md
-  - task2_research → agent: web_searcher → prompt: core/prompts/enhanced_article_task2_research.md
-  - task3_content → agent: enhanced_article_writer → prompt: core/prompts/enhanced_article_task3_content.md
-  - task4_compliance_review → agent: enhanced_article_compliance_specialist → prompt: core/prompts/enhanced_article_task4_compliance_review.md
+  - task1_brief → agent: rag_specialist → prompt: `services/content_workflow/prompts/enhanced_article_task1_brief.md`
+  - task2_research → agent: web_searcher → prompt: `services/content_workflow/prompts/enhanced_article_task2_research.md`
+  - task3_content → agent: enhanced_article_writer → prompt: `services/content_workflow/prompts/enhanced_article_task3_content.md`
+  - task4_compliance_review → agent: enhanced_article_compliance_specialist → prompt: `services/content_workflow/prompts/enhanced_article_task4_compliance_review.md`
 
 ### Nuovo workflow: "siebert_newsletter_html"
-- Template: core/infrastructure/workflows/templates/siebert_newsletter_html.json
-- Handler: core/infrastructure/workflows/handlers/siebert_newsletter_html_handler.py
+- Template: `services/content_workflow/infrastructure/workflows/templates/siebert_newsletter_html.json`
+- Handler: `services/content_workflow/infrastructure/workflows/handlers/siebert_newsletter_html_handler.py`
 - Task sequence (stesso stack del Premium Siebert, con un task finale extra):
   1. **RAG brand setup** → agent `rag_specialist`
   2. **Perplexity research** → agent `research_specialist`
@@ -390,7 +390,8 @@ Tabelle utilizzate:
 Health check rapido (read‑only):
 ```bash
 python3 - <<'PY'
-from core.infrastructure.database.supabase_tracker import get_tracker
+from services.content_workflow.infrastructure.database.supabase_tracker import get_tracker
+
 trk = get_tracker()
 assert trk is not None, 'Tracker non inizializzato'
 print('Tracker OK')

@@ -2,7 +2,7 @@
 Test CGS and Onboarding service integration.
 """
 import asyncio
-from onboarding.config.settings import get_onboarding_settings
+from services.onboarding.config.settings import get_onboarding_settings
 
 
 async def test_configuration():
@@ -43,7 +43,7 @@ async def test_cgs_connection(settings):
     print("🔗 Testing CGS Connection")
     print("=" * 60)
 
-    from onboarding.infrastructure.adapters.cgs_adapter import CgsAdapter
+    from services.onboarding.infrastructure.adapters.cgs_adapter import CgsAdapter
 
     try:
         adapter = CgsAdapter(settings)

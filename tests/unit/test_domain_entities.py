@@ -4,16 +4,16 @@ import pytest
 from uuid import uuid4
 from datetime import datetime
 
-from core.domain.entities.agent import Agent, AgentRole
-from core.domain.entities.content import (
+from services.content_workflow.domain.entities.agent import Agent, AgentRole
+from services.content_workflow.domain.entities.content import (
     Content,
     ContentType,
     ContentFormat,
     ContentStatus,
 )
-from core.domain.entities.task import Task, TaskStatus, TaskPriority, TaskResult
-from core.domain.entities.workflow import Workflow, WorkflowType, WorkflowStatus
-from core.domain.value_objects.provider_config import ProviderConfig, LLMProvider
+from services.content_workflow.domain.entities.task import Task, TaskStatus, TaskPriority, TaskResult
+from services.content_workflow.domain.entities.workflow import Workflow, WorkflowType, WorkflowStatus
+from services.content_workflow.domain.value_objects.provider_config import ProviderConfig, LLMProvider
 
 
 class TestAgent:

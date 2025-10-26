@@ -7,8 +7,8 @@ from datetime import datetime
 
 sys.path.insert(0, '/c/Users/david/Desktop/onboarding')
 
-from onboarding.application.builders.payload_builder import PayloadBuilder
-from onboarding.domain.models import (
+from services.onboarding.application.builders.payload_builder import PayloadBuilder
+from services.onboarding.domain.models import (
     OnboardingGoal,
     CompanySnapshot,
     CompanyInfo,

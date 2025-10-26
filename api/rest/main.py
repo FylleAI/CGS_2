@@ -12,13 +12,13 @@ from dotenv import load_dotenv
 # Make .env values visible to os.environ (tools read env directly)
 load_dotenv(dotenv_path=Path(".env"), override=False)
 
-from core.infrastructure.config.settings import get_settings
+from services.content_workflow.infrastructure.config.settings import get_settings
 from .v1.endpoints import content, workflows, agents, system, knowledge_base
 from .endpoints import logging as logging_endpoints
 from .middleware import LoggingMiddleware
 from .exceptions import setup_exception_handlers
-from core.card_service.api import card_router, integration_router
-from onboarding.api.endpoints import router as onboarding_router
+from services.card_service.api import card_router, integration_router, onboarding_router
+from services.onboarding.api.endpoints import router as onboarding_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -102,6 +102,7 @@ def create_app() -> FastAPI:
 
     # Card Service routers
     app.include_router(card_router, tags=["cards"])
+    app.include_router(onboarding_router, tags=["cards-onboarding"])
     app.include_router(integration_router, tags=["cards-integration"])
 
     # Health check endpoint

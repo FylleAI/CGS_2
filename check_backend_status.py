@@ -237,7 +237,7 @@ class CGSRefDiagnostics:
         try:
             # Try to import the main app
             from api.rest.main import app
-            from core.infrastructure.config.settings import get_settings
+            from services.content_workflow.infrastructure.config.settings import get_settings
 
             settings = get_settings()
 

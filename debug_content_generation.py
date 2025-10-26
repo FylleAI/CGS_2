@@ -230,9 +230,9 @@ class ContentGenerationDebugger:
 
         try:
             # Import and test LLM provider directly
-            from core.infrastructure.llm.openai_provider import OpenAIProvider
-            from core.infrastructure.config.settings import get_settings
-            from core.domain.value_objects.provider_config import (
+            from services.content_workflow.infrastructure.llm.openai_provider import OpenAIProvider
+            from services.content_workflow.infrastructure.config.settings import get_settings
+            from services.content_workflow.domain.value_objects.provider_config import (
                 ProviderConfig,
                 LLMProvider,
             )
