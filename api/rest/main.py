@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=Path(".env"), override=False)
 
 from core.infrastructure.config.settings import get_settings
-from .v1.endpoints import content, workflows, agents, system, knowledge_base
+from .v1.endpoints import content, workflows, agents, system, knowledge_base, workflow_v1
 from .endpoints import logging as logging_endpoints
 from .middleware import LoggingMiddleware
 from .exceptions import setup_exception_handlers
@@ -90,6 +90,7 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(content.router, prefix="/api/v1/content", tags=["content"])
     app.include_router(workflows.router, prefix="/api/v1/workflows", tags=["workflows"])
+    app.include_router(workflow_v1.router, prefix="/api/v1/workflow", tags=["workflow-v1"])
     app.include_router(agents.router, prefix="/api/v1/agents", tags=["agents"])
     app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
     app.include_router(knowledge_base.router, prefix="/api/v1", tags=["knowledge-base"])

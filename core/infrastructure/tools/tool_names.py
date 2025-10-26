@@ -19,9 +19,12 @@ class ToolNames:
     WEB_SEARCH_SERPER = "web_search"
     WEB_SEARCH_PERPLEXITY = "perplexity_search"
 
-    # RAG
+    # RAG (legacy file-based)
     RAG_GET_CLIENT_CONTENT = "rag_get_client_content"
     RAG_SEARCH_CONTENT = "rag_search_content"
+
+    # Context Cards (v1 - card-based context)
+    CONTEXT_CARD_RETRIEVE = "context_card_retrieve"
 
     # Creative / Image generation
     IMAGE_GENERATION = "image_generation_tool"

@@ -15,13 +15,20 @@ from fylle_shared.enums import WorkflowType
 class WorkflowRequest(BaseModel):
     """
     Workflow Request - Request to execute a workflow.
-    
+
     v1: Uses card_ids to reference context cards.
-    Legacy 'context' dict is deprecated.
+    Legacy 'context' dict is deprecated and will be removed in v2.0.
     """
     workflow_type: WorkflowType
-    card_ids: List[UUID]
+    card_ids: Optional[List[UUID]] = None
     parameters: Dict[str, Any] = Field(default_factory=dict)
+
+    # DEPRECATED: Will be removed in v2.0 (6 months notice)
+    context: Optional[Dict[str, Any]] = Field(
+        default=None,
+        deprecated=True,
+        description="DEPRECATED: Use card_ids instead. Will be removed in v2.0.",
+    )
 
     class Config:
         json_schema_extra = {
