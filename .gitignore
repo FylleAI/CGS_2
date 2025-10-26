@@ -143,3 +143,4 @@ startup-program-*.json
 onboarding/.env
 onboarding/.env.backup
 *.env.backup
+vertex.json

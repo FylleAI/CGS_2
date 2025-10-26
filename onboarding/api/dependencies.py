@@ -9,6 +9,7 @@ from onboarding.infrastructure.adapters.gemini_adapter import GeminiSynthesisAda
 from onboarding.infrastructure.adapters.cgs_adapter import CgsAdapter
 from onboarding.infrastructure.adapters.brevo_adapter import BrevoAdapter
 from onboarding.infrastructure.adapters.card_service_adapter import CardServiceAdapter
+from onboarding.infrastructure.card_service_client import CardServiceClient
 from onboarding.infrastructure.repositories.supabase_repository import (
     SupabaseSessionRepository,
     get_session_repository,
@@ -17,6 +18,7 @@ from onboarding.infrastructure.repositories.company_context_repository import (
     CompanyContextRepository,
 )
 from onboarding.application.builders.payload_builder import PayloadBuilder
+from onboarding.application.card_export_pipeline import CardExportPipeline
 from onboarding.application.use_cases.create_session import CreateSessionUseCase
 from onboarding.application.use_cases.research_company import ResearchCompanyUseCase
 from onboarding.application.use_cases.synthesize_snapshot import SynthesizeSnapshotUseCase
@@ -72,6 +74,29 @@ def get_card_service_adapter() -> Optional[CardServiceAdapter]:
     if not settings.is_card_service_configured():
         return None
     return CardServiceAdapter(settings)
+
+
+@lru_cache()
+def get_card_service_client() -> Optional[CardServiceClient]:
+    """Get Card Service HTTP client."""
+    settings = get_settings()
+    if not settings.is_card_service_configured():
+        return None
+    card_service_url = settings.card_service_url or "http://localhost:8001"
+    return CardServiceClient(
+        base_url=card_service_url,
+        timeout=30,
+        retry_attempts=3,
+    )
+
+
+@lru_cache()
+def get_card_export_pipeline() -> Optional[CardExportPipeline]:
+    """Get Card Export Pipeline."""
+    client = get_card_service_client()
+    if not client:
+        return None
+    return CardExportPipeline(card_service_client=client)
 
 
 @lru_cache()
