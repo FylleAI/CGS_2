@@ -207,6 +207,10 @@ async def execute_workflow_v1(
                 # Merge card context into workflow context
                 workflow_context.update(card_context)
 
+                # Also merge any additional context parameters from request
+                if hasattr(request, "context") and request.context:
+                    workflow_context.update(request.context)
+
                 # Get metrics
                 cache_hit_rate = context_tool.get_cache_hit_rate()
                 cards_used = len(request.card_ids)
