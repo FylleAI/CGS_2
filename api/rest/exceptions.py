@@ -14,15 +14,28 @@ def setup_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-        """Handle HTTP exceptions."""
+        """
+        Handle HTTP exceptions.
+
+        If exc.detail is a dict with an 'error' key, use it as-is.
+        Otherwise, wrap it in a standard error format.
+        """
         logger.error(f"HTTP error {exc.status_code}: {exc.detail}")
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={
+
+        # If detail is already a dict with error info, use it directly
+        if isinstance(exc.detail, dict) and "error" in exc.detail:
+            content = exc.detail
+        else:
+            # Otherwise, wrap in standard format
+            content = {
                 "error": "HTTP Error",
                 "message": exc.detail,
                 "status_code": exc.status_code,
-            },
+            }
+
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=content,
         )
 
     @app.exception_handler(RequestValidationError)

@@ -1,7 +1,7 @@
 """
 Metrics endpoint for Prometheus.
 
-Exposes workflow and cache metrics in Prometheus format.
+Exposes workflow, cache, and onboarding metrics in Prometheus format.
 """
 
 import logging
@@ -18,10 +18,12 @@ router = APIRouter()
 async def prometheus_metrics():
     """
     Prometheus metrics endpoint.
-    
+
     Returns metrics in Prometheus text format for scraping.
-    
+
     Metrics exposed:
+
+    **Workflow Metrics:**
     - workflow_cache_hit_total: Cache hits by card type
     - workflow_cache_miss_total: Cache misses by card type
     - workflow_cache_hit_rate: Current cache hit rate (0.0-1.0)
@@ -35,7 +37,14 @@ async def prometheus_metrics():
     - workflow_execution_duration_ms: Workflow execution duration
     - workflow_partial_result_total: Workflows with partial results
     - workflow_retrieve_failure_total: Card retrieval failures
-    
+
+    **Onboarding Metrics:**
+    - onboarding_cards_created_total: Cards created by tenant and card type
+    - onboarding_batch_duration_ms: Batch creation duration histogram
+    - onboarding_sessions_total: Sessions created by tenant
+    - onboarding_sessions_completed_total: Sessions completed by tenant and status
+    - onboarding_errors_total: Errors by tenant and error type
+
     Returns:
         Prometheus metrics in text format
     """
