@@ -31,8 +31,8 @@ from ...infrastructure.workflows.registry import (
 )
 from ...infrastructure.database.supabase_tracker import get_tracker, SupabaseTracker
 from ...infrastructure import workflows as _workflows  # Ensure handlers are registered
-from ...card_service.application.get_cards_for_context_use_case import GetCardsForContextUseCase
-from ...card_service.infrastructure.card_repository import CardRepository
+from services.card_service.application.get_cards_for_context_use_case import GetCardsForContextUseCase
+from services.card_service.infrastructure.card_repository import CardRepository
 
 
 logger = logging.getLogger(__name__)

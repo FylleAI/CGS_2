@@ -13,10 +13,10 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=Path(".env"), override=False)
 
 from services.content_workflow.infrastructure.config.settings import get_settings
-from .v1.endpoints import content, workflows, agents, system, knowledge_base
-from .endpoints import logging as logging_endpoints
-from .middleware import LoggingMiddleware
-from .exceptions import setup_exception_handlers
+from api.rest.v1.endpoints import content, workflows, agents, system, knowledge_base
+from api.rest.endpoints import logging as logging_endpoints
+from api.rest.middleware import LoggingMiddleware
+from api.rest.exceptions import setup_exception_handlers
 from services.card_service.api import card_router, integration_router
 from services.onboarding.api.endpoints import router as onboarding_router
 
