@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=Path(".env"), override=False)
 
 from core.infrastructure.config.settings import get_settings
-from .v1.endpoints import content, workflows, agents, system, knowledge_base, workflow_v1
+from .v1.endpoints import content, workflows, agents, system, knowledge_base, workflow_v1, metrics
 from .endpoints import logging as logging_endpoints
 from .middleware import LoggingMiddleware
 from .exceptions import setup_exception_handlers
@@ -48,7 +48,23 @@ async def lifespan(app: FastAPI):
     if not settings.has_any_provider():
         logger.warning("No AI providers configured. Some features may not work.")
 
-    # Initialize services here if needed
+    # Initialize workflow registry and cards client
+    try:
+        from core.infrastructure.workflows.registry import workflow_registry
+        from clients.python.fylle_cards_client.fylle_cards_client.client import CardsClient
+
+        # Initialize Cards client
+        cards_api_url = os.getenv("CARDS_API_URL", "http://localhost:8002/api/v1")
+        cards_client = CardsClient(base_url=cards_api_url)
+        logger.info(f"✅ Cards client initialized: {cards_api_url}")
+
+        # Initialize workflow v1 endpoint with dependencies
+        workflow_v1.init_workflow_v1(workflow_registry, cards_client)
+        logger.info("✅ Workflow v1 endpoint initialized")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize workflow v1: {e}", exc_info=True)
+        # Continue startup - workflow v1 will return 500 if not initialized
+
     yield
 
     # Shutdown
@@ -95,6 +111,7 @@ def create_app() -> FastAPI:
     app.include_router(system.router, prefix="/api/v1/system", tags=["system"])
     app.include_router(knowledge_base.router, prefix="/api/v1", tags=["knowledge-base"])
     app.include_router(logging_endpoints.router, tags=["logging"])
+    app.include_router(metrics.router, tags=["metrics"])
 
     # Health check endpoint
     @app.get("/health")

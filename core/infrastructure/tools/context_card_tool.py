@@ -15,6 +15,7 @@ from collections import OrderedDict
 
 from fylle_cards_client import CardsClient, CardType, ContextCard
 from fylle_shared.enums import CardType as SharedCardType
+from core.infrastructure.metrics.prometheus import WorkflowMetrics
 
 logger = logging.getLogger(__name__)
 
@@ -142,6 +143,9 @@ class ContextCardTool:
         self.cache_hits += 1
         logger.debug(f"✅ Cache HIT: {key} (hits: {entry.hit_count})")
 
+        # Record Prometheus metric
+        WorkflowMetrics.record_cache_hit(entry.card.card_type.value)
+
         return entry.card
     
     def _put_in_cache(
@@ -222,6 +226,8 @@ class ContextCardTool:
             else:
                 missing_card_ids.append(card_id)
                 self.cache_misses += 1
+                # Record cache miss metric (we'll know card_type after retrieval)
+                # For now, record as "unknown" - will be updated after retrieval
         
         logger.info(
             f"📊 Cache stats: {len(cards)} hits, {len(missing_card_ids)} misses",
@@ -241,6 +247,8 @@ class ContextCardTool:
                 for card in response.cards:
                     self._put_in_cache(tenant_id, card)
                     cards.append(card)
+                    # Record cache miss metric for retrieved card
+                    WorkflowMetrics.record_cache_miss(card.card_type.value)
 
                 # Check if partial result (fewer cards than requested)
                 is_partial = len(response.cards) < len(missing_card_ids)
@@ -284,7 +292,11 @@ class ContextCardTool:
         context = self._format_context(cards)
         
         retrieval_time_ms = int((time.time() - start_time) * 1000)
-        
+
+        # Record Prometheus metrics
+        WorkflowMetrics.record_retrieve_duration(retrieval_time_ms)
+        WorkflowMetrics.update_cache_hit_rate(self.get_cache_hit_rate())
+
         logger.info(
             f"✅ Context retrieval completed",
             extra={
@@ -293,7 +305,7 @@ class ContextCardTool:
                 "cache_hit_rate": self.get_cache_hit_rate(),
             },
         )
-        
+
         return context
 
     async def _track_usage_batch(

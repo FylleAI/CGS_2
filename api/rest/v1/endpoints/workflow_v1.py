@@ -17,9 +17,26 @@ from pydantic import BaseModel, Field
 from fylle_shared.enums import WorkflowType
 from fylle_shared.models.workflow import WorkflowRequest
 
+from core.infrastructure.tools.context_card_tool import ContextCardTool
+from core.infrastructure.workflows.registry import WorkflowRegistry
+from core.infrastructure.metrics.prometheus import WorkflowMetrics
+from clients.python.fylle_cards_client.fylle_cards_client.client import CardsClient
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Global instances (initialized on startup)
+_workflow_registry: Optional[WorkflowRegistry] = None
+_cards_client: Optional[CardsClient] = None
+
+
+def init_workflow_v1(workflow_registry: WorkflowRegistry, cards_client: CardsClient):
+    """Initialize workflow v1 dependencies."""
+    global _workflow_registry, _cards_client
+    _workflow_registry = workflow_registry
+    _cards_client = cards_client
+    logger.info("✅ Workflow v1 initialized with registry and cards client")
 
 
 # Response Models (matching OpenAPI contract)
@@ -131,36 +148,211 @@ async def execute_workflow_v1(
         
         # Start execution
         start_time = time.time()
-        
-        # TODO: Implement actual workflow execution with ContextCardTool
-        # For now, return a placeholder response
-        
-        execution_time_ms = int((time.time() - start_time) * 1000)
-        
-        # Placeholder metrics
-        metrics = WorkflowMetrics(
-            execution_time_ms=execution_time_ms,
-            cards_used=len(request.card_ids) if request.card_ids else 0,
-            cache_hit_rate=0.0,
-            tokens_used=0,
-        )
-        
-        logger.info(
-            f"✅ Workflow execution completed",
-            extra={
-                "workflow_id": str(workflow_id),
-                "execution_time_ms": execution_time_ms,
-                "status": "completed",
-                "request_id": request_id,
-            },
-        )
-        
-        return WorkflowExecuteResponse(
-            workflow_id=workflow_id,
-            status="completed",
-            output={"message": "Workflow execution placeholder - implementation in progress"},
-            metrics=metrics,
-        )
+
+        # Prepare context for workflow execution
+        workflow_context = dict(request.parameters) if request.parameters else {}
+        workflow_context["workflow_id"] = str(workflow_id)
+        workflow_context["tenant_id"] = x_tenant_id
+        workflow_context["trace_id"] = x_trace_id
+        workflow_context["session_id"] = x_session_id
+
+        cache_hit_rate = 0.0
+        cards_used = 0
+        partial_result = False
+
+        # Path 1: card_ids (preferred)
+        if request.card_ids:
+            logger.info(
+                f"📇 Using card-based context (preferred path)",
+                extra={
+                    "workflow_id": str(workflow_id),
+                    "card_count": len(request.card_ids),
+                },
+            )
+
+            # Initialize ContextCardTool
+            if not _cards_client:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Cards client not initialized",
+                )
+
+            context_tool = ContextCardTool(
+                cards_client=_cards_client,
+                tenant_id=x_tenant_id,
+            )
+
+            try:
+                # Retrieve cards and format context
+                card_context = await context_tool.retrieve_cards(
+                    tenant_id=x_tenant_id,
+                    card_ids=request.card_ids,
+                    workflow_id=workflow_id,
+                    workflow_type=request.workflow_type.value,
+                    trace_id=x_trace_id,
+                )
+
+                # Merge card context into workflow context
+                workflow_context.update(card_context)
+
+                # Get metrics
+                cache_hit_rate = context_tool.get_cache_hit_rate()
+                cards_used = len(request.card_ids)
+
+                # Check for partial results
+                retrieved_count = sum(len(v) for v in card_context.values() if isinstance(v, list))
+                if retrieved_count < len(request.card_ids):
+                    partial_result = True
+                    missing_count = len(request.card_ids) - retrieved_count
+
+                    logger.warning(
+                        f"⚠️ Partial card retrieval",
+                        extra={
+                            "workflow_id": str(workflow_id),
+                            "requested": len(request.card_ids),
+                            "retrieved": retrieved_count,
+                            "missing": missing_count,
+                            "trace_id": x_trace_id,
+                        },
+                    )
+
+                    # Add header to indicate partial result
+                    response.headers["X-Partial-Result"] = (
+                        f"Retrieved {retrieved_count}/{len(request.card_ids)} cards"
+                    )
+
+                logger.info(
+                    f"✅ Cards retrieved successfully",
+                    extra={
+                        "workflow_id": str(workflow_id),
+                        "cards_retrieved": retrieved_count,
+                        "cache_hit_rate": cache_hit_rate,
+                    },
+                )
+
+            except Exception as e:
+                logger.error(
+                    f"❌ Card retrieval failed completely",
+                    extra={
+                        "workflow_id": str(workflow_id),
+                        "error": str(e),
+                        "trace_id": x_trace_id,
+                        "request_id": request_id,
+                    },
+                    exc_info=True,
+                )
+
+                # Record failure metric
+                from core.infrastructure.metrics.prometheus import WorkflowMetrics as PrometheusMetrics
+                PrometheusMetrics.record_retrieve_failure(
+                    workflow_type=request.workflow_type.value,
+                    error_type=type(e).__name__,
+                )
+
+                # Safety net: return 502 with trace_id
+                raise HTTPException(
+                    status_code=502,
+                    detail={
+                        "error": "Card retrieval failed",
+                        "message": str(e),
+                        "trace_id": x_trace_id,
+                        "request_id": request_id,
+                    },
+                )
+
+        # Path 2: legacy context (deprecated)
+        else:
+            logger.info(
+                f"📦 Using legacy context (deprecated path)",
+                extra={
+                    "workflow_id": str(workflow_id),
+                },
+            )
+            workflow_context.update(getattr(request, "context", {}))
+
+        # Execute workflow
+        if not _workflow_registry:
+            raise HTTPException(
+                status_code=500,
+                detail="Workflow registry not initialized",
+            )
+
+        try:
+            handler = _workflow_registry.get_handler(request.workflow_type.value)
+            result = await handler.execute(workflow_context)
+
+            execution_time_ms = int((time.time() - start_time) * 1000)
+
+            # Extract output from result
+            output = result if isinstance(result, dict) else {"result": str(result)}
+
+            # Build metrics
+            metrics = WorkflowMetrics(
+                execution_time_ms=execution_time_ms,
+                cards_used=cards_used,
+                cache_hit_rate=cache_hit_rate if cards_used > 0 else None,
+                tokens_used=output.get("tokens_used"),  # If available from workflow
+            )
+
+            # Record Prometheus metrics
+            from core.infrastructure.metrics.prometheus import WorkflowMetrics as PrometheusMetrics
+            PrometheusMetrics.record_workflow_execution(
+                workflow_type=request.workflow_type.value,
+                duration_ms=execution_time_ms,
+                status="completed",
+                using_card_ids=bool(request.card_ids),
+                partial_result=partial_result,
+            )
+
+            logger.info(
+                f"✅ Workflow execution completed",
+                extra={
+                    "workflow_id": str(workflow_id),
+                    "execution_time_ms": execution_time_ms,
+                    "status": "completed",
+                    "request_id": request_id,
+                    "cache_hit_rate": cache_hit_rate,
+                    "partial_result": partial_result,
+                },
+            )
+
+            return WorkflowExecuteResponse(
+                workflow_id=workflow_id,
+                status="completed",
+                output=output,
+                metrics=metrics,
+            )
+
+        except ValueError as e:
+            # Workflow type not found
+            logger.error(
+                f"❌ Workflow type not found: {request.workflow_type.value}",
+                extra={
+                    "workflow_id": str(workflow_id),
+                    "error": str(e),
+                    "request_id": request_id,
+                },
+            )
+            raise HTTPException(
+                status_code=404,
+                detail=f"Workflow type not found: {request.workflow_type.value}",
+            )
+
+        except Exception as e:
+            logger.error(
+                f"❌ Workflow execution failed",
+                extra={
+                    "workflow_id": str(workflow_id),
+                    "error": str(e),
+                    "trace_id": x_trace_id,
+                    "request_id": request_id,
+                },
+                exc_info=True,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"Workflow execution failed: {str(e)}",
+            )
     
     except HTTPException:
         raise
