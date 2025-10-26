@@ -142,6 +142,24 @@ Il sistema di onboarding è stato **semplificato da 8 a 2 goal types** (-75% com
 
 ---
 
+### 6. **PIANO_IMPLEMENTAZIONE_CARD_SERVICE.md** (Roadmap Card Service)
+
+**Scopo**: Piano operativo per introdurre il Card Service come microservizio autonomo e tool collaborativo.
+
+**Contenuto**:
+- 📦 CompanySnapshot v1 normalizzato (schema completo + convenzioni comuni)
+- 🃏 Tipologie di card persistenti e card atomiche per CGS/UI
+- 🛠️ Modello tool condiviso con ACL granulari e audit trail
+- 🧩 Template registry dinamico (no hard coding) per nuove tipologie di card
+- 🗄️ Schema Supabase (tabelle, indici, eventi outbox)
+- 🔌 API REST/Webhook + SDK Python
+- 🔁 Integrazioni con Onboarding, Content Workflow e CGS
+- 🎨 Registry frontend e roadmap di 3 sprint con criteri di accettazione e rischi
+
+**Quando Usarlo**: Per guidare l'implementazione end-to-end del Card Service e coordinare team backend/frontend su workflow, onboarding e card interattive.
+
+---
+
 ## 🗺️ Diagrammi Interattivi
 
 ### 1. **Onboarding System: End-to-End Flow**
