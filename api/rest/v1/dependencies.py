@@ -3,19 +3,19 @@
 from functools import lru_cache
 from typing import Optional
 
-from core.application.use_cases.generate_content import GenerateContentUseCase
-from core.infrastructure.repositories.file_content_repository import (
+from services.content_workflow.application.use_cases.generate_content import GenerateContentUseCase
+from services.content_workflow.infrastructure.repositories.file_content_repository import (
     FileContentRepository,
 )
-from core.infrastructure.repositories.yaml_agent_repository import YamlAgentRepository
-from core.infrastructure.repositories.file_workflow_repository import (
+from services.content_workflow.infrastructure.repositories.yaml_agent_repository import YamlAgentRepository
+from services.content_workflow.infrastructure.repositories.file_workflow_repository import (
     FileWorkflowRepository,
 )
-from core.infrastructure.external_services.openai_adapter import OpenAIAdapter
-from core.infrastructure.factories.provider_factory import LLMProviderFactory
-from core.infrastructure.config.settings import get_settings
-from core.domain.value_objects.provider_config import LLMProvider
-from core.card_service.infrastructure.card_repository import CardRepository
+from services.content_workflow.infrastructure.external_services.openai_adapter import OpenAIAdapter
+from services.content_workflow.infrastructure.factories.provider_factory import LLMProviderFactory
+from services.content_workflow.infrastructure.config.settings import get_settings
+from services.content_workflow.domain.value_objects.provider_config import LLMProvider
+from services.card_service.infrastructure.card_repository import CardRepository
 
 
 @lru_cache()

@@ -14,7 +14,7 @@ from rich.table import Table
 from rich.panel import Panel
 from datetime import datetime
 
-from core.infrastructure.database.supabase_tracker import get_tracker
+from services.content_workflow.infrastructure.database.supabase_tracker import get_tracker
 
 app = typer.Typer(help="CGSRef Tracking Commands")
 console = Console()

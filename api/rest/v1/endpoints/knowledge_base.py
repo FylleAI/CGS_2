@@ -5,8 +5,8 @@ from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
 
-from core.infrastructure.database.supabase_tracker import SupabaseTracker
-from core.infrastructure.tools.rag_tool import RAGTool
+from services.content_workflow.infrastructure.database.supabase_tracker import SupabaseTracker
+from services.content_workflow.infrastructure.tools.rag_tool import RAGTool
 
 
 def get_supabase_client():

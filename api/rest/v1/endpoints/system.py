@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict, Any
 
-from core.infrastructure.config.settings import get_settings
+from services.content_workflow.infrastructure.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
