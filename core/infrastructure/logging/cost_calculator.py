@@ -1,8 +1,7 @@
-"""
-Enhanced cost calculation system for accurate token usage and cost tracking.
-"""
+"""Enhanced cost calculation system for accurate token usage and cost tracking."""
 
 import logging
+import re
 from typing import Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
@@ -29,10 +28,22 @@ class TokenUsage:
     total_tokens: int = 0
     cached_tokens: int = 0  # For providers that support caching
     reasoning_tokens: int = 0  # For reasoning models like o1
+    cache_write_tokens: int = 0  # Tokens billed for cache creation (Anthropic, Gemini)
+    cache_read_tokens: int = 0  # Tokens billed when reading from cache
 
     def __post_init__(self):
+        if self.cache_read_tokens == 0 and self.cached_tokens:
+            self.cache_read_tokens = self.cached_tokens
+        elif self.cached_tokens == 0 and self.cache_read_tokens:
+            self.cached_tokens = self.cache_read_tokens
+
         if self.total_tokens == 0:
-            self.total_tokens = self.prompt_tokens + self.completion_tokens
+            base_total = self.prompt_tokens + self.completion_tokens
+            if self.reasoning_tokens:
+                base_total += self.reasoning_tokens
+            if self.cache_read_tokens:
+                base_total += self.cache_read_tokens
+            self.total_tokens = base_total
 
 
 @dataclass
@@ -283,7 +294,11 @@ class CostCalculator:
         }
 
     def calculate_cost(
-        self, provider: str, model: str, token_usage: TokenUsage, cached_tokens: int = 0
+        self,
+        provider: str,
+        model: str,
+        token_usage: TokenUsage,
+        cached_tokens: Optional[int] = None,
     ) -> CostBreakdown:
         """
         Calculate accurate cost based on real token usage.
@@ -292,7 +307,9 @@ class CostCalculator:
             provider: LLM provider name
             model: Model name
             token_usage: Actual token usage from API response
-            cached_tokens: Number of cached tokens (for supported providers)
+            cached_tokens: Number of cached tokens (for supported providers).
+                When ``None`` the calculator falls back to the value exposed by
+                ``token_usage.cached_tokens``.
 
         Returns:
             Detailed cost breakdown
@@ -305,13 +322,12 @@ class CostCalculator:
 
         provider_data = self.pricing_data[provider_lower]
 
-        if model not in provider_data:
+        model_data = self._resolve_model_pricing(provider_lower, model)
+        if model_data is None:
             logger.warning(
                 f"⚠️ Unknown model: {model} for provider {provider}, using default pricing"
             )
             return self._calculate_default_cost(token_usage)
-
-        model_data = provider_data[model]
 
         # Calculate base costs
         prompt_cost = (token_usage.prompt_tokens / 1000) * model_data[
@@ -328,13 +344,27 @@ class CostCalculator:
                 "reasoning_cost_per_1k"
             ]
 
+        # Determine cached token usage (explicit argument takes precedence)
+        cached_token_count = (
+            token_usage.cache_read_tokens
+            if cached_tokens is None
+            else cached_tokens
+        )
+
         # Calculate cache costs for supported providers
         cache_cost = 0.0
-        if model_data.get("supports_caching", False) and cached_tokens > 0:
-            cache_read_cost = (cached_tokens / 1000) * model_data.get(
-                "cache_read_cost_per_1k", 0
-            )
-            cache_cost = cache_read_cost
+        if model_data.get("supports_caching", False):
+            if cached_token_count > 0:
+                cache_read_cost = (cached_token_count / 1000) * model_data.get(
+                    "cache_read_cost_per_1k", 0
+                )
+                cache_cost += cache_read_cost
+
+            if token_usage.cache_write_tokens > 0:
+                cache_write_rate = model_data.get("cache_write_cost_per_1k", 0)
+                cache_cost += (
+                    token_usage.cache_write_tokens / 1000
+                ) * cache_write_rate
 
         cost_breakdown = CostBreakdown(
             prompt_cost=prompt_cost,
@@ -350,6 +380,44 @@ class CostCalculator:
         )
 
         return cost_breakdown
+
+    def _resolve_model_pricing(
+        self, provider: str, model: str
+    ) -> Optional[Dict[str, Any]]:
+        """Resolve pricing data for a model, handling aliases and version suffixes."""
+
+        provider_models = self.pricing_data.get(provider, {})
+        if not provider_models:
+            return None
+
+        if model in provider_models:
+            return provider_models[model]
+
+        normalized = self._normalize_model_name(model)
+        if normalized in provider_models:
+            return provider_models[normalized]
+
+        # Attempt prefix/suffix based matching for future model variants
+        for known_model, pricing in provider_models.items():
+            if normalized.startswith(known_model) or known_model.startswith(normalized):
+                return pricing
+
+        return None
+
+    @staticmethod
+    def _normalize_model_name(model: str) -> str:
+        """Normalize a model name by lowering case and stripping version suffixes."""
+
+        name = model.strip().lower()
+        name = name.replace(":", "-")
+        # Remove common marketing suffixes
+        for suffix in ("-latest", "-preview", "-beta", "-alpha", "-test"):
+            if name.endswith(suffix):
+                name = name[: -len(suffix)]
+
+        # Drop date/version suffixes like -20250219 or -v1
+        name = re.sub(r"-(\d{4,8}|v\d+)$", "", name)
+        return name
 
     def _calculate_default_cost(self, token_usage: TokenUsage) -> CostBreakdown:
         """Fallback cost calculation for unknown providers/models."""
