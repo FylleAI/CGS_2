@@ -7,11 +7,11 @@ import logging
 from typing import List, Optional
 from uuid import UUID
 
-from services.content_workflow.card_service.application.create_card_use_case import CreateCardUseCase
-from services.content_workflow.card_service.application.link_cards_use_case import LinkCardsUseCase
-from services.content_workflow.card_service.domain.card_entity import BaseCard, CreateCardRequest
-from services.content_workflow.card_service.domain.card_types import CardType, RelationshipType
-from services.content_workflow.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
+from services.card_service.application.create_card_use_case import CreateCardUseCase
+from services.card_service.application.link_cards_use_case import LinkCardsUseCase
+from services.card_service.domain.card_entity import BaseCard, CreateCardRequest
+from services.card_service.domain.card_types import CardType, RelationshipType
+from services.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
 
 logger = logging.getLogger(__name__)
 

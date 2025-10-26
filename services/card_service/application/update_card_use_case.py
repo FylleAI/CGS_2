@@ -6,8 +6,8 @@ import logging
 from typing import Optional
 from uuid import UUID
 
-from services.content_workflow.card_service.domain.card_entity import CardResponse, UpdateCardRequest
-from services.content_workflow.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
+from services.card_service.domain.card_entity import CardResponse, UpdateCardRequest
+from services.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
 
 logger = logging.getLogger(__name__)
 

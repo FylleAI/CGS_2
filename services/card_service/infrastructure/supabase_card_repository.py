@@ -13,8 +13,8 @@ import json
 
 from supabase import create_client, Client
 
-from services.content_workflow.card_service.domain.card_entity import BaseCard, CardResponse
-from services.content_workflow.card_service.domain.card_types import CardType as CardTypeEnum
+from services.card_service.domain.card_entity import BaseCard, CardResponse
+from services.card_service.domain.card_types import CardType as CardTypeEnum
 
 logger = logging.getLogger(__name__)
 

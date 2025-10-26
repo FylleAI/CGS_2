@@ -9,12 +9,12 @@ from sqlalchemy import and_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import declarative_base
 
-from services.content_workflow.card_service.domain.card_entity import (
+from services.card_service.domain.card_entity import (
     BaseCard,
     CardResponse,
     CardType,
 )
-from services.content_workflow.card_service.domain.card_types import CardType as CardTypeEnum
+from services.card_service.domain.card_types import CardType as CardTypeEnum
 
 Base = declarative_base()
 
