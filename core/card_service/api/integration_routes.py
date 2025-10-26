@@ -17,15 +17,10 @@ from core.card_service.application.create_cards_from_snapshot_use_case import (
 from core.card_service.application.get_cards_for_context_use_case import (
     GetCardsForContextUseCase,
 )
+from core.card_service.api.dependencies import get_db_session
 
 # Create router
 router = APIRouter(prefix="/api/v1/cards", tags=["cards-integration"])
-
-
-# Dependency to get database session
-async def get_db_session() -> AsyncSession:
-    """Get database session - implement based on your setup"""
-    pass
 
 
 def normalize_tenant_id(tenant_id: str) -> str:

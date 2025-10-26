@@ -26,16 +26,10 @@ from core.card_service.infrastructure.card_relationship_repository import (
     CardRelationshipRepository,
 )
 from core.card_service.infrastructure.card_repository import CardRepository
+from core.card_service.api.dependencies import get_db_session
 
 # Create router
 router = APIRouter(prefix="/api/v1/cards", tags=["cards"])
-
-
-# Dependency to get database session
-async def get_db_session() -> AsyncSession:
-    """Get database session - implement based on your setup"""
-    # This should be injected from your main app
-    pass
 
 
 def normalize_tenant_id(tenant_id: str) -> str:
