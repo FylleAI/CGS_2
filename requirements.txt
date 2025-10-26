@@ -34,6 +34,9 @@ aiofiles>=23.0.0
 psutil>=5.9.0
 Jinja2>=3.1.4
 
+# Metrics and monitoring
+prometheus-client>=0.20.0
+
 
 requests>=2.31.0
 aiohttp>=3.9.0

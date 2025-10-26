@@ -20,7 +20,7 @@ from fylle_shared.models.workflow import WorkflowRequest
 from core.infrastructure.tools.context_card_tool import ContextCardTool
 from core.infrastructure.workflows.registry import WorkflowRegistry
 from core.infrastructure.metrics.prometheus import WorkflowMetrics
-from clients.python.fylle_cards_client.fylle_cards_client.client import CardsClient
+from fylle_cards_client import CardsClient
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +179,6 @@ async def execute_workflow_v1(
 
             context_tool = ContextCardTool(
                 cards_client=_cards_client,
-                tenant_id=x_tenant_id,
             )
 
             try:

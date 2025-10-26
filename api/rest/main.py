@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
     # Initialize workflow registry and cards client
     try:
         from core.infrastructure.workflows.registry import workflow_registry
-        from clients.python.fylle_cards_client.fylle_cards_client.client import CardsClient
+        from fylle_cards_client import CardsClient
 
         # Initialize Cards client
         cards_api_url = os.getenv("CARDS_API_URL", "http://localhost:8002/api/v1")
