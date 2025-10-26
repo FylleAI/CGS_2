@@ -4,8 +4,8 @@ import logging
 from typing import Any, Dict, Optional
 from uuid import UUID
 
-from onboarding.domain.models import OnboardingSession, SessionState
-from onboarding.infrastructure.repositories.supabase_repository import SupabaseSessionRepository
+from services.onboarding.domain.models import OnboardingSession, SessionState
+from services.onboarding.infrastructure.repositories.supabase_repository import SupabaseSessionRepository
 
 logger = logging.getLogger(__name__)
 

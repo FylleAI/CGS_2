@@ -5,7 +5,7 @@ Quick tests for each adapter without running the full flow.
 """
 
 import asyncio
-from onboarding.config.settings import get_onboarding_settings
+from services.onboarding.config.settings import get_onboarding_settings
 
 
 async def test_settings():
@@ -66,7 +66,7 @@ async def test_perplexity():
         print("\n⚠️  Perplexity not configured. Set PERPLEXITY_API_KEY in .env")
         return
     
-    from onboarding.infrastructure.adapters.perplexity_adapter import PerplexityAdapter
+    from services.onboarding.infrastructure.adapters.perplexity_adapter import PerplexityAdapter
     
     adapter = PerplexityAdapter(settings)
     print(f"\n✓ Adapter initialized")
@@ -106,7 +106,7 @@ async def test_gemini():
         print("\n⚠️  Gemini not configured. Set GEMINI_API_KEY or Vertex credentials")
         return
     
-    from onboarding.infrastructure.adapters.gemini_adapter import GeminiSynthesisAdapter
+    from services.onboarding.infrastructure.adapters.gemini_adapter import GeminiSynthesisAdapter
     
     adapter = GeminiSynthesisAdapter(settings)
     print(f"\n✓ Adapter initialized")
@@ -165,7 +165,7 @@ async def test_cgs_health():
     
     settings = get_onboarding_settings()
     
-    from onboarding.infrastructure.adapters.cgs_adapter import CgsAdapter
+    from services.onboarding.infrastructure.adapters.cgs_adapter import CgsAdapter
     
     adapter = CgsAdapter(settings)
     print(f"\n✓ Adapter initialized")
@@ -192,7 +192,7 @@ async def test_models():
     print("📦 Testing Domain Models")
     print("=" * 60)
     
-    from onboarding.domain.models import (
+    from services.onboarding.domain.models import (
         OnboardingSession,
         OnboardingGoal,
         SessionState,
@@ -254,7 +254,7 @@ async def test_models():
     
     # Test payload
     print(f"\n5️⃣  Creating CGS Payload...")
-    from onboarding.domain.cgs_contracts import (
+    from services.onboarding.domain.cgs_contracts import (
         CgsPayloadLinkedInPost,
         LinkedInPostInput,
     )

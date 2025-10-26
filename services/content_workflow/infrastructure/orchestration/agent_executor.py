@@ -743,7 +743,7 @@ class AgentExecutor:
                         client_name = parts[0]
 
                     # Fallback to rag_get_client_content
-                    from core.infrastructure.tools.rag_tool import RAGTool
+                    from services.content_workflow.infrastructure.tools.rag_tool import RAGTool
 
                     rag_tool = RAGTool()
                     fallback_result = await rag_tool.get_client_content(client_name)

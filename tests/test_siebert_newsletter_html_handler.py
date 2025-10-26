@@ -1,6 +1,6 @@
 import pytest
 
-from core.infrastructure.workflows.handlers.siebert_newsletter_html_handler import (
+from services.content_workflow.infrastructure.workflows.handlers.siebert_newsletter_html_handler import (
     SiebertNewsletterHtmlHandler,
 )
 

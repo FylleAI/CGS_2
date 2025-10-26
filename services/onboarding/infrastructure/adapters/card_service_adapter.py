@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 
-from onboarding.config.settings import OnboardingSettings
+from services.onboarding.config.settings import OnboardingSettings
 
 logger = logging.getLogger(__name__)
 

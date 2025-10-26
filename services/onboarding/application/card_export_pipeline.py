@@ -16,8 +16,8 @@ import logging
 from typing import List, Optional, Dict, Any
 from uuid import UUID
 
-from onboarding.domain.models import CompanySnapshot
-from onboarding.infrastructure.card_service_client import CardServiceClient
+from services.onboarding.domain.models import CompanySnapshot
+from services.onboarding.infrastructure.card_service_client import CardServiceClient
 
 logger = logging.getLogger(__name__)
 

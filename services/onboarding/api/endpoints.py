@@ -6,8 +6,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Depends, status
 
-from onboarding.domain.models import OnboardingInput, SessionState
-from onboarding.api.models import (
+from services.onboarding.domain.models import OnboardingInput, SessionState
+from services.onboarding.api.models import (
     StartOnboardingRequest,
     StartOnboardingResponse,
     SubmitAnswersRequest,
@@ -17,7 +17,7 @@ from onboarding.api.models import (
     QuestionResponse,
     SnapshotSummary,
 )
-from onboarding.api.dependencies import (
+from services.onboarding.api.dependencies import (
     get_create_session_use_case,
     get_research_company_use_case,
     get_synthesize_snapshot_use_case,

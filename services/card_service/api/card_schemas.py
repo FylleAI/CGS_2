@@ -8,7 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from core.card_service.domain.card_types import CardType, RelationshipType
+from services.content_workflow.card_service.domain.card_types import CardType, RelationshipType
 
 
 class CreateCardRequestSchema(BaseModel):

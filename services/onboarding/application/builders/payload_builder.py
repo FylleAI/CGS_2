@@ -8,8 +8,8 @@ import logging
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from onboarding.domain.models import CompanySnapshot, OnboardingGoal
-from onboarding.domain.cgs_contracts import (
+from services.onboarding.domain.models import CompanySnapshot, OnboardingGoal
+from services.onboarding.domain.cgs_contracts import (
     CgsPayloadLinkedInPost,
     CgsPayloadNewsletter,
     CgsPayloadOnboardingContent,
@@ -18,8 +18,8 @@ from onboarding.domain.cgs_contracts import (
     OnboardingContentInput,
     CgsPayloadMetadata,
 )
-from onboarding.domain.content_types import build_content_config
-from onboarding.config.settings import get_onboarding_settings
+from services.onboarding.domain.content_types import build_content_config
+from services.onboarding.config.settings import get_onboarding_settings
 
 logger = logging.getLogger(__name__)
 

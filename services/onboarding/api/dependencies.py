@@ -3,27 +3,27 @@
 from functools import lru_cache
 from typing import Optional
 
-from onboarding.config.settings import OnboardingSettings, get_onboarding_settings
-from onboarding.infrastructure.adapters.perplexity_adapter import PerplexityAdapter
-from onboarding.infrastructure.adapters.gemini_adapter import GeminiSynthesisAdapter
-from onboarding.infrastructure.adapters.cgs_adapter import CgsAdapter
-from onboarding.infrastructure.adapters.brevo_adapter import BrevoAdapter
-from onboarding.infrastructure.adapters.card_service_adapter import CardServiceAdapter
-from onboarding.infrastructure.card_service_client import CardServiceClient
-from onboarding.infrastructure.repositories.supabase_repository import (
+from services.onboarding.config.settings import OnboardingSettings, get_onboarding_settings
+from services.onboarding.infrastructure.adapters.perplexity_adapter import PerplexityAdapter
+from services.onboarding.infrastructure.adapters.gemini_adapter import GeminiSynthesisAdapter
+from services.onboarding.infrastructure.adapters.cgs_adapter import CgsAdapter
+from services.onboarding.infrastructure.adapters.brevo_adapter import BrevoAdapter
+from services.onboarding.infrastructure.adapters.card_service_adapter import CardServiceAdapter
+from services.onboarding.infrastructure.card_service_client import CardServiceClient
+from services.onboarding.infrastructure.repositories.supabase_repository import (
     SupabaseSessionRepository,
     get_session_repository,
 )
-from onboarding.infrastructure.repositories.company_context_repository import (
+from services.onboarding.infrastructure.repositories.company_context_repository import (
     CompanyContextRepository,
 )
-from onboarding.application.builders.payload_builder import PayloadBuilder
-from onboarding.application.card_export_pipeline import CardExportPipeline
-from onboarding.application.use_cases.create_session import CreateSessionUseCase
-from onboarding.application.use_cases.research_company import ResearchCompanyUseCase
-from onboarding.application.use_cases.synthesize_snapshot import SynthesizeSnapshotUseCase
-from onboarding.application.use_cases.collect_answers import CollectAnswersUseCase
-from onboarding.application.use_cases.execute_onboarding import ExecuteOnboardingUseCase
+from services.onboarding.application.builders.payload_builder import PayloadBuilder
+from services.onboarding.application.card_export_pipeline import CardExportPipeline
+from services.onboarding.application.use_cases.create_session import CreateSessionUseCase
+from services.onboarding.application.use_cases.research_company import ResearchCompanyUseCase
+from services.onboarding.application.use_cases.synthesize_snapshot import SynthesizeSnapshotUseCase
+from services.onboarding.application.use_cases.collect_answers import CollectAnswersUseCase
+from services.onboarding.application.use_cases.execute_onboarding import ExecuteOnboardingUseCase
 
 
 # Settings

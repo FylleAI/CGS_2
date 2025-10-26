@@ -3,9 +3,9 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
-from onboarding.application.use_cases.execute_onboarding import ExecuteOnboardingUseCase
-from onboarding.domain.entities.onboarding_session import OnboardingSession, CompanySnapshot
-from onboarding.infrastructure.adapters.card_service_adapter import CardServiceAdapter
+from services.onboarding.application.use_cases.execute_onboarding import ExecuteOnboardingUseCase
+from services.onboarding.domain.entities.onboarding_session import OnboardingSession, CompanySnapshot
+from services.onboarding.infrastructure.adapters.card_service_adapter import CardServiceAdapter
 
 
 @pytest.fixture

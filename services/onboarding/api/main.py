@@ -7,10 +7,10 @@ from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from onboarding.config.settings import get_onboarding_settings
-from onboarding.api.endpoints import router as onboarding_router
-from onboarding.api.models import HealthCheckResponse
-from onboarding.api.dependencies import get_cgs_adapter
+from services.onboarding.config.settings import get_onboarding_settings
+from services.onboarding.api.endpoints import router as onboarding_router
+from services.onboarding.api.models import HealthCheckResponse
+from services.onboarding.api.dependencies import get_cgs_adapter
 
 # Configure logging
 logging.basicConfig(

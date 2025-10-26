@@ -10,7 +10,7 @@ import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from core.infrastructure.config.settings import get_settings
+from services.content_workflow.infrastructure.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 

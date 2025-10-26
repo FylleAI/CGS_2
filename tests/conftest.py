@@ -6,13 +6,13 @@ import shutil
 from pathlib import Path
 from uuid import uuid4
 
-from core.domain.entities.agent import Agent, AgentRole
-from core.domain.entities.content import Content, ContentType, ContentFormat
-from core.domain.entities.workflow import Workflow, WorkflowType
-from core.domain.entities.task import Task
-from core.domain.value_objects.provider_config import ProviderConfig, LLMProvider
-from core.domain.value_objects.client_profile import ClientProfile
-from core.domain.value_objects.generation_params import GenerationParams
+from services.content_workflow.domain.entities.agent import Agent, AgentRole
+from services.content_workflow.domain.entities.content import Content, ContentType, ContentFormat
+from services.content_workflow.domain.entities.workflow import Workflow, WorkflowType
+from services.content_workflow.domain.entities.task import Task
+from services.content_workflow.domain.value_objects.provider_config import ProviderConfig, LLMProvider
+from services.content_workflow.domain.value_objects.client_profile import ClientProfile
+from services.content_workflow.domain.value_objects.generation_params import GenerationParams
 
 
 @pytest.fixture

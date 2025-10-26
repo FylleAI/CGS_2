@@ -1,7 +1,7 @@
 import os
 import pytest
 
-from core.infrastructure.tools.perplexity_research_tool import PerplexityResearchTool
+from services.content_workflow.infrastructure.tools.perplexity_research_tool import PerplexityResearchTool
 
 
 @pytest.mark.asyncio

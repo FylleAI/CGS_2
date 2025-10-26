@@ -14,16 +14,16 @@ import asyncio
 import json
 from pathlib import Path
 
-from onboarding.config.settings import get_onboarding_settings
-from onboarding.infrastructure.adapters.perplexity_adapter import PerplexityAdapter
-from onboarding.infrastructure.adapters.gemini_adapter import GeminiSynthesisAdapter
-from onboarding.infrastructure.adapters.cgs_adapter import CgsAdapter
-from onboarding.domain.models import (
+from services.onboarding.config.settings import get_onboarding_settings
+from services.onboarding.infrastructure.adapters.perplexity_adapter import PerplexityAdapter
+from services.onboarding.infrastructure.adapters.gemini_adapter import GeminiSynthesisAdapter
+from services.onboarding.infrastructure.adapters.cgs_adapter import CgsAdapter
+from services.onboarding.domain.models import (
     OnboardingGoal,
     OnboardingSession,
     SessionState,
 )
-from onboarding.domain.cgs_contracts import (
+from services.onboarding.domain.cgs_contracts import (
     CgsPayloadLinkedInPost,
     LinkedInPostInput,
     CgsPayloadMetadata,
@@ -248,7 +248,7 @@ async def example_payload_inspection():
     print("📋 PAYLOAD STRUCTURE EXAMPLE")
     print("=" * 80)
     
-    from onboarding.domain.models import (
+    from services.onboarding.domain.models import (
         CompanyInfo,
         AudienceInfo,
         VoiceInfo,

@@ -6,8 +6,8 @@ Wraps the CGS PerplexityResearchTool for onboarding-specific research.
 import logging
 from typing import Any, Dict, Optional
 
-from core.infrastructure.tools.perplexity_research_tool import PerplexityResearchTool
-from onboarding.config.settings import OnboardingSettings
+from services.content_workflow.infrastructure.tools.perplexity_research_tool import PerplexityResearchTool
+from services.onboarding.config.settings import OnboardingSettings
 
 logger = logging.getLogger(__name__)
 

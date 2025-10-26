@@ -10,8 +10,8 @@ from datetime import datetime
 
 from supabase import create_client, Client
 
-from onboarding.config.settings import OnboardingSettings
-from onboarding.domain.models import OnboardingSession, SessionState
+from services.onboarding.config.settings import OnboardingSettings
+from services.onboarding.domain.models import OnboardingSession, SessionState
 
 logger = logging.getLogger(__name__)
 
@@ -223,7 +223,7 @@ class SupabaseSessionRepository:
     
     def _dict_to_session(self, data: Dict[str, Any]) -> OnboardingSession:
         """Convert Supabase dict to OnboardingSession."""
-        from onboarding.domain.models import OnboardingGoal, CompanySnapshot
+        from services.onboarding.domain.models import OnboardingGoal, CompanySnapshot
         
         # Parse snapshot if present
         snapshot = None
@@ -276,7 +276,7 @@ def get_session_repository(
         SupabaseSessionRepository or None if not configured
     """
     if settings is None:
-        from onboarding.config.settings import get_onboarding_settings
+        from services.onboarding.config.settings import get_onboarding_settings
         settings = get_onboarding_settings()
     
     if not settings.is_supabase_configured():

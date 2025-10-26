@@ -4,10 +4,10 @@ import logging
 from typing import Any, Dict, Optional
 from uuid import UUID
 
-from onboarding.domain.models import OnboardingSession, SessionState, CompanySnapshot
-from onboarding.infrastructure.adapters.perplexity_adapter import PerplexityAdapter
-from onboarding.infrastructure.repositories.supabase_repository import SupabaseSessionRepository
-from onboarding.infrastructure.repositories.company_context_repository import CompanyContextRepository
+from services.onboarding.domain.models import OnboardingSession, SessionState, CompanySnapshot
+from services.onboarding.infrastructure.adapters.perplexity_adapter import PerplexityAdapter
+from services.onboarding.infrastructure.repositories.supabase_repository import SupabaseSessionRepository
+from services.onboarding.infrastructure.repositories.company_context_repository import CompanyContextRepository
 
 logger = logging.getLogger(__name__)
 

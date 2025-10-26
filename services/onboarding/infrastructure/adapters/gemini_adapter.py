@@ -7,10 +7,10 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 
-from core.infrastructure.external_services.gemini_adapter import GeminiAdapter as CgsGeminiAdapter
-from core.domain.value_objects.provider_config import ProviderConfig, LLMProvider
-from onboarding.config.settings import OnboardingSettings
-from onboarding.domain.models import (
+from services.content_workflow.infrastructure.external_services.gemini_adapter import GeminiAdapter as CgsGeminiAdapter
+from services.content_workflow.domain.value_objects.provider_config import ProviderConfig, LLMProvider
+from services.onboarding.config.settings import OnboardingSettings
+from services.onboarding.domain.models import (
     CompanySnapshot,
     CompanyInfo,
     AudienceInfo,

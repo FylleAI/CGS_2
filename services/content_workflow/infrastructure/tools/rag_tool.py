@@ -6,7 +6,7 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 
 from ..database.supabase_tracker import SupabaseTracker
-from core.infrastructure.config.settings import get_settings
+from services.content_workflow.infrastructure.config.settings import get_settings
 
 try:  # Optional dependency for embeddings
     import openai  # type: ignore

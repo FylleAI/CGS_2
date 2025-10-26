@@ -9,8 +9,8 @@ from uuid import UUID
 
 import httpx
 
-from onboarding.config.settings import OnboardingSettings
-from onboarding.domain.cgs_contracts import (
+from services.onboarding.config.settings import OnboardingSettings
+from services.onboarding.domain.cgs_contracts import (
     CgsPayloadLinkedInPost,
     CgsPayloadNewsletter,
     ResultEnvelope,
@@ -125,7 +125,7 @@ class CgsAdapter:
         Includes rich context (company_snapshot + clarifying_answers) for agents.
         """
         # Import here to avoid circular dependency
-        from onboarding.domain.cgs_contracts import CgsPayloadOnboardingContent
+        from services.onboarding.domain.cgs_contracts import CgsPayloadOnboardingContent
 
         # Base request
         request = {

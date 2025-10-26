@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import Mock
 
-from core.infrastructure.logging.agent_logger import AgentLogger
+from services.content_workflow.infrastructure.logging.agent_logger import AgentLogger
 
 
 def test_agent_logger_thinking_saved_to_tracker():

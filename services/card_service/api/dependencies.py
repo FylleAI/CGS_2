@@ -8,7 +8,7 @@ import os
 from typing import Optional
 from functools import lru_cache
 
-from core.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
+from services.content_workflow.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
 
 logger = logging.getLogger(__name__)
 

@@ -9,8 +9,8 @@ from datetime import datetime
 
 import httpx
 
-from onboarding.config.settings import OnboardingSettings
-from onboarding.domain.cgs_contracts import ContentResult
+from services.onboarding.config.settings import OnboardingSettings
+from services.onboarding.domain.cgs_contracts import ContentResult
 
 logger = logging.getLogger(__name__)
 

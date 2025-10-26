@@ -8,8 +8,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core.card_service.domain.card_entity import CardRelationship
-from core.card_service.domain.card_types import RelationshipType
+from services.content_workflow.card_service.domain.card_entity import CardRelationship
+from services.content_workflow.card_service.domain.card_types import RelationshipType
 
 
 class CardRelationshipRepository:

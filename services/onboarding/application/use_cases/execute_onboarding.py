@@ -4,12 +4,12 @@ import logging
 from typing import Optional
 from uuid import UUID
 
-from onboarding.domain.models import OnboardingSession, SessionState
-from onboarding.domain.cgs_contracts import ResultEnvelope
-from onboarding.application.builders.payload_builder import PayloadBuilder
-from onboarding.infrastructure.adapters.cgs_adapter import CgsAdapter
-from onboarding.infrastructure.adapters.brevo_adapter import BrevoAdapter
-from onboarding.infrastructure.repositories.supabase_repository import SupabaseSessionRepository
+from services.onboarding.domain.models import OnboardingSession, SessionState
+from services.onboarding.domain.cgs_contracts import ResultEnvelope
+from services.onboarding.application.builders.payload_builder import PayloadBuilder
+from services.onboarding.infrastructure.adapters.cgs_adapter import CgsAdapter
+from services.onboarding.infrastructure.adapters.brevo_adapter import BrevoAdapter
+from services.onboarding.infrastructure.repositories.supabase_repository import SupabaseSessionRepository
 
 logger = logging.getLogger(__name__)
 

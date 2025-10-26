@@ -10,8 +10,8 @@ from datetime import datetime, timedelta
 
 from supabase import Client
 
-from onboarding.config.settings import OnboardingSettings
-from onboarding.domain.models import CompanySnapshot
+from services.onboarding.config.settings import OnboardingSettings
+from services.onboarding.domain.models import CompanySnapshot
 
 logger = logging.getLogger(__name__)
 

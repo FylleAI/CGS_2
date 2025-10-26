@@ -482,8 +482,8 @@ class GenerateContentUseCase:
             )
 
             # Add a simple content generation task
-            from core.domain.entities.task import Task, TaskType, TaskPriority
-            from core.domain.entities.agent import AgentRole
+            from services.content_workflow.domain.entities.task import Task, TaskType, TaskPriority
+            from services.content_workflow.domain.entities.agent import AgentRole
             from uuid import uuid4
 
             task = Task(
@@ -505,8 +505,8 @@ class GenerateContentUseCase:
         self, context: Dict[str, Any]
     ) -> Workflow:
         """Create enhanced article workflow with research and writing tasks."""
-        from core.domain.entities.task import Task, TaskType, TaskPriority
-        from core.domain.entities.agent import AgentRole
+        from services.content_workflow.domain.entities.task import Task, TaskType, TaskPriority
+        from services.content_workflow.domain.entities.agent import AgentRole
         from uuid import uuid4
 
         workflow = Workflow(

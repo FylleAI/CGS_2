@@ -4,15 +4,15 @@ import logging
 from typing import Any, Dict, Optional
 from uuid import UUID
 
-from onboarding.domain.models import (
+from services.onboarding.domain.models import (
     OnboardingSession,
     SessionState,
     CompanySnapshot,
     OnboardingGoal,
 )
-from onboarding.infrastructure.adapters.gemini_adapter import GeminiSynthesisAdapter
-from onboarding.infrastructure.repositories.supabase_repository import SupabaseSessionRepository
-from onboarding.infrastructure.repositories.company_context_repository import CompanyContextRepository
+from services.onboarding.infrastructure.adapters.gemini_adapter import GeminiSynthesisAdapter
+from services.onboarding.infrastructure.repositories.supabase_repository import SupabaseSessionRepository
+from services.onboarding.infrastructure.repositories.company_context_repository import CompanyContextRepository
 
 logger = logging.getLogger(__name__)
 

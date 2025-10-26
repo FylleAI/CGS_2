@@ -3,8 +3,8 @@
 import logging
 from typing import Optional
 
-from onboarding.domain.models import OnboardingSession, OnboardingInput, SessionState
-from onboarding.infrastructure.repositories.supabase_repository import SupabaseSessionRepository
+from services.onboarding.domain.models import OnboardingSession, OnboardingInput, SessionState
+from services.onboarding.infrastructure.repositories.supabase_repository import SupabaseSessionRepository
 
 logger = logging.getLogger(__name__)
 

@@ -7,7 +7,7 @@ from typing import Dict, Any, List
 
 from ..base.workflow_base import WorkflowHandler
 from ..registry import register_workflow
-from core.infrastructure.config.settings import get_settings
+from services.content_workflow.infrastructure.config.settings import get_settings
 
 logger = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 from pydantic import BaseModel, Field
 
-from onboarding.domain.models import (
+from services.onboarding.domain.models import (
     OnboardingGoal,
     SessionState,
     CompanySnapshot,
