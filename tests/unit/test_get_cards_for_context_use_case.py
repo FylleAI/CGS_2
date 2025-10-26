@@ -3,10 +3,10 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime
-from core.card_service.application.get_cards_for_context_use_case import (
+from services.card_service.application.get_cards_for_context_use_case import (
     GetCardsForContextUseCase,
 )
-from core.card_service.domain.entities.card import Card, CardType, CardContent
+from services.card_service.domain.entities.card import Card, CardType, CardContent
 
 
 @pytest.fixture

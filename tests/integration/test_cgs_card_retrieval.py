@@ -3,11 +3,11 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime
-from core.application.use_cases.generate_content import GenerateContentUseCase
-from core.application.dto.content_request import ContentGenerationRequest
-from core.domain.entities.content import ContentType, ContentFormat
-from core.domain.value_objects.provider_config import ProviderConfig, LLMProvider
-from core.card_service.domain.entities.card import Card, CardType, CardContent
+from services.content_workflow.application.use_cases.generate_content import GenerateContentUseCase
+from services.content_workflow.application.dto.content_request import ContentGenerationRequest
+from services.content_workflow.domain.entities.content import ContentType, ContentFormat
+from services.content_workflow.domain.value_objects.provider_config import ProviderConfig, LLMProvider
+from services.card_service.domain.entities.card import Card, CardType, CardContent
 
 
 @pytest.fixture

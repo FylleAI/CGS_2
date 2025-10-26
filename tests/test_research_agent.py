@@ -1,10 +1,10 @@
 import pytest
 
-from core.infrastructure.repositories.yaml_agent_repository import YamlAgentRepository
-from core.infrastructure.orchestration.agent_executor import AgentExecutor
-from core.infrastructure.tools.tool_names import ToolNames
-from core.domain.value_objects.provider_config import ProviderConfig
-from core.application.interfaces.llm_provider_interface import (
+from services.content_workflow.infrastructure.repositories.yaml_agent_repository import YamlAgentRepository
+from services.content_workflow.infrastructure.orchestration.agent_executor import AgentExecutor
+from services.content_workflow.infrastructure.tools.tool_names import ToolNames
+from services.content_workflow.domain.value_objects.provider_config import ProviderConfig
+from services.content_workflow.application.interfaces.llm_provider_interface import (
     LLMProviderInterface,
     LLMResponse,
     LLMStreamChunk,

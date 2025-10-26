@@ -1,6 +1,6 @@
 import pytest
 
-from core.infrastructure.workflows.handlers.siebert_newsletter_html_handler import (
+from services.content_workflow.infrastructure.workflows.handlers.siebert_newsletter_html_handler import (
     SiebertNewsletterHtmlHandler,
 )
 
@@ -54,7 +54,10 @@ def test_prepare_context_injects_design_system(handler):
     assert context["workflow_output_format"] == "html"
 
 
-def test_post_process_task_raises_on_invalid_html(handler):
+def test_post_process_task_records_errors_for_invalid_html(handler):
     context = {}
-    with pytest.raises(ValueError):
-        handler.post_process_task("task5_html_builder", "<div>bad</div>", context)
+    result = handler.post_process_task("task5_html_builder", "<div>bad</div>", context)
+
+    assert result["html_validation_passed"] is False
+    assert "html_validation_errors" in result
+    assert any("max-width" in msg or "quality" in msg.lower() for msg in result["html_validation_errors"])

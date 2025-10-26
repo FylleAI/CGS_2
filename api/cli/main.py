@@ -10,20 +10,20 @@ from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.panel import Panel
 
-from core.application.use_cases.generate_content import GenerateContentUseCase
-from core.application.dto.content_request import ContentGenerationRequest
-from core.domain.entities.content import ContentType, ContentFormat
-from core.domain.value_objects.provider_config import ProviderConfig, LLMProvider
-from core.domain.value_objects.generation_params import GenerationParams
-from core.infrastructure.repositories.file_content_repository import (
+from services.content_workflow.application.use_cases.generate_content import GenerateContentUseCase
+from services.content_workflow.application.dto.content_request import ContentGenerationRequest
+from services.content_workflow.domain.entities.content import ContentType, ContentFormat
+from services.content_workflow.domain.value_objects.provider_config import ProviderConfig, LLMProvider
+from services.content_workflow.domain.value_objects.generation_params import GenerationParams
+from services.content_workflow.infrastructure.repositories.file_content_repository import (
     FileContentRepository,
 )
-from core.infrastructure.repositories.yaml_agent_repository import YamlAgentRepository
-from core.infrastructure.repositories.file_workflow_repository import (
+from services.content_workflow.infrastructure.repositories.yaml_agent_repository import YamlAgentRepository
+from services.content_workflow.infrastructure.repositories.file_workflow_repository import (
     FileWorkflowRepository,
 )
-from core.infrastructure.factories.provider_factory import LLMProviderFactory
-from core.infrastructure.config.settings import get_settings
+from services.content_workflow.infrastructure.factories.provider_factory import LLMProviderFactory
+from services.content_workflow.infrastructure.config.settings import get_settings
 from .tracking import app as tracking_app
 
 # Configure logging

@@ -2,8 +2,8 @@
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from onboarding.infrastructure.adapters.card_service_adapter import CardServiceAdapter
-from onboarding.config.settings import OnboardingSettings
+from services.onboarding.infrastructure.adapters.card_service_adapter import CardServiceAdapter
+from services.onboarding.config.settings import OnboardingSettings
 
 
 @pytest.fixture

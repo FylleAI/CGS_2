@@ -16,9 +16,9 @@ from uuid import uuid4
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from onboarding.config.settings import get_onboarding_settings
-from onboarding.infrastructure.repositories.company_context_repository import CompanyContextRepository
-from onboarding.domain.models import (
+from services.onboarding.config.settings import get_onboarding_settings
+from services.onboarding.infrastructure.repositories.company_context_repository import CompanyContextRepository
+from services.onboarding.domain.models import (
     CompanySnapshot,
     CompanyInfo,
     AudienceInfo,

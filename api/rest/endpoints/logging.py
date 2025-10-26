@@ -7,9 +7,9 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import logging
 
-from core.infrastructure.logging.agent_logger import agent_logger
-from core.infrastructure.logging.workflow_reporter import workflow_reporter
-from core.infrastructure.logging.system_monitor import system_monitor
+from services.content_workflow.infrastructure.logging.agent_logger import agent_logger
+from services.content_workflow.infrastructure.logging.workflow_reporter import workflow_reporter
+from services.content_workflow.infrastructure.logging.system_monitor import system_monitor
 
 logger = logging.getLogger(__name__)
 

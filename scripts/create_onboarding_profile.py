@@ -8,7 +8,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-from core.infrastructure.database.supabase_tracker import SupabaseTracker
+from services.content_workflow.infrastructure.database.supabase_tracker import SupabaseTracker
 from datetime import datetime
 
 def create_onboarding_profile():

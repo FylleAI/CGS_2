@@ -50,8 +50,8 @@ def setup_enhanced_logging():
     logging.getLogger("fastapi").setLevel(logging.DEBUG)
 
     # Enhanced logging for our modules
-    logging.getLogger("core.application").setLevel(logging.DEBUG)
-    logging.getLogger("core.infrastructure").setLevel(logging.DEBUG)
+    logging.getLogger("services.content_workflow.application").setLevel(logging.DEBUG)
+    logging.getLogger("services.content_workflow.infrastructure").setLevel(logging.DEBUG)
     logging.getLogger("api.rest").setLevel(logging.DEBUG)
 
     # Suppress noisy third-party logs
@@ -156,7 +156,7 @@ def main():
         logger.info("✅ FastAPI application imported successfully")
 
         # Get settings
-        from core.infrastructure.config.settings import get_settings
+        from services.content_workflow.infrastructure.config.settings import get_settings
 
         settings = get_settings()
 

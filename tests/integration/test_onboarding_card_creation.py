@@ -1,11 +1,16 @@
 """Integration tests for Onboarding → Card creation flow."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime
-from onboarding.application.use_cases.execute_onboarding import ExecuteOnboardingUseCase
-from onboarding.domain.entities.onboarding_session import OnboardingSession, CompanySnapshot
-from onboarding.infrastructure.adapters.card_service_adapter import CardServiceAdapter
+
+from services.onboarding.application.use_cases.execute_onboarding import ExecuteOnboardingUseCase
+from services.onboarding.domain.cgs_contracts import ContentResult, ResultEnvelope
+from services.onboarding.domain.entities.onboarding_session import (
+    OnboardingSession,
+    CompanySnapshot,
+)
+from services.onboarding.domain.models import SessionState
 
 
 @pytest.fixture
@@ -36,7 +41,7 @@ def use_case(mock_dependencies):
 @pytest.fixture
 def sample_session():
     """Create sample onboarding session."""
-    return OnboardingSession(
+    session = OnboardingSession(
         id="session-1",
         user_email="test@example.com",
         company_name="Test Company",
@@ -56,15 +61,35 @@ def sample_session():
         updated_at=datetime.utcnow(),
     )
 
+    session.state = SessionState.PAYLOAD_READY
+    return session
+
+
+@pytest.fixture
+def successful_result(sample_session):
+    """Create a successful CGS result envelope for tests."""
+
+    return ResultEnvelope(
+        session_id=sample_session.session_id,
+        trace_id=sample_session.trace_id,
+        workflow="premium_newsletter",
+        goal=sample_session.goal.value,
+        status="completed",
+        content=ContentResult(
+            title="Generated content",
+            body="Generated content",
+            format="markdown",
+        ),
+    )
+
 
 @pytest.mark.asyncio
-async def test_execute_onboarding_creates_cards(use_case, mock_dependencies, sample_session):
+async def test_execute_onboarding_creates_cards(
+    use_case, mock_dependencies, sample_session, successful_result
+):
     """Test that onboarding execution creates cards."""
     # Mock CGS response
-    mock_dependencies["cgs_adapter"].execute.return_value = {
-        "status": "success",
-        "content": "Generated content",
-    }
+    mock_dependencies["cgs_adapter"].execute_workflow.return_value = successful_result
 
     # Mock card creation response
     card_response = [
@@ -106,7 +131,7 @@ async def test_execute_onboarding_creates_cards(use_case, mock_dependencies, sam
 
 @pytest.mark.asyncio
 async def test_execute_onboarding_without_card_service(
-    mock_dependencies, sample_session
+    mock_dependencies, sample_session, successful_result
 ):
     """Test onboarding execution when card service is not available."""
     # Remove card service client
@@ -121,10 +146,7 @@ async def test_execute_onboarding_without_card_service(
         card_service_client=None,
     )
 
-    mock_dependencies["cgs_adapter"].execute.return_value = {
-        "status": "success",
-        "content": "Generated content",
-    }
+    mock_dependencies["cgs_adapter"].execute_workflow.return_value = successful_result
 
     # Should execute without error
     result = await use_case.execute(sample_session)
@@ -137,13 +159,10 @@ async def test_execute_onboarding_without_card_service(
 
 @pytest.mark.asyncio
 async def test_execute_onboarding_card_creation_failure(
-    use_case, mock_dependencies, sample_session
+    use_case, mock_dependencies, sample_session, successful_result
 ):
     """Test onboarding execution when card creation fails."""
-    mock_dependencies["cgs_adapter"].execute.return_value = {
-        "status": "success",
-        "content": "Generated content",
-    }
+    mock_dependencies["cgs_adapter"].execute_workflow.return_value = successful_result
 
     # Mock card creation failure
     mock_dependencies["card_service_client"].create_cards_from_snapshot.side_effect = (
@@ -159,13 +178,10 @@ async def test_execute_onboarding_card_creation_failure(
 
 @pytest.mark.asyncio
 async def test_execute_onboarding_card_ids_stored_in_metadata(
-    use_case, mock_dependencies, sample_session
+    use_case, mock_dependencies, sample_session, successful_result
 ):
     """Test that card IDs are properly stored in session metadata."""
-    mock_dependencies["cgs_adapter"].execute.return_value = {
-        "status": "success",
-        "content": "Generated content",
-    }
+    mock_dependencies["cgs_adapter"].execute_workflow.return_value = successful_result
 
     card_response = [
         {"id": "card-1", "card_type": "product"},
@@ -187,13 +203,10 @@ async def test_execute_onboarding_card_ids_stored_in_metadata(
 
 @pytest.mark.asyncio
 async def test_execute_onboarding_all_four_card_types_created(
-    use_case, mock_dependencies, sample_session
+    use_case, mock_dependencies, sample_session, successful_result
 ):
     """Test that all four card types are created."""
-    mock_dependencies["cgs_adapter"].execute.return_value = {
-        "status": "success",
-        "content": "Generated content",
-    }
+    mock_dependencies["cgs_adapter"].execute_workflow.return_value = successful_result
 
     card_response = [
         {"id": "card-1", "card_type": "product", "title": "Product"},

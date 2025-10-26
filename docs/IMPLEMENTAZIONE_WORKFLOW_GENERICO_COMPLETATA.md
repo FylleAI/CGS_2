@@ -225,7 +225,7 @@ npm run type-check
 
 # End-to-End
 # 1. Start backend: uvicorn onboarding.main:app --reload --port 8001
-# 2. Start CGS: uvicorn core.main:app --reload --port 8000
+# 2. Start CGS: uvicorn api.rest.main:app --reload --port 8000
 # 3. Start frontend: npm run dev
 # 4. Test flow: http://localhost:3001
 ```
