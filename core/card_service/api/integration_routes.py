@@ -3,12 +3,12 @@ Card Service API - Integration Routes
 Routes for Onboarding and CGS Core Engine integration
 """
 
+import logging
 from typing import Dict, List, Optional
 from uuid import UUID
 import hashlib
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.card_service.api.card_schemas import CardResponseSchema
 from core.card_service.application.create_cards_from_snapshot_use_case import (
@@ -17,7 +17,10 @@ from core.card_service.application.create_cards_from_snapshot_use_case import (
 from core.card_service.application.get_cards_for_context_use_case import (
     GetCardsForContextUseCase,
 )
-from core.card_service.api.dependencies import get_db_session
+from core.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
+from core.card_service.api.dependencies import get_card_repository
+
+logger = logging.getLogger(__name__)
 
 # Create router
 router = APIRouter(prefix="/api/v1/cards", tags=["cards-integration"])
@@ -66,7 +69,7 @@ def normalize_tenant_id(tenant_id: str) -> str:
 async def create_cards_from_snapshot(
     tenant_id: str = Query(..., description="Tenant ID (email or UUID)"),
     snapshot: dict = None,
-    session: AsyncSession = Depends(get_db_session),
+    repo: SupabaseCardRepository = Depends(get_card_repository),
 ) -> List[CardResponseSchema]:
     """
     Create 4 atomic cards from CompanySnapshot.
@@ -127,10 +130,13 @@ async def create_cards_from_snapshot(
     try:
         # Normalize tenant_id
         normalized_tenant_id = normalize_tenant_id(tenant_id)
+        logger.info(f"Creating cards from snapshot for tenant: {normalized_tenant_id}")
 
-        use_case = CreateCardsFromSnapshotUseCase(session)
+        use_case = CreateCardsFromSnapshotUseCase(repo)
         cards = await use_case.execute(normalized_tenant_id, snapshot)
-        
+
+        logger.info(f"✅ Created {len(cards)} cards for tenant: {normalized_tenant_id}")
+
         return [
             CardResponseSchema(
                 id=card.id,
@@ -138,22 +144,24 @@ async def create_cards_from_snapshot(
                 card_type=card.card_type,
                 title=card.title,
                 content=card.content,
-                metrics=card.metrics,
-                notes=card.notes,
-                version=card.version,
-                is_active=card.is_active,
+                metrics=card.metrics or {},
+                notes=card.notes or "",
+                version=card.version or 1,
+                is_active=card.is_active if card.is_active is not None else True,
                 created_by=card.created_by,
-                updated_by=card.updated_by,
+                updated_by=None,
                 created_at=card.created_at,
                 updated_at=card.updated_at,
             )
             for card in cards
         ]
-    
+
     except ValueError as e:
+        logger.error(f"ValueError: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error")
+        logger.error(f"❌ Error creating cards: {type(e).__name__}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 # ============================================================================
@@ -164,7 +172,7 @@ async def create_cards_from_snapshot(
 @router.get("/context/all")
 async def get_all_cards_for_context(
     tenant_id: str = Query(..., description="Tenant ID (email or UUID)"),
-    session: AsyncSession = Depends(get_db_session),
+    repo: SupabaseCardRepository = Depends(get_card_repository),
 ) -> Dict[str, List[CardResponseSchema]]:
     """
     Get all cards for a tenant organized by type.
@@ -189,9 +197,9 @@ async def get_all_cards_for_context(
         # Normalize tenant_id
         normalized_tenant_id = normalize_tenant_id(tenant_id)
 
-        use_case = GetCardsForContextUseCase(session)
+        use_case = GetCardsForContextUseCase(repo)
         cards_dict = await use_case.execute(normalized_tenant_id)
-        
+
         result = {}
         for card_type, cards in cards_dict.items():
             result[card_type] = [
@@ -201,29 +209,30 @@ async def get_all_cards_for_context(
                     card_type=card.card_type,
                     title=card.title,
                     content=card.content,
-                    metrics=card.metrics,
-                    notes=card.notes,
-                    version=card.version,
-                    is_active=card.is_active,
+                    metrics=card.metrics or {},
+                    notes=card.notes or "",
+                    version=card.version or 1,
+                    is_active=card.is_active if card.is_active is not None else True,
                     created_by=card.created_by,
-                    updated_by=card.updated_by,
+                    updated_by=None,
                     created_at=card.created_at,
                     updated_at=card.updated_at,
-                    relationships=card.relationships,
+                    relationships=[],
                 )
                 for card in cards
             ]
-        
+
         return result
-    
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error")
+        logger.error(f"❌ Error getting cards for context: {type(e).__name__}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("/context/rag-text")
 async def get_rag_context_text(
     tenant_id: str = Query(..., description="Tenant ID (email or UUID)"),
-    session: AsyncSession = Depends(get_db_session),
+    repo: SupabaseCardRepository = Depends(get_card_repository),
 ) -> Dict[str, str]:
     """
     Get all cards formatted as RAG context text for LLM.
@@ -245,13 +254,14 @@ async def get_rag_context_text(
         # Normalize tenant_id
         normalized_tenant_id = normalize_tenant_id(tenant_id)
 
-        use_case = GetCardsForContextUseCase(session)
+        use_case = GetCardsForContextUseCase(repo)
         context_text = await use_case.get_as_rag_context(normalized_tenant_id)
-        
+
         return {"context": context_text}
-    
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error")
+        logger.error(f"❌ Error getting RAG context: {type(e).__name__}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @router.get("/context/by-type")
@@ -260,7 +270,7 @@ async def get_cards_by_type(
     card_types: Optional[List[str]] = Query(
         None, description="Card types to retrieve (product, persona, campaign, topic)"
     ),
-    session: AsyncSession = Depends(get_db_session),
+    repo: SupabaseCardRepository = Depends(get_card_repository),
 ) -> Dict[str, List[CardResponseSchema]]:
     """
     Get cards for specific types.
@@ -277,9 +287,9 @@ async def get_cards_by_type(
         # Normalize tenant_id
         normalized_tenant_id = normalize_tenant_id(tenant_id)
 
-        use_case = GetCardsForContextUseCase(session)
+        use_case = GetCardsForContextUseCase(repo)
         cards_dict = await use_case.execute(normalized_tenant_id, card_types)
-        
+
         result = {}
         for card_type, cards in cards_dict.items():
             result[card_type] = [
@@ -289,23 +299,25 @@ async def get_cards_by_type(
                     card_type=card.card_type,
                     title=card.title,
                     content=card.content,
-                    metrics=card.metrics,
-                    notes=card.notes,
-                    version=card.version,
-                    is_active=card.is_active,
+                    metrics=card.metrics or {},
+                    notes=card.notes or "",
+                    version=card.version or 1,
+                    is_active=card.is_active if card.is_active is not None else True,
                     created_by=card.created_by,
-                    updated_by=card.updated_by,
+                    updated_by=None,
                     created_at=card.created_at,
                     updated_at=card.updated_at,
-                    relationships=card.relationships,
+                    relationships=[],
                 )
                 for card in cards
             ]
-        
+
         return result
-    
+
     except ValueError as e:
+        logger.error(f"ValueError: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Internal server error")
+        logger.error(f"❌ Error getting cards by type: {type(e).__name__}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 

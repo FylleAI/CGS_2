@@ -1,85 +1,67 @@
 """
 Card Service API - Dependencies
-Provides database session and other dependencies for card service routes
+Provides Supabase repository and other dependencies for card service routes
 """
 
-from typing import AsyncGenerator, Optional
+import logging
+import os
+from typing import Optional
 from functools import lru_cache
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from core.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
 
-from core.infrastructure.config.settings import get_settings
+logger = logging.getLogger(__name__)
 
-
-# Global session maker (created once)
-_async_session_maker: Optional[sessionmaker] = None
+# Global Supabase repository (created once)
+_supabase_repository: Optional[SupabaseCardRepository] = None
 
 
-def _get_async_session_maker() -> Optional[sessionmaker]:
-    """Get or create async session maker"""
-    global _async_session_maker
+def get_supabase_repository() -> SupabaseCardRepository:
+    """
+    Get or create Supabase card repository.
 
-    if _async_session_maker is not None:
-        return _async_session_maker
+    Uses Supabase REST API instead of direct PostgreSQL connection
+    to avoid firewall issues with port 5432.
+    """
+    global _supabase_repository
+
+    if _supabase_repository is not None:
+        logger.info("✅ Returning cached Supabase repository")
+        return _supabase_repository
 
     try:
-        import os
+        logger.info("🔧 Creating new Supabase repository...")
 
-        # Try to get Card Service database URL from environment
-        db_url = os.getenv("CARD_SERVICE_DATABASE_URL")
+        # Get Supabase credentials from environment
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_ANON_KEY")
 
-        # Fallback to Supabase if not set
-        if not db_url:
-            supabase_url = os.getenv("SUPABASE_URL")
-            if supabase_url:
-                # Convert Supabase URL to PostgreSQL async connection string
-                # Format: https://project.supabase.co -> postgresql+asyncpg://postgres:password@project.supabase.co:5432/postgres
-                db_url = f"postgresql+asyncpg://postgres:postgres@{supabase_url.replace('https://', '').replace('http://', '')}:5432/postgres"
+        logger.info(f"📌 SUPABASE_URL: {supabase_url}")
+        logger.info(f"📌 SUPABASE_ANON_KEY: {'SET' if supabase_key else 'NOT SET'}")
 
-        if not db_url:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error("No database URL configured. Set CARD_SERVICE_DATABASE_URL or SUPABASE_URL")
-            return None
+        if not supabase_url or not supabase_key:
+            logger.error("❌ Supabase credentials not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY")
+            raise RuntimeError("Supabase credentials not configured")
 
-        # Create async engine
-        engine = create_async_engine(db_url, echo=False)
+        # Create repository
+        _supabase_repository = SupabaseCardRepository(supabase_url, supabase_key)
+        logger.info("✅ Supabase repository created successfully")
+        return _supabase_repository
 
-        # Create session maker
-        _async_session_maker = sessionmaker(
-            engine,
-            class_=AsyncSession,
-            expire_on_commit=False,
-            autoflush=False,
-            autocommit=False,
-        )
-
-        return _async_session_maker
     except Exception as e:
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Failed to create async session maker: {str(e)}")
-        return None
+        logger.error(f"❌ Failed to create Supabase repository: {type(e).__name__}: {str(e)}", exc_info=True)
+        raise
 
 
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_card_repository() -> SupabaseCardRepository:
     """
-    Get database session for dependency injection.
-    
+    Get card repository for dependency injection.
+
     Usage in routes:
         @router.get("/cards")
-        async def list_cards(session: AsyncSession = Depends(get_db_session)):
+        async def list_cards(repo: SupabaseCardRepository = Depends(get_card_repository)):
             ...
     """
-    session_maker = _get_async_session_maker()
-    
-    if session_maker is None:
-        raise RuntimeError("Database session maker not initialized")
-    
-    session = session_maker()
-    try:
-        yield session
-    finally:
-        await session.close()
+    logger.info("🔌 get_card_repository() called")
+    return get_supabase_repository()
 

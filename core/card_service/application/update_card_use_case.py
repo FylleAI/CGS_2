@@ -2,25 +2,21 @@
 Card Service Application - Update Card Use Case
 """
 
+import logging
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from core.card_service.domain.card_entity import CardResponse, UpdateCardRequest
-from core.card_service.infrastructure.card_relationship_repository import (
-    CardRelationshipRepository,
-)
-from core.card_service.infrastructure.card_repository import CardRepository
+from core.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
+
+logger = logging.getLogger(__name__)
 
 
 class UpdateCardUseCase:
     """Use case for updating a card"""
 
-    def __init__(self, session: AsyncSession):
-        self.session = session
-        self.card_repository = CardRepository(session)
-        self.relationship_repository = CardRelationshipRepository(session)
+    def __init__(self, card_repository: SupabaseCardRepository):
+        self.card_repository = card_repository
 
     async def execute(
         self,
@@ -31,22 +27,22 @@ class UpdateCardUseCase:
     ) -> Optional[CardResponse]:
         """
         Update a card.
-        
+
         Args:
             card_id: Card identifier
             tenant_id: Tenant identifier (for security)
             request: UpdateCardRequest with fields to update
             updated_by: User who updated the card
-            
+
         Returns:
             Updated CardResponse, or None if card not found
         """
-        
+
         # Check card exists
         card = await self.card_repository.get_by_id(card_id, tenant_id)
         if not card:
             return None
-        
+
         # Update card
         updated_card = await self.card_repository.update(
             card_id=card_id,
@@ -55,15 +51,14 @@ class UpdateCardUseCase:
             content=request.content,
             metrics=request.metrics,
             notes=request.notes,
-            updated_by=updated_by,
         )
-        
+
         if not updated_card:
             return None
-        
+
         # Get relationships
-        relationships = await self.relationship_repository.get_by_source_card(card_id)
-        
+        relationships = await self.card_repository.get_relationships(card_id)
+
         # Build response
         response = CardResponse(
             id=updated_card.id,
@@ -71,16 +66,16 @@ class UpdateCardUseCase:
             card_type=updated_card.card_type,
             title=updated_card.title,
             content=updated_card.content,
-            metrics=updated_card.metrics,
-            notes=updated_card.notes,
-            version=updated_card.version,
-            is_active=updated_card.is_active,
+            metrics=updated_card.metrics or {},
+            notes=updated_card.notes or "",
+            version=updated_card.version or 1,
+            is_active=updated_card.is_active if updated_card.is_active is not None else True,
             created_by=updated_card.created_by,
-            updated_by=updated_card.updated_by,
+            updated_by=None,
             created_at=updated_card.created_at,
             updated_at=updated_card.updated_at,
             relationships=relationships,
         )
-        
+
         return response
 

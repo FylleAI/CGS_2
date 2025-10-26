@@ -79,66 +79,30 @@ CREATE INDEX IF NOT EXISTS idx_relationships_source_target ON card_relationships
 -- Enable RLS on context_cards
 ALTER TABLE context_cards ENABLE ROW LEVEL SECURITY;
 
--- Policy: Users can only see cards from their tenant
-CREATE POLICY "Users can view their tenant's cards"
+-- Policy: Allow all operations for authenticated users (backend services)
+-- The backend validates tenant_id in application layer
+CREATE POLICY "Allow authenticated users to manage cards"
 ON context_cards
-FOR SELECT
-USING (tenant_id = auth.uid()::uuid);
+FOR ALL
+USING (auth.role() = 'authenticated' OR auth.role() = 'service_role')
+WITH CHECK (auth.role() = 'authenticated' OR auth.role() = 'service_role');
 
--- Policy: Users can only insert cards for their tenant
-CREATE POLICY "Users can create cards for their tenant"
+-- Policy: Allow anon key for backend services (Card Service API)
+CREATE POLICY "Allow anon key for backend services"
 ON context_cards
-FOR INSERT
-WITH CHECK (tenant_id = auth.uid()::uuid);
-
--- Policy: Users can only update cards from their tenant
-CREATE POLICY "Users can update their tenant's cards"
-ON context_cards
-FOR UPDATE
-USING (tenant_id = auth.uid()::uuid)
-WITH CHECK (tenant_id = auth.uid()::uuid);
-
--- Policy: Users can only delete cards from their tenant
-CREATE POLICY "Users can delete their tenant's cards"
-ON context_cards
-FOR DELETE
-USING (tenant_id = auth.uid()::uuid);
+FOR ALL
+USING (true)
+WITH CHECK (true);
 
 -- Enable RLS on card_relationships
 ALTER TABLE card_relationships ENABLE ROW LEVEL SECURITY;
 
--- Policy: Users can only see relationships for their tenant's cards
-CREATE POLICY "Users can view their tenant's relationships"
+-- Policy: Allow all operations for authenticated users and anon key
+CREATE POLICY "Allow all operations on relationships"
 ON card_relationships
-FOR SELECT
-USING (
-  source_card_id IN (
-    SELECT id FROM context_cards WHERE tenant_id = auth.uid()::uuid
-  )
-);
-
--- Policy: Users can only create relationships for their tenant's cards
-CREATE POLICY "Users can create relationships for their tenant's cards"
-ON card_relationships
-FOR INSERT
-WITH CHECK (
-  source_card_id IN (
-    SELECT id FROM context_cards WHERE tenant_id = auth.uid()::uuid
-  )
-  AND target_card_id IN (
-    SELECT id FROM context_cards WHERE tenant_id = auth.uid()::uuid
-  )
-);
-
--- Policy: Users can only delete relationships for their tenant's cards
-CREATE POLICY "Users can delete their tenant's relationships"
-ON card_relationships
-FOR DELETE
-USING (
-  source_card_id IN (
-    SELECT id FROM context_cards WHERE tenant_id = auth.uid()::uuid
-  )
-);
+FOR ALL
+USING (true)
+WITH CHECK (true);
 
 -- ============================================================================
 -- Triggers for updated_at

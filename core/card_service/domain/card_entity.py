@@ -13,7 +13,7 @@ from .card_types import CardType, RelationshipType
 
 class BaseCard(BaseModel):
     """Base card model - parent for all card types"""
-    
+
     id: UUID
     tenant_id: UUID
     card_type: CardType
@@ -27,9 +27,6 @@ class BaseCard(BaseModel):
     updated_by: Optional[UUID] = None
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        use_enum_values = True
 
 
 class ProductContent(BaseModel):

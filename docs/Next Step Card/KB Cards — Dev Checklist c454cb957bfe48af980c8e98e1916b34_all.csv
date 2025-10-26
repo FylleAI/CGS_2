@@ -1,0 +1,13 @@
+﻿Task,Dependencies,Due,Effort,Epic,Milestone,Notes,Owner,Priority,Status
+Tabella relazioni e constraint grafo,,,3,Graph & Relations,Fase 1,"card_relations(src,dst,type). A-ciclico per derives_from; soft-delete + trigger impact set.",,P0,Todo
+Guardrail pre-publish per canale,Resolver di contesto,,3,Telemetry & QA,Fase 2,"Regole per LinkedIn/HubSpot (limiti, formati).",,P1,Todo
+Schema card atomico su Postgres (JSONB) + indici GIN,,,3,Data Model & Storage,Fase 1,"Card(id, type, title, attributes JSONSchema, relations[], kpi[], version, created_by, updated_by). RLS per multi-tenant.",,P0,Todo
+Resolver di contesto e prompt builder,API base Cards,,5,Orchestration,Fase 2,Context blocks deterministici con checksum/versione.,,P0,Todo
+API base Cards (REST) + ACL campo,,,5,API & ACL,Fase 2,"GET list/detail, POST/PATCH; Idempotency-Key; audit log.",,P0,Todo
+Regole evolutive e workflow review/apply,PerformanceCard ingestion,,4,Evolution Rules,Fase 3,"Soglie KPI, aging, fast-track per fix semplici.",,P0,Todo
+Connettori MCP: HubSpot/LinkedIn KPI → PerformanceCard,,,5,Ingestion & MCP,Fase 3,Normalizzazione metriche; debounce/merge (EMA).,,P0,Todo
+"Linter contenuti (tono, stop-words, PII)",,,2,Types & Validation,Fase 1,,,P1,Todo
+Telemetria qualità card,,,3,Telemetry & QA,Fase 4,"Freshness, coverage, contraddizioni, brand drift.",,P1,Todo
+"JSONSchema per tipi Product, Persona, BrandVoice",,,3,Types & Validation,Fase 1,"Obbligatori, enum, pattern; validazione server/client.",,P0,Todo
+Versioning card_versions e audit metadata,,,2,Data Model & Storage,Fase 1,"Diff, source, tool, confidence.",,P1,Todo
+"Security hardening (cifratura, vault, PII)",,,3,Security & Compliance,Fase 4,"Mascheramento nei log, retention Insight, least privilege.",,P0,Todo

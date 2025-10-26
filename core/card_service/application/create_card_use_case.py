@@ -2,25 +2,25 @@
 Card Service Application - Create Card Use Case
 """
 
+import logging
 from typing import Optional
 from uuid import UUID
-
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.card_service.domain.card_entity import (
     BaseCard,
     CreateCardRequest,
 )
 from core.card_service.domain.card_types import CardType
-from core.card_service.infrastructure.card_repository import CardRepository
+from core.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
+
+logger = logging.getLogger(__name__)
 
 
 class CreateCardUseCase:
     """Use case for creating a new card"""
 
-    def __init__(self, session: AsyncSession):
-        self.session = session
-        self.repository = CardRepository(session)
+    def __init__(self, repository: SupabaseCardRepository):
+        self.repository = repository
 
     async def execute(
         self,

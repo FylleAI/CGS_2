@@ -3,22 +3,23 @@ Card Service Application - Create Cards from Snapshot Use Case
 Integration point with Onboarding Microservice
 """
 
+import logging
 from typing import List, Optional
 from uuid import UUID
-
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.card_service.application.create_card_use_case import CreateCardUseCase
 from core.card_service.application.link_cards_use_case import LinkCardsUseCase
 from core.card_service.domain.card_entity import BaseCard, CreateCardRequest
 from core.card_service.domain.card_types import CardType, RelationshipType
-from core.card_service.infrastructure.card_repository import CardRepository
+from core.card_service.infrastructure.supabase_card_repository import SupabaseCardRepository
+
+logger = logging.getLogger(__name__)
 
 
 class CreateCardsFromSnapshotUseCase:
     """
     Use case for creating 4 atomic cards from CompanySnapshot.
-    
+
     This is the integration point between Onboarding and Card Service.
     Called after Onboarding completes and creates:
     - ProductCard (from company info)
@@ -27,11 +28,10 @@ class CreateCardsFromSnapshotUseCase:
     - TopicCard (from insights)
     """
 
-    def __init__(self, session: AsyncSession):
-        self.session = session
-        self.create_card_use_case = CreateCardUseCase(session)
-        self.link_cards_use_case = LinkCardsUseCase(session)
-        self.card_repository = CardRepository(session)
+    def __init__(self, repository: SupabaseCardRepository):
+        self.repository = repository
+        self.create_card_use_case = CreateCardUseCase(repository)
+        self.link_cards_use_case = LinkCardsUseCase(repository)
 
     async def execute(
         self,
