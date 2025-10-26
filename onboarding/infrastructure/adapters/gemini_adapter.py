@@ -163,9 +163,17 @@ IMPORTANT GUIDELINES:
 10. Infer brand voice from communication style in research
 11. Be concise but comprehensive
 
+**REQUIRED FIELDS FOR CARD CREATION** (must be populated if data is available):
+- company: name (required), domain, industry, description (required), key_offerings[], differentiators[]
+- audience: primary, segments[] (from secondary), pain_points[], desired_outcomes[]
+- voice: tone, style_guidelines[], forbidden_phrases[], cta_preferences[]
+- insights: positioning, key_messages[], recent_news[], competitors[]
+
 **VALIDATION RULES**:
 - If expected_response_type is "enum", options MUST be a non-empty array
 - If expected_response_type is NOT "enum", options MUST be null
+- Fill fields only if supported by research sources - do NOT invent data
+- Use empty arrays [] for missing list fields, null for missing optional strings
 
 Return ONLY valid JSON, no markdown formatting or explanations.
 """

@@ -32,6 +32,19 @@ class RetrieveCardsRequest(BaseModel):
     card_ids: List[str] = Field(..., description="List of card IDs to retrieve")
 
 
+class CreateCardRequest(BaseModel):
+    """Request to create a single card."""
+
+    tenant_id: str
+    card_type: str
+    title: str
+    description: str = ""
+    content: Dict[str, Any]
+    tags: List[str] = Field(default_factory=list)
+    source_session_id: str = None
+    created_by: str = "onboarding-api"
+
+
 class ContextCard(BaseModel):
     """Context card response."""
 
@@ -228,6 +241,56 @@ async def retrieve_cards(
     )
 
     return response
+
+
+@app.post("/api/v1/cards")
+async def create_card(
+    request: CreateCardRequest,
+    x_tenant_id: str = Header(..., alias="X-Tenant-ID"),
+    x_trace_id: str = Header(None, alias="X-Trace-ID"),
+):
+    """Create a single card (mock implementation)."""
+    logger.info(
+        f"📝 Card creation request: {request.card_type}",
+        extra={
+            "tenant_id": x_tenant_id,
+            "trace_id": x_trace_id,
+            "card_type": request.card_type,
+            "title": request.title,
+        },
+    )
+
+    # Generate card ID
+    card_id = str(uuid4())
+
+    # Create card
+    card = ContextCard(
+        card_id=card_id,
+        tenant_id=request.tenant_id,
+        card_type=request.card_type,
+        title=request.title,
+        description=request.description,
+        content=request.content,
+        tags=request.tags,
+        is_active=True,
+        created_at=datetime.utcnow().isoformat(),
+        updated_at=datetime.utcnow().isoformat(),
+        created_by=request.created_by,
+    )
+
+    # Store in mock database
+    MOCK_CARDS[card_id] = card
+
+    logger.info(
+        f"✅ Card created: {card_id} ({request.card_type})",
+        extra={
+            "tenant_id": x_tenant_id,
+            "trace_id": x_trace_id,
+            "card_id": card_id,
+        },
+    )
+
+    return card.model_dump()
 
 
 @app.get("/health")
