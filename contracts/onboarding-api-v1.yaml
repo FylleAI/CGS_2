@@ -1,0 +1,345 @@
+openapi: 3.1.0
+info:
+  title: Fylle Onboarding API
+  version: 1.0.0
+  description: |
+    Onboarding API for collecting company information and creating context cards.
+    
+    **v1.0 Changes**:
+    - NEW: Returns `card_ids` in session response
+    - Cards are created in Cards API after answers submission
+    - Session includes reference to created cards
+  contact:
+    name: Fylle Engineering
+    email: engineering@fylle.ai
+
+servers:
+  - url: http://localhost:8001
+    description: Local development
+  - url: https://onboarding-api.fylle.ai
+    description: Production
+
+security:
+  - TenantHeader: []
+
+paths:
+  /api/v1/onboarding/sessions:
+    post:
+      summary: Create a new onboarding session
+      operationId: createSession
+      tags: [Onboarding]
+      parameters:
+        - $ref: '#/components/parameters/TraceIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSessionRequest'
+            examples:
+              new_session:
+                summary: Create new session
+                value:
+                  tenant_id: '123e4567-e89b-12d3-a456-426614174000'
+                  company_domain: 'acme.com'
+                  user_email: 'john@acme.com'
+      responses:
+        '201':
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingSession'
+              examples:
+                created:
+                  value:
+                    session_id: '456e7890-e89b-12d3-a456-426614174001'
+                    tenant_id: '123e4567-e89b-12d3-a456-426614174000'
+                    status: 'research'
+                    company_domain: 'acme.com'
+                    user_email: 'john@acme.com'
+                    created_at: '2025-10-26T10:00:00Z'
+                    updated_at: '2025-10-26T10:00:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/onboarding/sessions/{session_id}:
+    get:
+      summary: Get onboarding session
+      operationId: getSession
+      tags: [Onboarding]
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/TraceIdHeader'
+      responses:
+        '200':
+          description: Session found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OnboardingSession'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/onboarding/sessions/{session_id}/answers:
+    post:
+      summary: Submit answers and create cards
+      operationId: submitAnswers
+      tags: [Onboarding]
+      description: |
+        Submit answers to clarifying questions.
+        
+        **v1.0 Behavior**:
+        1. Validate answers
+        2. Create CompanySnapshot
+        3. Call Cards API to create cards (POST /cards/batch)
+        4. Return session with `card_ids`
+        
+        **Idempotency**: Uses session_id as idempotency key for Cards API.
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/TraceIdHeader'
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitAnswersRequest'
+            examples:
+              answers:
+                summary: Submit answers
+                value:
+                  answers:
+                    - question_id: 'q1'
+                      answer: 'We help tech companies automate their CRM'
+                    - question_id: 'q2'
+                      answer: 'Tech executives and product managers'
+                    - question_id: 'q3'
+                      answer: 'Professional but approachable'
+      responses:
+        '200':
+          description: Answers submitted, cards created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitAnswersResponse'
+              examples:
+                success:
+                  summary: Cards created successfully
+                  value:
+                    session_id: '456e7890-e89b-12d3-a456-426614174001'
+                    status: 'completed'
+                    card_ids:
+                      - '789e0123-e89b-12d3-a456-426614174002'
+                      - '789e0123-e89b-12d3-a456-426614174003'
+                      - '789e0123-e89b-12d3-a456-426614174004'
+                      - '789e0123-e89b-12d3-a456-426614174005'
+                    cards_created_count: 4
+                    updated_at: '2025-10-26T10:30:00Z'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    TenantHeader:
+      type: apiKey
+      in: header
+      name: X-Tenant-ID
+      description: |
+        Tenant ID for multi-tenant isolation.
+        Required on all requests.
+
+  parameters:
+    TraceIdHeader:
+      name: X-Trace-ID
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Distributed tracing ID (auto-generated if not provided)
+    
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        maxLength: 255
+      description: |
+        Idempotency key for safe retries.
+        If not provided, session_id is used as idempotency key for Cards API.
+
+  schemas:
+    CreateSessionRequest:
+      type: object
+      required:
+        - tenant_id
+        - company_domain
+        - user_email
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        company_domain:
+          type: string
+          description: Company domain for research (e.g., 'acme.com')
+        user_email:
+          type: string
+          format: email
+
+    OnboardingSession:
+      type: object
+      required:
+        - session_id
+        - tenant_id
+        - status
+        - created_at
+        - updated_at
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [research, synthesis, questions, answers, completed, failed]
+        company_domain:
+          type: string
+        user_email:
+          type: string
+          format: email
+        card_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: IDs of cards created from this session (available after answers submission)
+        cards_created_count:
+          type: integer
+          description: Number of cards created (available after answers submission)
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    SubmitAnswersRequest:
+      type: object
+      required:
+        - answers
+      properties:
+        answers:
+          type: array
+          items:
+            type: object
+            required:
+              - question_id
+              - answer
+            properties:
+              question_id:
+                type: string
+              answer:
+                type: string
+
+    SubmitAnswersResponse:
+      type: object
+      required:
+        - session_id
+        - status
+        - card_ids
+        - cards_created_count
+        - updated_at
+      properties:
+        session_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [completed, failed]
+        card_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: IDs of cards created in Cards API
+        cards_created_count:
+          type: integer
+          description: Number of cards created
+        updated_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        detail:
+          type: string
+        request_id:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            validation_error:
+              value:
+                error: 'ValidationError'
+                detail: 'Invalid email format'
+                request_id: 'req-abc123'
+    
+    Unauthorized:
+      description: Unauthorized - missing or invalid X-Tenant-ID
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missing_tenant:
+              value:
+                error: 'Unauthorized'
+                detail: 'X-Tenant-ID header required'
+                request_id: 'req-abc123'
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            session_not_found:
+              value:
+                error: 'NotFound'
+                detail: 'Session not found'
+                request_id: 'req-abc123'
+

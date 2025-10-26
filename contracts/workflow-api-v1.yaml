@@ -1,0 +1,322 @@
+openapi: 3.1.0
+info:
+  title: Fylle Workflow API
+  version: 1.0.0
+  description: |
+    Workflow API for executing content generation workflows in Fylle system.
+    
+    **v1.0 Changes**:
+    - NEW: `card_ids` parameter (preferred way to pass context)
+    - DEPRECATED: `context` parameter (legacy, will be removed in v2.0)
+    
+    **Migration Path**:
+    - v1.0: Both `card_ids` and `context` supported
+    - v1.5 (2026-01-26): `context` marked deprecated with warning headers
+    - v2.0 (2026-04-26): `context` removed (6 months notice)
+    
+    **Deprecation Warning**:
+    When using `context` parameter, response includes:
+    - Header: `X-API-Deprecation-Warning: context parameter is deprecated, use card_ids`
+    - Header: `X-API-Migration-Guide: https://docs.fylle.ai/migration/context-to-cards`
+  contact:
+    name: Fylle Engineering
+    email: engineering@fylle.ai
+
+servers:
+  - url: http://localhost:8001
+    description: Local development
+  - url: https://workflow-api.fylle.ai
+    description: Production
+
+security:
+  - TenantHeader: []
+
+paths:
+  /api/v1/workflow/execute:
+    post:
+      summary: Execute a workflow with context cards
+      operationId: executeWorkflow
+      tags: [Workflow]
+      description: |
+        Execute a content generation workflow.
+        
+        **v1.0 Preferred**: Use `card_ids` to reference context cards.
+        **v1.0 Legacy**: Use `context` dict (deprecated, not documented as happy path).
+        
+        **Context Resolution**:
+        1. If `card_ids` provided: Retrieve cards from Cards API (preferred)
+        2. If `context` provided: Use legacy dict (deprecated, warning headers)
+        3. If both provided: Use `card_ids`, ignore `context`
+        4. If neither provided: Error 400
+      parameters:
+        - $ref: '#/components/parameters/TraceIdHeader'
+        - $ref: '#/components/parameters/SessionIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowExecuteRequest'
+            examples:
+              with_card_ids:
+                summary: Execute with card_ids (preferred)
+                value:
+                  workflow_type: 'premium_newsletter'
+                  card_ids:
+                    - '789e0123-e89b-12d3-a456-426614174002'
+                    - '789e0123-e89b-12d3-a456-426614174003'
+                    - '789e0123-e89b-12d3-a456-426614174004'
+                  parameters:
+                    topic: 'AI trends in 2025'
+                    tone: 'professional'
+                    length: 'medium'
+              
+              with_context_deprecated:
+                summary: Execute with context (DEPRECATED)
+                value:
+                  workflow_type: 'premium_newsletter'
+                  context:
+                    company:
+                      name: 'Acme Corp'
+                      industry: 'SaaS'
+                    audience:
+                      primary: 'Tech executives'
+                    voice:
+                      tone: 'Professional'
+                  parameters:
+                    topic: 'AI trends in 2025'
+      responses:
+        '200':
+          description: Workflow execution started or completed
+          headers:
+            X-API-Deprecation-Warning:
+              description: Present if deprecated `context` parameter was used
+              schema:
+                type: string
+              example: 'context parameter is deprecated, use card_ids'
+            X-API-Migration-Guide:
+              description: Link to migration guide (if deprecation warning present)
+              schema:
+                type: string
+              example: 'https://docs.fylle.ai/migration/context-to-cards'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowExecuteResponse'
+              examples:
+                completed:
+                  summary: Workflow completed
+                  value:
+                    workflow_id: 'abc12345-e89b-12d3-a456-426614174003'
+                    status: 'completed'
+                    output:
+                      content: 'Generated newsletter content...'
+                      title: 'AI Trends in 2025'
+                      metadata:
+                        word_count: 850
+                        reading_time_minutes: 4
+                    metrics:
+                      execution_time_ms: 2500
+                      cards_used: 3
+                      llm_calls: 2
+                      tokens_used: 1200
+                      cache_hit_rate: 0.67
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /api/v1/workflow/{workflow_id}:
+    get:
+      summary: Get workflow execution status
+      operationId: getWorkflowStatus
+      tags: [Workflow]
+      parameters:
+        - name: workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/TraceIdHeader'
+      responses:
+        '200':
+          description: Workflow status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkflowExecuteResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    TenantHeader:
+      type: apiKey
+      in: header
+      name: X-Tenant-ID
+      description: |
+        Tenant ID for multi-tenant isolation.
+        Required on all requests.
+
+  parameters:
+    TraceIdHeader:
+      name: X-Trace-ID
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Distributed tracing ID (auto-generated if not provided)
+    
+    SessionIdHeader:
+      name: X-Session-ID
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Session ID for tracking user sessions
+
+  schemas:
+    WorkflowType:
+      type: string
+      enum: [premium_newsletter, onboarding_content]
+      description: |
+        Workflow type enum (LOCKED - from fylle-shared).
+        
+        Available workflows:
+        - premium_newsletter: Generate premium newsletter content
+        - onboarding_content: Generate onboarding welcome content
+
+    WorkflowExecuteRequest:
+      type: object
+      required:
+        - workflow_type
+      properties:
+        workflow_type:
+          $ref: '#/components/schemas/WorkflowType'
+        card_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          description: |
+            Card IDs for context (PREFERRED in v1.0).
+            Cards will be retrieved from Cards API and used as context.
+        context:
+          type: object
+          deprecated: true
+          description: |
+            DEPRECATED: Legacy context dict.
+            Use `card_ids` instead.
+            Will be removed in v2.0 (2026-04-26).
+            
+            If used, response will include deprecation warning headers.
+        parameters:
+          type: object
+          default: {}
+          description: Workflow-specific parameters (topic, tone, length, etc.)
+
+    WorkflowExecuteResponse:
+      type: object
+      required:
+        - workflow_id
+        - status
+        - output
+      properties:
+        workflow_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [running, completed, failed]
+        output:
+          type: object
+          description: Workflow output (structure depends on workflow_type)
+        metrics:
+          type: object
+          description: Execution metrics
+          properties:
+            execution_time_ms:
+              type: integer
+            cards_used:
+              type: integer
+            llm_calls:
+              type: integer
+            tokens_used:
+              type: integer
+            cache_hit_rate:
+              type: number
+              format: float
+              minimum: 0.0
+              maximum: 1.0
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        detail:
+          type: string
+        request_id:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missing_context:
+              value:
+                error: 'ValidationError'
+                detail: 'Either card_ids or context required'
+                request_id: 'req-abc123'
+    
+    Unauthorized:
+      description: Unauthorized - missing or invalid X-Tenant-ID
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missing_tenant:
+              value:
+                error: 'Unauthorized'
+                detail: 'X-Tenant-ID header required'
+                request_id: 'req-abc123'
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            workflow_not_found:
+              value:
+                error: 'NotFound'
+                detail: 'Workflow not found'
+                request_id: 'req-abc123'
+    
+    RateLimitExceeded:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            rate_limit:
+              value:
+                error: 'RateLimitExceeded'
+                detail: 'Rate limit exceeded'
+                request_id: 'req-abc123'
+

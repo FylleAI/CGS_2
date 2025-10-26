@@ -1,0 +1,660 @@
+openapi: 3.1.0
+info:
+  title: Fylle Cards API
+  version: 1.0.0
+  description: |
+    Cards API for managing context cards in Fylle system.
+    
+    Context cards are atomic units of knowledge (company, audience, voice, insight)
+    that are used by workflows and agents for content generation.
+    
+    **v1.0 Surface**:
+    - CRUD operations for cards
+    - Batch creation from CompanySnapshot
+    - Retrieve cards for workflow execution
+    - Usage tracking
+    
+    **NOT in v1.0** (deferred to v1.1):
+    - Card relationships
+    - Semantic search
+    - Performance tracking
+  contact:
+    name: Fylle Engineering
+    email: engineering@fylle.ai
+
+servers:
+  - url: http://localhost:8002
+    description: Local development
+  - url: https://cards-api.fylle.ai
+    description: Production
+
+security:
+  - TenantHeader: []
+
+paths:
+  /api/v1/cards:
+    post:
+      summary: Create a single card
+      operationId: createCard
+      tags: [Cards]
+      parameters:
+        - $ref: '#/components/parameters/TraceIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCardRequest'
+            examples:
+              company_card:
+                summary: Create company card
+                value:
+                  tenant_id: '123e4567-e89b-12d3-a456-426614174000'
+                  card_type: 'company'
+                  title: 'Acme Corp'
+                  description: 'Cloud CRM platform for tech companies'
+                  content:
+                    name: 'Acme Corp'
+                    domain: 'acme.com'
+                    industry: 'SaaS'
+                    description: 'Cloud CRM platform'
+                  tags: ['SaaS', 'CRM']
+                  created_by: 'onboarding-service'
+      responses:
+        '201':
+          description: Card created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextCard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+    
+    get:
+      summary: List cards with filtering
+      operationId: listCards
+      tags: [Cards]
+      parameters:
+        - $ref: '#/components/parameters/TraceIdHeader'
+        - name: card_type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/CardType'
+        - name: is_active
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: List of cards
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/cards/batch:
+    post:
+      summary: Create multiple cards from CompanySnapshot (idempotent)
+      operationId: createCardsBatch
+      tags: [Cards]
+      description: |
+        Create cards from onboarding CompanySnapshot.
+        
+        **Idempotency**: Uses Idempotency-Key header for safe retries.
+        If the same key is sent again, returns existing cards without creating duplicates.
+        
+        **Deduplication**: Uses content hash to detect duplicate content.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+        - $ref: '#/components/parameters/TraceIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCardsBatchRequest'
+            examples:
+              onboarding_snapshot:
+                summary: Cards from onboarding session
+                value:
+                  tenant_id: '123e4567-e89b-12d3-a456-426614174000'
+                  company_snapshot:
+                    company:
+                      name: 'Acme Corp'
+                      domain: 'acme.com'
+                      industry: 'SaaS'
+                      description: 'Cloud CRM platform for tech companies'
+                      size: '50-200'
+                      founded: '2020'
+                    audience:
+                      primary: 'Tech executives'
+                      secondary: 'Product managers'
+                      pain_points: ['Manual processes', 'Data silos', 'Poor integration']
+                      goals: ['Automation', 'Better insights']
+                    voice:
+                      tone: 'Professional, approachable'
+                      style_guidelines: ['Active voice', 'Short sentences', 'Avoid jargon']
+                      sample_content: 'We help tech companies...'
+                    insights:
+                      key_differentiators: ['AI-powered', 'Easy integration', 'Fast setup']
+                      competitive_advantages: ['Better UX', 'Lower cost']
+                      market_position: 'Mid-market leader'
+                  source_session_id: '456e7890-e89b-12d3-a456-426614174001'
+                  created_by: 'onboarding-service'
+      responses:
+        '201':
+          description: Cards created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardBatchResponse'
+              examples:
+                success:
+                  summary: 4 cards created
+                  value:
+                    cards:
+                      - card_id: '789e0123-e89b-12d3-a456-426614174002'
+                        tenant_id: '123e4567-e89b-12d3-a456-426614174000'
+                        card_type: 'company'
+                        title: 'Acme Corp'
+                        description: 'Cloud CRM platform for tech companies'
+                        content: { name: 'Acme Corp', industry: 'SaaS' }
+                        tags: ['SaaS', 'CRM']
+                        version: 1
+                        is_active: true
+                        usage_count: 0
+                        created_at: '2025-10-26T10:00:00Z'
+                        updated_at: '2025-10-26T10:00:00Z'
+                        created_by: 'onboarding-service'
+                      - card_id: '789e0123-e89b-12d3-a456-426614174003'
+                        tenant_id: '123e4567-e89b-12d3-a456-426614174000'
+                        card_type: 'audience'
+                        title: 'Acme Corp - Target Audience'
+                        content: { primary: 'Tech executives' }
+                        tags: []
+                        version: 1
+                        is_active: true
+                        usage_count: 0
+                        created_at: '2025-10-26T10:00:00Z'
+                        updated_at: '2025-10-26T10:00:00Z'
+                        created_by: 'onboarding-service'
+                      - card_id: '789e0123-e89b-12d3-a456-426614174004'
+                        tenant_id: '123e4567-e89b-12d3-a456-426614174000'
+                        card_type: 'voice'
+                        title: 'Acme Corp - Brand Voice'
+                        content: { tone: 'Professional, approachable' }
+                        tags: []
+                        version: 1
+                        is_active: true
+                        usage_count: 0
+                        created_at: '2025-10-26T10:00:00Z'
+                        updated_at: '2025-10-26T10:00:00Z'
+                        created_by: 'onboarding-service'
+                      - card_id: '789e0123-e89b-12d3-a456-426614174005'
+                        tenant_id: '123e4567-e89b-12d3-a456-426614174000'
+                        card_type: 'insight'
+                        title: 'Acme Corp - Strategic Insights'
+                        content: { key_differentiators: ['AI-powered'] }
+                        tags: []
+                        version: 1
+                        is_active: true
+                        usage_count: 0
+                        created_at: '2025-10-26T10:00:00Z'
+                        updated_at: '2025-10-26T10:00:00Z'
+                        created_by: 'onboarding-service'
+                    created_count: 4
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+
+  /api/v1/cards/{card_id}:
+    get:
+      summary: Get card by ID
+      operationId: getCard
+      tags: [Cards]
+      parameters:
+        - name: card_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/TraceIdHeader'
+      responses:
+        '200':
+          description: Card found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextCard'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/cards/retrieve:
+    post:
+      summary: Retrieve cards for workflow execution
+      operationId: retrieveCards
+      tags: [Cards]
+      description: |
+        Retrieve multiple cards by IDs for workflow execution.
+        
+        **Best-effort**: If some card_ids are missing, returns available cards
+        and sets X-Partial-Result: true header.
+        
+        **v1.0**: Simple retrieve by IDs only.
+        **v1.1**: Will add semantic search with query parameter.
+      parameters:
+        - $ref: '#/components/parameters/TraceIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetrieveCardsRequest'
+            examples:
+              workflow_context:
+                summary: Retrieve cards for workflow
+                value:
+                  tenant_id: '123e4567-e89b-12d3-a456-426614174000'
+                  card_ids:
+                    - '789e0123-e89b-12d3-a456-426614174002'
+                    - '789e0123-e89b-12d3-a456-426614174003'
+                    - '789e0123-e89b-12d3-a456-426614174004'
+      responses:
+        '200':
+          description: Cards retrieved
+          headers:
+            X-Partial-Result:
+              description: True if some requested card_ids were missing
+              schema:
+                type: boolean
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CardListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/cards/{card_id}/usage:
+    post:
+      summary: Track card usage in workflow
+      operationId: trackCardUsage
+      tags: [Cards]
+      description: |
+        Track when a card is used in a workflow execution.
+
+        Updates usage_count and last_used_at.
+        Creates usage event for analytics.
+      parameters:
+        - name: card_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/TraceIdHeader'
+        - $ref: '#/components/parameters/SessionIdHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackUsageRequest'
+            examples:
+              workflow_usage:
+                summary: Track usage in workflow
+                value:
+                  workflow_id: 'abc12345-e89b-12d3-a456-426614174003'
+                  workflow_type: 'premium_newsletter'
+                  metadata:
+                    agent_name: 'content_generator'
+                    context_position: 1
+      responses:
+        '204':
+          description: Usage tracked successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    TenantHeader:
+      type: apiKey
+      in: header
+      name: X-Tenant-ID
+      description: |
+        Tenant ID for multi-tenant isolation.
+        Required on all requests.
+        Used for Row-Level Security (RLS) enforcement.
+
+  parameters:
+    TraceIdHeader:
+      name: X-Trace-ID
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Distributed tracing ID (auto-generated if not provided)
+
+    SessionIdHeader:
+      name: X-Session-ID
+      in: header
+      required: false
+      schema:
+        type: string
+      description: Session ID for tracking user sessions
+
+    IdempotencyKeyHeader:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema:
+        type: string
+        maxLength: 255
+      description: |
+        Idempotency key for safe retries.
+        If the same key is sent again, returns existing result without side effects.
+
+  schemas:
+    CardType:
+      type: string
+      enum: [company, audience, voice, insight]
+      description: |
+        Card type enum (LOCKED - from fylle-shared).
+
+        v1.0: Only 4 types.
+        v1.1: Will add product, persona, campaign, topic.
+
+    ContextCard:
+      type: object
+      required:
+        - card_id
+        - tenant_id
+        - card_type
+        - title
+        - content
+        - version
+        - is_active
+        - created_at
+        - updated_at
+        - created_by
+      properties:
+        card_id:
+          type: string
+          format: uuid
+        tenant_id:
+          type: string
+          format: uuid
+        card_type:
+          $ref: '#/components/schemas/CardType'
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+        content:
+          type: object
+          description: Flexible JSONB content (structure depends on card_type)
+        tags:
+          type: array
+          items:
+            type: string
+          default: []
+        version:
+          type: integer
+          minimum: 1
+          default: 1
+        is_active:
+          type: boolean
+          default: true
+        confidence_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          nullable: true
+        quality_score:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          nullable: true
+        usage_count:
+          type: integer
+          minimum: 0
+          default: 0
+        last_used_at:
+          type: string
+          format: date-time
+          nullable: true
+        source_session_id:
+          type: string
+          format: uuid
+          nullable: true
+        source_workflow_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        created_by:
+          type: string
+
+    CreateCardRequest:
+      type: object
+      required:
+        - tenant_id
+        - card_type
+        - title
+        - content
+        - created_by
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        card_type:
+          $ref: '#/components/schemas/CardType'
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+        content:
+          type: object
+        tags:
+          type: array
+          items:
+            type: string
+          default: []
+        source_session_id:
+          type: string
+          format: uuid
+        created_by:
+          type: string
+
+    CreateCardsBatchRequest:
+      type: object
+      required:
+        - tenant_id
+        - company_snapshot
+        - source_session_id
+        - created_by
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        company_snapshot:
+          type: object
+          description: CompanySnapshot from onboarding (company, audience, voice, insights)
+        source_session_id:
+          type: string
+          format: uuid
+        created_by:
+          type: string
+
+    CardBatchResponse:
+      type: object
+      required:
+        - cards
+        - created_count
+      properties:
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextCard'
+        created_count:
+          type: integer
+          description: Number of cards created (0 if idempotency key matched)
+
+    RetrieveCardsRequest:
+      type: object
+      required:
+        - tenant_id
+        - card_ids
+      properties:
+        tenant_id:
+          type: string
+          format: uuid
+        card_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+
+    CardListResponse:
+      type: object
+      required:
+        - cards
+        - total
+      properties:
+        cards:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContextCard'
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    TrackUsageRequest:
+      type: object
+      properties:
+        workflow_id:
+          type: string
+          format: uuid
+        workflow_type:
+          type: string
+        metadata:
+          type: object
+          default: {}
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+        detail:
+          type: string
+        request_id:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request - validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            validation_error:
+              value:
+                error: 'ValidationError'
+                detail: 'Invalid card_type: must be one of [company, audience, voice, insight]'
+                request_id: 'req-abc123'
+
+    Unauthorized:
+      description: Unauthorized - missing or invalid X-Tenant-ID
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missing_tenant:
+              value:
+                error: 'Unauthorized'
+                detail: 'X-Tenant-ID header required'
+                request_id: 'req-abc123'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            card_not_found:
+              value:
+                error: 'NotFound'
+                detail: 'Card not found or not accessible by tenant'
+                request_id: 'req-abc123'
+
+    RateLimitExceeded:
+      description: Rate limit exceeded (100 req/min per tenant)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            rate_limit:
+              value:
+                error: 'RateLimitExceeded'
+                detail: 'Rate limit: 100 requests per minute per tenant'
+                request_id: 'req-abc123'

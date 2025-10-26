@@ -1,0 +1,210 @@
+name: Validate API Contracts
+
+on:
+  push:
+    branches: [main, develop, 'feature/**']
+    paths:
+      - 'contracts/**/*.yaml'
+      - 'contracts/**/*.yml'
+      - '.github/workflows/validate-contracts.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'contracts/**/*.yaml'
+      - 'contracts/**/*.yml'
+
+jobs:
+  validate-openapi:
+    name: Validate OpenAPI Specs
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install openapi-spec-validator
+        run: |
+          pip install openapi-spec-validator
+      
+      - name: Validate Cards API
+        run: |
+          python -m openapi_spec_validator contracts/cards-api-v1.yaml
+      
+      - name: Validate Workflow API
+        run: |
+          python -m openapi_spec_validator contracts/workflow-api-v1.yaml
+      
+      - name: Validate Onboarding API
+        run: |
+          python -m openapi_spec_validator contracts/onboarding-api-v1.yaml
+      
+      - name: Summary
+        if: success()
+        run: |
+          echo "✅ All API contracts are valid!"
+
+  contract-tests:
+    name: Contract Tests (Schemathesis)
+    runs-on: ubuntu-latest
+    needs: validate-openapi
+    
+    # Only run on PRs to avoid running on every push
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install schemathesis
+        run: |
+          pip install schemathesis
+      
+      - name: Run contract tests (dry-run)
+        run: |
+          # Dry-run mode: validate contract structure without running against API
+          # In future, we'll run against mock server or local API
+          echo "📋 Contract tests would run against:"
+          echo "  - Cards API: http://localhost:8002"
+          echo "  - Workflow API: http://localhost:8001"
+          echo ""
+          echo "⚠️  Skipping actual tests (no running API in CI yet)"
+          echo "✅ Contract structure validated in previous job"
+      
+      # TODO: Add actual contract tests when we have:
+      # 1. Mock server setup in CI
+      # 2. Or docker-compose with all services
+      # 
+      # Example:
+      # - name: Run Cards API contract tests
+      #   run: |
+      #     schemathesis run \
+      #       --base-url http://localhost:8002 \
+      #       contracts/cards-api-v1.yaml \
+      #       --checks all \
+      #       --hypothesis-max-examples=50
+
+  check-breaking-changes:
+    name: Check for Breaking Changes
+    runs-on: ubuntu-latest
+    needs: validate-openapi
+    
+    # Only run on PRs
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          path: pr
+      
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          path: base
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install openapi-diff
+        run: |
+          pip install openapi-diff
+      
+      - name: Check Cards API for breaking changes
+        continue-on-error: true
+        run: |
+          if [ -f base/contracts/cards-api-v1.yaml ]; then
+            echo "🔍 Checking Cards API for breaking changes..."
+            openapi-diff base/contracts/cards-api-v1.yaml pr/contracts/cards-api-v1.yaml || true
+          else
+            echo "⚠️  Base contract not found (new file)"
+          fi
+      
+      - name: Check Workflow API for breaking changes
+        continue-on-error: true
+        run: |
+          if [ -f base/contracts/workflow-api-v1.yaml ]; then
+            echo "🔍 Checking Workflow API for breaking changes..."
+            openapi-diff base/contracts/workflow-api-v1.yaml pr/contracts/workflow-api-v1.yaml || true
+          else
+            echo "⚠️  Base contract not found (new file)"
+          fi
+      
+      - name: Check Onboarding API for breaking changes
+        continue-on-error: true
+        run: |
+          if [ -f base/contracts/onboarding-api-v1.yaml ]; then
+            echo "🔍 Checking Onboarding API for breaking changes..."
+            openapi-diff base/contracts/onboarding-api-v1.yaml pr/contracts/onboarding-api-v1.yaml || true
+          else
+            echo "⚠️  Base contract not found (new file)"
+          fi
+      
+      - name: Summary
+        run: |
+          echo "⚠️  Review any breaking changes above"
+          echo "Breaking changes require:"
+          echo "  1. Cross-team approval"
+          echo "  2. Migration guide"
+          echo "  3. 6 months deprecation notice"
+          echo "  4. New major version (v2.0)"
+
+  lint-contracts:
+    name: Lint OpenAPI Specs
+    runs-on: ubuntu-latest
+    needs: validate-openapi
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install spectral
+        run: |
+          npm install -g @stoplight/spectral-cli
+      
+      - name: Create Spectral ruleset
+        run: |
+          cat > .spectral.yaml << 'EOF'
+          extends: ["spectral:oas"]
+          rules:
+            # Require operation IDs
+            operation-operationId: error
+            # Require descriptions
+            operation-description: warn
+            # Require examples
+            operation-examples: warn
+            # Require tags
+            operation-tags: error
+          EOF
+      
+      - name: Lint Cards API
+        run: |
+          spectral lint contracts/cards-api-v1.yaml --ruleset .spectral.yaml || true
+      
+      - name: Lint Workflow API
+        run: |
+          spectral lint contracts/workflow-api-v1.yaml --ruleset .spectral.yaml || true
+      
+      - name: Lint Onboarding API
+        run: |
+          spectral lint contracts/onboarding-api-v1.yaml --ruleset .spectral.yaml || true
+
