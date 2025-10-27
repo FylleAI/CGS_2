@@ -284,19 +284,55 @@ SET LOCAL app.current_tenant_id = '123e4567-e89b-12d3-a456-426614174000';
 DO $$
 DECLARE
     test_card_id UUID;
+    workflow_id_1 TEXT := 'workflow-test-001';
+    workflow_id_2 TEXT := 'workflow-test-002';
+    initial_usage_count INT;
+    final_usage_count INT;
+    usage_events_count INT;
 BEGIN
-    SELECT card_id INTO test_card_id
+    SELECT card_id, usage_count INTO test_card_id, initial_usage_count
     FROM cards
     WHERE tenant_id = '123e4567-e89b-12d3-a456-426614174000'
       AND card_type = 'company'
     LIMIT 1;
 
-    -- Track usage (first time)
-    INSERT INTO card_usage (card_id, tenant_id, workflow_type, used_by)
-    VALUES (test_card_id, '123e4567-e89b-12d3-a456-426614174000', 'premium_newsletter', 'workflow-api')
-    RETURNING card_id, workflow_type, used_at;
+    RAISE NOTICE 'Initial usage_count: %', initial_usage_count;
 
-    RAISE NOTICE '✅ TEST 7 PASSED: Usage tracked successfully';
+    -- First usage event (workflow 1)
+    INSERT INTO card_usage (card_id, tenant_id, workflow_id, workflow_type, session_id, used_at)
+    VALUES (test_card_id, '123e4567-e89b-12d3-a456-426614174000', workflow_id_1, 'premium_newsletter', 'session-001', NOW());
+
+    -- Update card usage count
+    UPDATE cards
+    SET usage_count = usage_count + 1, last_used_at = NOW(), updated_at = NOW()
+    WHERE card_id = test_card_id AND tenant_id = '123e4567-e89b-12d3-a456-426614174000';
+
+    -- Second usage event (different workflow)
+    INSERT INTO card_usage (card_id, tenant_id, workflow_id, workflow_type, session_id, used_at)
+    VALUES (test_card_id, '123e4567-e89b-12d3-a456-426614174000', workflow_id_2, 'linkedin_post', 'session-002', NOW());
+
+    -- Update card usage count
+    UPDATE cards
+    SET usage_count = usage_count + 1, last_used_at = NOW(), updated_at = NOW()
+    WHERE card_id = test_card_id AND tenant_id = '123e4567-e89b-12d3-a456-426614174000';
+
+    -- Get final counts
+    SELECT usage_count INTO final_usage_count
+    FROM cards
+    WHERE card_id = test_card_id AND tenant_id = '123e4567-e89b-12d3-a456-426614174000';
+
+    SELECT COUNT(*) INTO usage_events_count
+    FROM card_usage
+    WHERE card_id = test_card_id AND tenant_id = '123e4567-e89b-12d3-a456-426614174000';
+
+    RAISE NOTICE 'Final usage_count: %', final_usage_count;
+    RAISE NOTICE 'Usage events recorded: %', usage_events_count;
+
+    IF final_usage_count = initial_usage_count + 2 AND usage_events_count >= 2 THEN
+        RAISE NOTICE '✅ TEST 7 PASSED: Usage tracking with deduplication';
+    ELSE
+        RAISE NOTICE '❌ TEST 7 FAILED: Expected usage_count = %, got %', initial_usage_count + 2, final_usage_count;
+    END IF;
 END $$;
 
 -- ============================================================================

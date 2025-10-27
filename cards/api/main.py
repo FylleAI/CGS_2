@@ -14,7 +14,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 
-from .v1.endpoints import cards_router, init_cards_endpoints
+from .v1.endpoints import cards_router, usage_router, init_cards_endpoints, init_usage_endpoints
 from ..infrastructure.database.connection import DatabaseConnection
 
 # Configure logging
@@ -78,7 +78,8 @@ async def lifespan(app: FastAPI):
     
     # Initialize endpoints with database
     init_cards_endpoints(db_connection)
-    
+    init_usage_endpoints(db_connection)
+
     logger.info("✅ Cards API started successfully")
     
     yield
@@ -209,6 +210,12 @@ app.include_router(
     tags=["cards"],
 )
 
+app.include_router(
+    usage_router,
+    prefix="/api/v1/cards",
+    tags=["usage"],
+)
+
 
 # Root endpoint
 @app.get("/")
@@ -224,6 +231,7 @@ async def root():
             "metrics": "/metrics",
             "batch_create": "POST /api/v1/cards/batch",
             "retrieve": "POST /api/v1/cards/retrieve",
+            "track_usage": "POST /api/v1/cards/{card_id}/usage",
         },
     }
 
