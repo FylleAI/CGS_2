@@ -3,16 +3,20 @@
 Test workflow execution with card_ids (new path).
 
 This script tests the card-based context path by:
-1. Starting the mock Cards API server
+1. Creating test cards in Cards API (real database)
 2. Executing a workflow with card_ids instead of legacy context
 3. Verifying that cards are retrieved and used correctly
+
+NOTE: This script now uses the REAL Cards API (port 8002) instead of mock.
+      Requires Cards API to be running with Supabase connection.
 """
 
 import json
 import subprocess
 import sys
 import time
-from typing import Any, Dict
+from typing import Any, Dict, List
+from uuid import uuid4
 
 import httpx
 
@@ -22,13 +26,8 @@ CARDS_API_URL = "http://localhost:8002"
 TENANT_ID = "123e4567-e89b-12d3-a456-426614174000"  # Valid UUID
 TRACE_ID = "test-card-path-001"
 
-# Test card IDs (matching mock_cards_api.py) - using valid UUIDs
-TEST_CARD_IDS = [
-    "550e8400-e29b-41d4-a716-446655440001",  # Fylle AI company card
-    "550e8400-e29b-41d4-a716-446655440002",  # Tech Decision Makers audience card
-    "550e8400-e29b-41d4-a716-446655440003",  # Professional & Insightful voice card
-    "550e8400-e29b-41d4-a716-446655440004",  # AI Market Trends insight card
-]
+# Test card IDs will be created dynamically
+TEST_CARD_IDS: List[str] = []
 
 
 def check_server_health(url: str, service_name: str) -> bool:
@@ -46,8 +45,89 @@ def check_server_health(url: str, service_name: str) -> bool:
         return False
 
 
+def create_test_cards() -> bool:
+    """Create test cards in Cards API (real database)."""
+    print("\n" + "=" * 80)
+    print("SETUP: Creating Test Cards")
+    print("=" * 80)
+
+    # Define test cards matching the old mock data
+    test_cards = [
+        {
+            "card_type": "company",
+            "content": {
+                "name": "Fylle AI",
+                "domain": "fylle.ai",
+                "industry": "Artificial Intelligence",
+                "description": "Fylle AI is a cutting-edge content generation platform that leverages advanced AI to create high-quality, personalized content for businesses.",
+                "key_offerings": ["AI Content Generation", "Workflow Automation", "Multi-agent Systems"],
+                "differentiators": ["Advanced AI models", "Customizable workflows", "Enterprise-ready"]
+            }
+        },
+        {
+            "card_type": "audience",
+            "content": {
+                "primary": "Tech Decision Makers",
+                "pain_points": ["Content creation bottlenecks", "Inconsistent brand voice", "Time-consuming research"],
+                "desired_outcomes": ["Faster content production", "Consistent quality", "Data-driven insights"]
+            }
+        },
+        {
+            "card_type": "voice",
+            "content": {
+                "tone": "Professional & Insightful",
+                "style_guidelines": ["Clear and concise", "Data-driven", "Action-oriented", "Thought leadership"]
+            }
+        },
+        {
+            "card_type": "insight",
+            "content": {
+                "positioning": "AI Innovation Leader",
+                "key_messages": ["Cutting-edge AI technology", "Proven ROI", "Enterprise-ready solutions"],
+                "recent_news": ["Series B funding announced", "Fortune 500 client acquisition", "New AI model release"]
+            }
+        }
+    ]
+
+    try:
+        # Create cards via batch endpoint
+        response = httpx.post(
+            f"{CARDS_API_URL}/api/v1/cards/batch",
+            headers={
+                "Content-Type": "application/json",
+                "X-Tenant-ID": TENANT_ID,
+                "X-Trace-ID": TRACE_ID,
+                "Idempotency-Key": f"test-workflow-setup-{uuid4()}",
+            },
+            json={"cards": test_cards},
+            timeout=10.0,
+        )
+
+        print(f"Status: {response.status_code}")
+
+        if response.status_code == 201:
+            data = response.json()
+            print(f"✅ Created {data['created_count']} cards")
+
+            # Store card IDs for later use
+            global TEST_CARD_IDS
+            TEST_CARD_IDS = [card["card_id"] for card in data["cards"]]
+
+            for card in data["cards"]:
+                print(f"  - {card['card_id']}: {card['card_type']}")
+
+            return True
+        else:
+            print(f"❌ Card creation failed: {response.text}")
+            return False
+
+    except Exception as e:
+        print(f"❌ Card creation error: {e}")
+        return False
+
+
 def test_card_retrieval() -> bool:
-    """Test card retrieval from mock Cards API."""
+    """Test card retrieval from Cards API."""
     print("\n" + "=" * 80)
     print("TEST 1: Card Retrieval")
     print("=" * 80)
@@ -68,15 +148,19 @@ def test_card_retrieval() -> bool:
 
         if response.status_code == 200:
             data = response.json()
-            print(f"✅ Retrieved {data['retrieved']}/{data['total']} cards")
+            cards_found = len(data["cards"])
+            print(f"✅ Retrieved {cards_found}/{len(TEST_CARD_IDS)} cards")
 
             for card in data["cards"]:
-                print(f"  - {card['card_id']}: {card['card_type']} - {card['title']}")
+                content_preview = str(card['content'])[:50] + "..." if len(str(card['content'])) > 50 else str(card['content'])
+                print(f"  - {card['card_id']}: {card['card_type']} - {content_preview}")
 
-            if data["missing_ids"]:
-                print(f"⚠️ Missing cards: {data['missing_ids']}")
+            # Check for partial result header
+            partial_result = response.headers.get("X-Partial-Result", "false")
+            if partial_result == "true":
+                print(f"⚠️ Partial result: some cards not found")
 
-            return data["retrieved"] == len(TEST_CARD_IDS)
+            return cards_found == len(TEST_CARD_IDS)
         else:
             print(f"❌ Card retrieval failed: {response.text}")
             return False
@@ -176,18 +260,19 @@ def test_workflow_with_cards() -> bool:
 def main():
     """Run all tests."""
     print("=" * 80)
-    print("WORKFLOW CARD-BASED CONTEXT TEST")
+    print("WORKFLOW CARD-BASED CONTEXT TEST (Real Cards API)")
     print("=" * 80)
 
     # Check if servers are running
     print("\n🔍 Checking server health...")
 
-    cards_healthy = check_server_health(CARDS_API_URL, "Mock Cards API")
+    cards_healthy = check_server_health(CARDS_API_URL, "Cards API")
     workflow_healthy = check_server_health(WORKFLOW_API_URL, "Workflow API")
 
     if not cards_healthy:
-        print("\n❌ Mock Cards API is not running!")
-        print("Start it with: python3 scripts/mock_cards_api.py")
+        print("\n❌ Cards API is not running!")
+        print("Start it with: ./scripts/start_cards_api.sh")
+        print("Or: uvicorn cards.api.main:app --port 8002")
         sys.exit(1)
 
     if not workflow_healthy:
@@ -197,6 +282,11 @@ def main():
 
     # Run tests
     results = []
+
+    # Setup: Create test cards
+    if not create_test_cards():
+        print("\n❌ Failed to create test cards!")
+        sys.exit(1)
 
     # Test 1: Card retrieval
     results.append(("Card Retrieval", test_card_retrieval()))
