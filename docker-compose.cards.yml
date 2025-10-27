@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database (local development)
+  postgres:
+    image: postgres:17-alpine
+    container_name: cards-postgres
+    environment:
+      POSTGRES_USER: cards_user
+      POSTGRES_PASSWORD: cards_password
+      POSTGRES_DB: cards_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cards_user -d cards_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cards-network
+
+  # Cards API
+  cards-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.cards
+    container_name: cards-api
+    environment:
+      # Database connection
+      SUPABASE_DATABASE_URL: postgresql://cards_user:cards_password@postgres:5432/cards_db
+      
+      # API configuration
+      PORT: 8002
+      HOST: 0.0.0.0
+      LOG_LEVEL: info
+      
+      # Database pool
+      DB_MIN_POOL_SIZE: 5
+      DB_MAX_POOL_SIZE: 20
+      
+      # Idempotency
+      IDEMPOTENCY_TTL_HOURS: 24
+    ports:
+      - "8002:8002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cards-network
+    restart: unless-stopped
+
+  # Prometheus (metrics collection)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cards-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - cards-network
+    restart: unless-stopped
+
+  # Grafana (metrics visualization)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cards-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - cards-network
+    restart: unless-stopped
+
+networks:
+  cards-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
