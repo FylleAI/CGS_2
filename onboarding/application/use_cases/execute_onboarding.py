@@ -1,7 +1,8 @@
 """Use case for executing complete onboarding workflow."""
 
 import logging
-from typing import Optional
+from typing import List, Optional
+from uuid import UUID
 
 from onboarding.domain.models import OnboardingSession, SessionState
 from onboarding.domain.cgs_contracts import ResultEnvelope
@@ -49,19 +50,25 @@ class ExecuteOnboardingUseCase:
         session: OnboardingSession,
         dry_run: bool = False,
         requested_provider: Optional[str] = None,
+        card_ids: Optional[List[UUID]] = None,
     ) -> ResultEnvelope:
         """
         Execute onboarding workflow.
-        
+
         Args:
             session: OnboardingSession with complete snapshot
             dry_run: Whether to run in dry-run mode
             requested_provider: Optional LLM provider override
-        
+            card_ids: Optional list of card IDs from Cards API (Sprint 4 Day 1)
+
         Returns:
             ResultEnvelope with execution results
         """
         logger.info(f"Executing onboarding for session: {session.session_id}")
+
+        # Sprint 4 Day 1: Log card_ids if provided
+        if card_ids:
+            logger.info(f"Executing workflow with {len(card_ids)} card IDs: {card_ids}")
         
         # Validate session state
         if session.state != SessionState.PAYLOAD_READY:

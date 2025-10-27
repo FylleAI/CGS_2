@@ -1,10 +1,15 @@
 """FastAPI endpoints for onboarding service."""
 
+import json
 import logging
+import os
+import time
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Header
+from fylle_cards_client import CardsClient
+from fylle_cards_client.client import CardsAPIError
 
 from onboarding.domain.models import OnboardingInput, SessionState
 from onboarding.api.models import (
@@ -25,10 +30,19 @@ from onboarding.api.dependencies import (
     get_execute_onboarding_use_case,
     get_repository,
 )
+from onboarding.infrastructure.metrics import (
+    onboarding_cards_created_total,
+    onboarding_batch_duration_ms,
+    onboarding_errors_total,
+    onboarding_partial_creation_total,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/onboarding", tags=["onboarding"])
+
+# Cards API configuration
+CARDS_API_URL = os.getenv("CARDS_API_URL", "http://localhost:8002")
 
 
 @router.post("/start", response_model=StartOnboardingResponse, status_code=status.HTTP_201_CREATED)
@@ -130,13 +144,24 @@ async def submit_answers(
     collect_answers_uc = Depends(get_collect_answers_use_case),
     execute_uc = Depends(get_execute_onboarding_use_case),
     repository = Depends(get_repository),
+    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
+    x_trace_id: Optional[str] = Header(None, alias="X-Trace-ID"),
+    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key"),
 ):
     """
     Submit answers to clarifying questions and execute workflow.
-    
+
+    **Sprint 4 Day 1 Integration**:
+    1. Collect answers
+    2. Build CompanySnapshot v1
+    3. Create 4 cards via Cards API /batch (idempotent)
+    4. Save card_ids in session
+    5. Execute workflow with card_ids
+
     Validates answers, builds payload, executes CGS workflow, and delivers content.
     """
-    logger.info(f"Submitting answers for session: {session_id}")
+    trace_id = x_trace_id or str(session_id)
+    logger.info(f"Submitting answers for session: {session_id} (trace_id={trace_id})")
     
     if not repository:
         raise HTTPException(
@@ -187,9 +212,148 @@ async def submit_answers(
 
         # Collect answers
         session = await collect_answers_uc.execute(session, request.answers)
-        
-        # Execute workflow
-        result = await execute_uc.execute(session)
+
+        # ========================================================================
+        # SPRINT 4 DAY 1: CARDS API INTEGRATION
+        # ========================================================================
+
+        # STEP 1: Build CompanySnapshot v1 from session
+        # The snapshot is already available in session.snapshot after collect_answers
+        if not session.snapshot:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="CompanySnapshot not available after collecting answers",
+            )
+
+        # STEP 2: Call Cards API /batch to create 4 cards atomically
+        tenant_id = x_tenant_id or str(session.session_id)  # Fallback to session_id if no tenant header
+        idem_key = idempotency_key or f"onboarding-{session_id}-batch"
+
+        start_time = time.time()
+
+        logger.info(
+            json.dumps({
+                "event": "cards_batch_start",
+                "trace_id": trace_id,
+                "tenant_id": tenant_id,
+                "session_id": str(session_id),
+                "idempotency_key": idem_key,
+            })
+        )
+
+        try:
+            # Initialize Cards API client
+            cards_client = CardsClient(
+                base_url=CARDS_API_URL,
+                tenant_id=tenant_id,
+                trace_id=trace_id,
+                session_id=str(session_id),
+            )
+
+            # Convert snapshot to dict for Cards API
+            snapshot_dict = json.loads(session.snapshot.model_dump_json())
+
+            # Call batch endpoint with idempotency
+            batch_response = cards_client.create_cards_batch(
+                company_snapshot=snapshot_dict,
+                source_session_id=session_id,
+                created_by="onboarding-service",
+                idempotency_key=idem_key,
+            )
+
+            # Extract card IDs
+            card_ids = [card.card_id for card in batch_response.cards]
+            created_count = batch_response.created_count
+            partial = created_count < 4
+
+            # Calculate duration
+            duration_ms = int((time.time() - start_time) * 1000)
+
+            logger.info(
+                json.dumps({
+                    "event": "cards_batch_created",
+                    "trace_id": trace_id,
+                    "tenant_id": tenant_id,
+                    "session_id": str(session_id),
+                    "created_count": created_count,
+                    "partial": partial,
+                    "duration_ms": duration_ms,
+                    "idempotency_key": idem_key,
+                })
+            )
+
+            # STEP 3: Save card_ids in session metadata
+            session.metadata["card_ids"] = [str(cid) for cid in card_ids]
+            session.metadata["cards_created_count"] = created_count
+            session.metadata["cards_status"] = "partial" if partial else "created"
+            session.metadata["cards_trace_id"] = trace_id
+
+            # Persist session with card_ids
+            await repository.save_session(session)
+
+            # STEP 5: Metrics - Record cards created per type
+            for card in batch_response.cards:
+                onboarding_cards_created_total.labels(
+                    tenant_id=tenant_id,
+                    card_type=card.card_type,
+                ).inc()
+
+            # Record batch duration
+            onboarding_batch_duration_ms.labels(tenant_id=tenant_id).observe(duration_ms)
+
+            # Record partial creation if applicable
+            if partial:
+                onboarding_partial_creation_total.labels(tenant_id=tenant_id).inc()
+                logger.warning(
+                    json.dumps({
+                        "event": "cards_batch_partial",
+                        "trace_id": trace_id,
+                        "tenant_id": tenant_id,
+                        "session_id": str(session_id),
+                        "created_count": created_count,
+                        "expected_count": 4,
+                    })
+                )
+
+        except CardsAPIError as e:
+            # Cards API error - return 502 with trace_id
+            logger.error(
+                json.dumps({
+                    "event": "cards_batch_error",
+                    "trace_id": trace_id,
+                    "tenant_id": tenant_id,
+                    "session_id": str(session_id),
+                    "error": str(e),
+                })
+            )
+
+            # Record error metric
+            onboarding_errors_total.labels(
+                tenant_id=tenant_id,
+                error_type="cards_api",
+            ).inc()
+
+            # Update session to failed
+            session.update_state(SessionState.FAILED)
+            session.error_message = f"Cards API error: {str(e)}"
+            await repository.save_session(session)
+
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail={
+                    "error": "BadGateway",
+                    "detail": f"Cards API error: {str(e)}",
+                    "request_id": trace_id,
+                },
+            )
+
+        # ========================================================================
+        # END CARDS API INTEGRATION
+        # ========================================================================
+
+        # STEP 4: Execute workflow with card_ids
+        # Pass card_ids to workflow execution
+        result = await execute_uc.execute(session, card_ids=card_ids)
         
         # Build response
         response = SubmitAnswersResponse(

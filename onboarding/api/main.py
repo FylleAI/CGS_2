@@ -4,13 +4,14 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from onboarding.config.settings import get_onboarding_settings
 from onboarding.api.endpoints import router as onboarding_router
 from onboarding.api.models import HealthCheckResponse
 from onboarding.api.dependencies import get_cgs_adapter
+from onboarding.infrastructure.metrics import get_metrics, get_metrics_content_type
 
 # Configure logging
 logging.basicConfig(
@@ -105,7 +106,28 @@ async def root():
         "status": "running",
         "docs": "/docs",
         "health": "/health",
+        "metrics": "/metrics",
     }
+
+
+@app.get("/metrics")
+async def metrics():
+    """
+    Prometheus metrics endpoint.
+
+    **Sprint 4 Day 1 Metrics:**
+    - onboarding_cards_created_total: Cards created by tenant and card type
+    - onboarding_batch_duration_ms: Batch creation duration histogram
+    - onboarding_partial_creation_total: Partial card creations (< 4 cards)
+    - onboarding_errors_total: Errors by tenant and error type
+    - onboarding_sessions_total: Sessions created by tenant
+    - onboarding_sessions_completed_total: Sessions completed by tenant and status
+    """
+    metrics_data = get_metrics()
+    return Response(
+        content=metrics_data,
+        media_type=get_metrics_content_type(),
+    )
 
 
 # Include routers
