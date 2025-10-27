@@ -1,9 +1,23 @@
 #!/usr/bin/env python3
 """
-Mock Cards API server for testing workflow integration.
+⚠️ DEPRECATED: Mock Cards API server for testing workflow integration.
+
+**STATUS**: DEPRECATED - Use real Cards API instead (cards/api/main.py)
+
+**DEPRECATION NOTICE**:
+- This mock is deprecated as of Sprint 3 Day 2 (2025-10-27)
+- Use the real Cards API: ./scripts/start_cards_api.sh
+- Real API provides: database persistence, idempotency, RLS, metrics
+- This mock will be removed in Sprint 4
+
+**Migration Guide**:
+1. Start real Cards API: ./scripts/start_cards_api.sh
+2. Update tests to use real API (port 8002)
+3. Create cards via POST /api/v1/cards/batch
+4. Retrieve cards via POST /api/v1/cards/retrieve
 
 Provides a simple HTTP server that responds to card retrieval requests
-with mock card data.
+with mock card data (IN-MEMORY ONLY - NOT PERSISTENT).
 """
 
 import json
@@ -451,7 +465,21 @@ async def health_check():
 if __name__ == "__main__":
     import uvicorn
 
-    logger.info("🚀 Starting Mock Cards API server...")
+    logger.warning("=" * 80)
+    logger.warning("⚠️  DEPRECATION WARNING: Mock Cards API")
+    logger.warning("=" * 80)
+    logger.warning("This mock is DEPRECATED as of Sprint 3 Day 2 (2025-10-27)")
+    logger.warning("")
+    logger.warning("Please use the REAL Cards API instead:")
+    logger.warning("  Start: ./scripts/start_cards_api.sh")
+    logger.warning("  Port: 8002")
+    logger.warning("  Features: Database persistence, idempotency, RLS, metrics")
+    logger.warning("")
+    logger.warning("This mock will be REMOVED in Sprint 4")
+    logger.warning("=" * 80)
+    logger.warning("")
+
+    logger.info("🚀 Starting Mock Cards API server (DEPRECATED)...")
     logger.info(f"📦 Mock cards available: {len(MOCK_CARDS)}")
     for card_id, card in MOCK_CARDS.items():
         logger.info(f"  - {card_id}: {card.card_type} - {card.title}")
