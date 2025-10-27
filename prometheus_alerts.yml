@@ -1,0 +1,278 @@
+# Prometheus Alert Rules for Cards API
+# Load this file in prometheus.yml:
+#   rule_files:
+#     - 'prometheus_alerts.yml'
+
+groups:
+  - name: cards_api_alerts
+    interval: 30s
+    rules:
+      # ========================================================================
+      # HIGH PRIORITY ALERTS
+      # ========================================================================
+      
+      # Alert: Cards API is down
+      - alert: CardsAPIDown
+        expr: up{job="cards-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: cards-api
+        annotations:
+          summary: "Cards API is down"
+          description: "Cards API has been down for more than 1 minute. Instance: {{ $labels.instance }}"
+      
+      # Alert: High error rate (>5%)
+      - alert: CardsAPIHighErrorRate
+        expr: |
+          (
+            sum(rate(cards_api_requests_total{status=~"5.."}[5m]))
+            /
+            sum(rate(cards_api_requests_total[5m]))
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: cards-api
+        annotations:
+          summary: "Cards API high error rate"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+      
+      # Alert: High p95 latency for batch endpoint (>100ms)
+      - alert: CardsAPIBatchHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(cards_api_request_duration_seconds_bucket{endpoint="/api/v1/cards/batch"}[5m])) by (le)
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: cards-api
+          endpoint: batch
+        annotations:
+          summary: "Cards API batch endpoint high latency"
+          description: "p95 latency is {{ $value | humanizeDuration }} (threshold: 100ms)"
+      
+      # Alert: High p95 latency for retrieve endpoint (>50ms)
+      - alert: CardsAPIRetrieveHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(cards_api_request_duration_seconds_bucket{endpoint="/api/v1/cards/retrieve"}[5m])) by (le)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: cards-api
+          endpoint: retrieve
+        annotations:
+          summary: "Cards API retrieve endpoint high latency"
+          description: "p95 latency is {{ $value | humanizeDuration }} (threshold: 50ms)"
+      
+      # Alert: Database connection pool exhausted
+      - alert: CardsAPIDatabasePoolExhausted
+        expr: |
+          (
+            sum(cards_api_operations_total{operation="batch_create",status="error"})
+            /
+            sum(cards_api_operations_total{operation="batch_create"})
+          ) > 0.1
+        for: 2m
+        labels:
+          severity: critical
+          component: cards-api
+        annotations:
+          summary: "Cards API database pool may be exhausted"
+          description: "High failure rate on batch operations ({{ $value | humanizePercentage }})"
+      
+      # ========================================================================
+      # MEDIUM PRIORITY ALERTS
+      # ========================================================================
+      
+      # Alert: High request rate (potential DDoS)
+      - alert: CardsAPIHighRequestRate
+        expr: |
+          sum(rate(cards_api_requests_total[1m])) > 1000
+        for: 5m
+        labels:
+          severity: warning
+          component: cards-api
+        annotations:
+          summary: "Cards API high request rate"
+          description: "Request rate is {{ $value }} req/s (threshold: 1000 req/s)"
+      
+      # Alert: Idempotency cache hit rate too low (<50%)
+      - alert: CardsAPILowIdempotencyCacheHitRate
+        expr: |
+          (
+            sum(rate(cards_api_operations_total{operation="idempotency_hit"}[5m]))
+            /
+            sum(rate(cards_api_operations_total{operation=~"idempotency_.*"}[5m]))
+          ) < 0.5
+        for: 10m
+        labels:
+          severity: info
+          component: cards-api
+        annotations:
+          summary: "Cards API low idempotency cache hit rate"
+          description: "Cache hit rate is {{ $value | humanizePercentage }} (expected: >50%)"
+      
+      # Alert: High usage tracking write latency (>25ms)
+      - alert: CardsAPIUsageTrackingHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(cards_usage_write_duration_ms_bucket[5m])) by (le)
+          ) > 25
+        for: 5m
+        labels:
+          severity: warning
+          component: cards-api
+          endpoint: usage
+        annotations:
+          summary: "Cards API usage tracking high latency"
+          description: "p95 write latency is {{ $value }}ms (threshold: 25ms)"
+      
+      # Alert: Card deduplication rate too high (>20%)
+      - alert: CardsAPIHighDeduplicationRate
+        expr: |
+          (
+            sum(rate(cards_api_operations_total{operation="card_deduplicated"}[5m]))
+            /
+            sum(rate(cards_api_operations_total{operation="batch_create"}[5m]))
+          ) > 0.2
+        for: 10m
+        labels:
+          severity: info
+          component: cards-api
+        annotations:
+          summary: "Cards API high card deduplication rate"
+          description: "Deduplication rate is {{ $value | humanizePercentage }} (threshold: 20%)"
+      
+      # ========================================================================
+      # LOW PRIORITY ALERTS (INFO)
+      # ========================================================================
+      
+      # Alert: No requests in last 10 minutes (potential issue)
+      - alert: CardsAPINoRequests
+        expr: |
+          sum(rate(cards_api_requests_total[10m])) == 0
+        for: 10m
+        labels:
+          severity: info
+          component: cards-api
+        annotations:
+          summary: "Cards API no requests"
+          description: "No requests received in the last 10 minutes"
+      
+      # Alert: High memory usage (>80%)
+      - alert: CardsAPIHighMemoryUsage
+        expr: |
+          (
+            process_resident_memory_bytes{job="cards-api"}
+            /
+            (1024 * 1024 * 1024)
+          ) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: cards-api
+        annotations:
+          summary: "Cards API high memory usage"
+          description: "Memory usage is {{ $value | humanize }}GB (threshold: 800MB)"
+      
+      # Alert: High CPU usage (>80%)
+      - alert: CardsAPIHighCPUUsage
+        expr: |
+          rate(process_cpu_seconds_total{job="cards-api"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: cards-api
+        annotations:
+          summary: "Cards API high CPU usage"
+          description: "CPU usage is {{ $value | humanizePercentage }} (threshold: 80%)"
+      
+      # ========================================================================
+      # BUSINESS METRICS ALERTS
+      # ========================================================================
+      
+      # Alert: Low card usage tracking (potential integration issue)
+      - alert: CardsAPILowUsageTracking
+        expr: |
+          sum(rate(card_usage_events_total[10m])) < 1
+        for: 30m
+        labels:
+          severity: info
+          component: cards-api
+        annotations:
+          summary: "Cards API low usage tracking"
+          description: "Usage events rate is {{ $value }} events/s (expected: >1 event/s)"
+      
+      # Alert: Imbalanced card type distribution (potential data issue)
+      - alert: CardsAPIImbalancedCardTypes
+        expr: |
+          (
+            max(sum(rate(cards_api_operations_total{operation="batch_create"}[1h])) by (card_type))
+            /
+            min(sum(rate(cards_api_operations_total{operation="batch_create"}[1h])) by (card_type))
+          ) > 10
+        for: 1h
+        labels:
+          severity: info
+          component: cards-api
+        annotations:
+          summary: "Cards API imbalanced card type distribution"
+          description: "Card type distribution is imbalanced (ratio: {{ $value }})"
+      
+      # ========================================================================
+      # SLO ALERTS (Service Level Objectives)
+      # ========================================================================
+      
+      # Alert: SLO violation - Availability <99.9%
+      - alert: CardsAPISLOAvailabilityViolation
+        expr: |
+          (
+            sum(rate(cards_api_requests_total{status!~"5.."}[1h]))
+            /
+            sum(rate(cards_api_requests_total[1h]))
+          ) < 0.999
+        for: 5m
+        labels:
+          severity: critical
+          component: cards-api
+          slo: availability
+        annotations:
+          summary: "Cards API SLO availability violation"
+          description: "Availability is {{ $value | humanizePercentage }} (SLO: 99.9%)"
+      
+      # Alert: SLO violation - p95 latency >100ms for batch
+      - alert: CardsAPISLOLatencyViolationBatch
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(cards_api_request_duration_seconds_bucket{endpoint="/api/v1/cards/batch"}[1h])) by (le)
+          ) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          component: cards-api
+          slo: latency
+          endpoint: batch
+        annotations:
+          summary: "Cards API SLO latency violation (batch)"
+          description: "p95 latency is {{ $value | humanizeDuration }} (SLO: 100ms)"
+      
+      # Alert: SLO violation - p95 latency >50ms for retrieve
+      - alert: CardsAPISLOLatencyViolationRetrieve
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(cards_api_request_duration_seconds_bucket{endpoint="/api/v1/cards/retrieve"}[1h])) by (le)
+          ) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+          component: cards-api
+          slo: latency
+          endpoint: retrieve
+        annotations:
+          summary: "Cards API SLO latency violation (retrieve)"
+          description: "p95 latency is {{ $value | humanizeDuration }} (SLO: 50ms)"
+

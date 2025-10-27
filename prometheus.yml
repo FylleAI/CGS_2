@@ -7,6 +7,10 @@ global:
     cluster: 'cards-api-local'
     environment: 'development'
 
+# Alert rules
+rule_files:
+  - 'prometheus_alerts.yml'
+
 # Alertmanager configuration (optional)
 # alerting:
 #   alertmanagers:
