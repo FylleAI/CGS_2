@@ -15,9 +15,14 @@ from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 from cards.api.main import app
 from cards.infrastructure.database.connection import DatabaseConnection
+from cards.api.v1.endpoints import init_cards_endpoints
 
 # Test configuration
 TEST_TENANT_ID = str(uuid4())
@@ -38,22 +43,25 @@ async def db_connection():
     database_url = os.getenv("SUPABASE_DATABASE_URL")
     if not database_url:
         pytest.skip("SUPABASE_DATABASE_URL not set")
-    
+
     # Remove asyncpg+ prefix if present
     if database_url.startswith("postgresql+asyncpg://"):
         database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
-    
-    db = DatabaseConnection(database_url, min_size=2, max_size=5)
-    await db.connect()
-    
+
+    db = DatabaseConnection(database_url)
+    await db.connect(min_size=2, max_size=5)
+
+    # Initialize endpoints with database connection
+    init_cards_endpoints(db)
+
     yield db
-    
+
     await db.disconnect()
 
 
 @pytest.fixture
-async def client():
-    """Create async HTTP client for testing."""
+async def client(db_connection):
+    """Create async HTTP client for testing with initialized database."""
     async with AsyncClient(app=app, base_url=TEST_BASE_URL) as ac:
         yield ac
 

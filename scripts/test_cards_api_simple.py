@@ -21,6 +21,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from cards.api.main import app
+from cards.infrastructure.database.connection import DatabaseConnection
+from cards.api.v1.endpoints import init_cards_endpoints
+
+# Global database connection
+_db = None
 
 
 async def test_health():
@@ -132,12 +137,34 @@ async def test_batch_create():
 
 async def main():
     """Run all tests."""
+    global _db
+
     print("\n🧪 CARDS API SIMPLE TESTS\n")
-    
+
+    # Initialize database connection
+    database_url = os.getenv("SUPABASE_DATABASE_URL")
+    if not database_url:
+        print("❌ SUPABASE_DATABASE_URL not set")
+        sys.exit(1)
+
+    # Remove asyncpg+ prefix if present
+    if database_url.startswith("postgresql+asyncpg://"):
+        database_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
+
+    print(f"📍 Connecting to database: {database_url.split('@')[1]}")
+
+    _db = DatabaseConnection(database_url)
+    await _db.connect(min_size=2, max_size=5)
+
+    # Initialize endpoints with database
+    init_cards_endpoints(_db)
+
+    print("✅ Database initialized\n")
+
     try:
         await test_health()
         await test_batch_create()
-        
+
         print("=" * 80)
         print("✅ ALL TESTS PASSED!")
         print("=" * 80)
@@ -146,6 +173,11 @@ async def main():
         import traceback
         traceback.print_exc()
         sys.exit(1)
+    finally:
+        # Cleanup
+        if _db:
+            await _db.disconnect()
+            print("\n✅ Database connection closed")
 
 
 if __name__ == "__main__":
