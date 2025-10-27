@@ -295,7 +295,7 @@ async def submit_answers(
             for card in batch_response.cards:
                 onboarding_cards_created_total.labels(
                     tenant_id=tenant_id,
-                    card_type=card.card_type,
+                    card_type=card.card_type.value if hasattr(card.card_type, 'value') else str(card.card_type),
                 ).inc()
 
             # Record batch duration
