@@ -27,7 +27,11 @@ class OnboardingSettings(BaseSettings):
     cgs_api_timeout: int = Field(default=600, env="CGS_API_TIMEOUT")  # 10 minutes
     cgs_api_key: Optional[str] = Field(default=None, env="CGS_API_KEY")
     default_llm_provider: str = Field(default="gemini", env="DEFAULT_LLM_PROVIDER")
-    
+
+    # Cards API integration
+    cards_api_url: str = Field(default="http://localhost:8002", env="CARDS_API_URL")
+    cards_frontend_url: str = Field(default="http://localhost:3002", env="CARDS_FRONTEND_URL")
+
     # Perplexity settings (research)
     perplexity_api_key: Optional[str] = Field(default=None, env="PERPLEXITY_API_KEY")
     perplexity_model: str = Field(default="sonar-pro", env="PERPLEXITY_MODEL")

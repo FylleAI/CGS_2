@@ -187,6 +187,11 @@ export interface SubmitAnswersRequest {
 export interface SubmitAnswersResponse {
   session_id: string;
   state: SessionState;
+  snapshot?: CompanySnapshot;  // ✨ Enriched snapshot with user answers
+  card_ids?: string[];  // Cards API integration
+  cards_created?: number;
+  partial?: boolean;
+  cards_service_url?: string;  // ✨ URL for automatic redirect to Cards Service
   content_title?: string;
   content_preview?: string;
   word_count?: number;

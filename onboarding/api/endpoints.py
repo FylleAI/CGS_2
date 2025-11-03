@@ -1,10 +1,28 @@
 """FastAPI endpoints for onboarding service."""
 
+import json
 import logging
+import os
+import time
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Header
+
+# Conditional import for Cards client (may not be available during development)
+try:
+    from fylle_cards_client import CardsClient
+    from fylle_cards_client.client import CardsAPIError
+    CARDS_CLIENT_AVAILABLE = True
+except ImportError:
+    CARDS_CLIENT_AVAILABLE = False
+    CardsClient = None
+    CardsAPIError = Exception
+    import logging
+    logging.getLogger(__name__).warning(
+        "⚠️ fylle_cards_client not available - Cards creation will be skipped. "
+        "This is expected during development before Cards microservice is ready."
+    )
 
 from onboarding.domain.models import OnboardingInput, SessionState
 from onboarding.api.models import (
@@ -22,13 +40,42 @@ from onboarding.api.dependencies import (
     get_research_company_use_case,
     get_synthesize_snapshot_use_case,
     get_collect_answers_use_case,
-    get_execute_onboarding_use_case,
+    get_execute_onboarding_use_case,  # DEPRECATED: Will be removed
+    get_create_cards_use_case,
     get_repository,
 )
+# Conditional import for metrics (may not be available)
+try:
+    from onboarding.infrastructure.metrics import (
+        onboarding_cards_created_total,
+        onboarding_batch_duration_ms,
+        onboarding_errors_total,
+        onboarding_partial_creation_total,
+    )
+    METRICS_AVAILABLE = True
+except ImportError:
+    METRICS_AVAILABLE = False
+    # Create dummy metrics objects
+    class DummyMetric:
+        def labels(self, **kwargs):
+            return self
+        def inc(self):
+            pass
+        def observe(self, value):
+            pass
+
+    onboarding_cards_created_total = DummyMetric()
+    onboarding_batch_duration_ms = DummyMetric()
+    onboarding_errors_total = DummyMetric()
+    onboarding_partial_creation_total = DummyMetric()
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/onboarding", tags=["onboarding"])
+
+# Cards API configuration
+CARDS_API_URL = os.getenv("CARDS_API_URL", "http://localhost:8002")
+CARDS_FRONTEND_URL = os.getenv("CARDS_FRONTEND_URL", "http://localhost:3002")
 
 
 @router.post("/start", response_model=StartOnboardingResponse, status_code=status.HTTP_201_CREATED)
@@ -128,15 +175,27 @@ async def submit_answers(
     session_id: UUID,
     request: SubmitAnswersRequest,
     collect_answers_uc = Depends(get_collect_answers_use_case),
-    execute_uc = Depends(get_execute_onboarding_use_case),
+    create_cards_uc = Depends(get_create_cards_use_case),
     repository = Depends(get_repository),
+    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
+    x_trace_id: Optional[str] = Header(None, alias="X-Trace-ID"),
+    idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key"),
 ):
     """
-    Submit answers to clarifying questions and execute workflow.
-    
-    Validates answers, builds payload, executes CGS workflow, and delivers content.
+    Submit answers to clarifying questions and create cards.
+
+    **Onboarding → Cards Integration**:
+    1. Collect answers
+    2. Build CompanySnapshot (from Gemini synthesis + user answers)
+    3. Create 4 cards via Cards API /batch (idempotent)
+    4. Save card_ids in session
+    5. Return card_ids to frontend
+
+    Note: Workflow execution is separate - frontend will call Workflow API
+    when content generation is needed.
     """
-    logger.info(f"Submitting answers for session: {session_id}")
+    trace_id = x_trace_id or str(session_id)
+    logger.info(f"Submitting answers for session: {session_id} (trace_id={trace_id})")
     
     if not repository:
         raise HTTPException(
@@ -162,6 +221,7 @@ async def submit_answers(
                 session_id=session.session_id,
                 state=session.state,
                 message=f"Session already {session.state.value}. Please check status endpoint for updates.",
+                snapshot=session.snapshot,  # ✨ Include snapshot for idempotent requests
             )
 
             # Add CGS response data if available
@@ -187,28 +247,186 @@ async def submit_answers(
 
         # Collect answers
         session = await collect_answers_uc.execute(session, request.answers)
-        
-        # Execute workflow
-        result = await execute_uc.execute(session)
-        
-        # Build response
+
+        # ========================================================================
+        # SPRINT 4 DAY 1: CARDS API INTEGRATION
+        # ========================================================================
+
+        # STEP 1: Build CompanySnapshot v1 from session
+        # The snapshot is already available in session.snapshot after collect_answers
+        if not session.snapshot:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="CompanySnapshot not available after collecting answers",
+            )
+
+        # STEP 2: Call Cards API /batch to create 4 cards atomically
+        tenant_id = x_tenant_id or str(session.session_id)  # Fallback to session_id if no tenant header
+        idem_key = idempotency_key or f"onboarding-{session_id}-batch"
+
+        start_time = time.time()
+        card_ids = []
+        created_count = 0
+        partial = False
+
+        # Check if Cards client is available
+        if not CARDS_CLIENT_AVAILABLE:
+            logger.warning(
+                json.dumps({
+                    "event": "cards_batch_skipped",
+                    "trace_id": trace_id,
+                    "tenant_id": tenant_id,
+                    "session_id": str(session_id),
+                    "reason": "Cards client not available - development mode",
+                })
+            )
+            # Skip cards creation - continue with empty card_ids
+            card_ids = []
+            created_count = 0
+            partial = False
+        else:
+            logger.info(
+                json.dumps({
+                    "event": "cards_batch_start",
+                    "trace_id": trace_id,
+                    "tenant_id": tenant_id,
+                    "session_id": str(session_id),
+                    "idempotency_key": idem_key,
+                })
+            )
+
+            try:
+                # Initialize Cards API client
+                cards_client = CardsClient(
+                    base_url=CARDS_API_URL,
+                    tenant_id=tenant_id,
+                    trace_id=trace_id,
+                    session_id=str(session_id),
+                )
+
+                # Convert snapshot to dict for Cards API
+                snapshot_dict = json.loads(session.snapshot.model_dump_json())
+
+                # Call batch endpoint with idempotency
+                batch_response = cards_client.create_cards_batch(
+                    company_snapshot=snapshot_dict,
+                    source_session_id=session_id,
+                    created_by="onboarding-service",
+                    idempotency_key=idem_key,
+                )
+
+                # Extract card IDs
+                card_ids = [card.card_id for card in batch_response.cards]
+                created_count = batch_response.created_count
+                partial = created_count < 4
+
+                # Calculate duration
+                duration_ms = int((time.time() - start_time) * 1000)
+
+                logger.info(
+                    json.dumps({
+                        "event": "cards_batch_created",
+                        "trace_id": trace_id,
+                        "tenant_id": tenant_id,
+                        "session_id": str(session_id),
+                        "created_count": created_count,
+                        "partial": partial,
+                        "duration_ms": duration_ms,
+                        "idempotency_key": idem_key,
+                    })
+                )
+
+                # STEP 5: Metrics - Record cards created per type
+                for card in batch_response.cards:
+                    onboarding_cards_created_total.labels(
+                        tenant_id=tenant_id,
+                        card_type=card.card_type.value if hasattr(card.card_type, 'value') else str(card.card_type),
+                    ).inc()
+
+                # Record batch duration
+                onboarding_batch_duration_ms.labels(tenant_id=tenant_id).observe(duration_ms)
+
+                # Record partial creation if applicable
+                if partial:
+                    onboarding_partial_creation_total.labels(tenant_id=tenant_id).inc()
+                    logger.warning(
+                        json.dumps({
+                            "event": "cards_batch_partial",
+                            "trace_id": trace_id,
+                            "tenant_id": tenant_id,
+                            "session_id": str(session_id),
+                            "created_count": created_count,
+                            "expected_count": 4,
+                        })
+                    )
+
+            except CardsAPIError as e:
+                # Cards API error - return 502 with trace_id
+                logger.error(
+                    json.dumps({
+                        "event": "cards_batch_error",
+                        "trace_id": trace_id,
+                        "tenant_id": tenant_id,
+                        "session_id": str(session_id),
+                        "error": str(e),
+                    })
+                )
+
+                # Record error metric
+                onboarding_errors_total.labels(
+                    tenant_id=tenant_id,
+                    error_type="cards_api",
+                ).inc()
+
+                # Update session to failed
+                session.update_state(SessionState.FAILED)
+                session.error_message = f"Cards API error: {str(e)}"
+                await repository.save_session(session)
+
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail={
+                        "error": "BadGateway",
+                        "detail": f"Cards API error: {str(e)}",
+                        "request_id": trace_id,
+                    },
+                )
+
+        # STEP 3: Save card_ids in session metadata (whether cards were created or not)
+        session.metadata["card_ids"] = [str(cid) for cid in card_ids]
+        session.metadata["cards_created_count"] = created_count
+        session.metadata["cards_status"] = "skipped" if not CARDS_CLIENT_AVAILABLE else ("partial" if partial else "created")
+        session.metadata["cards_trace_id"] = trace_id
+
+        # ========================================================================
+        # END CARDS API INTEGRATION
+        # ========================================================================
+
+        # Update session state to DONE (cards created successfully)
+        session.update_state(SessionState.DONE)
+        await repository.save_session(session)
+
+        # Build Cards Service frontend URL for redirect
+        # Format: http://localhost:3002/cards?session_id=xxx&tenant_id=yyy
+        cards_service_url = f"{CARDS_FRONTEND_URL}/cards?session_id={session_id}&tenant_id={tenant_id}"
+
+        # Build response with card_ids and enriched snapshot
         response = SubmitAnswersResponse(
             session_id=session.session_id,
             state=session.state,
-            message="Onboarding completed successfully!" if result.is_successful() else "Workflow execution failed",
+            message=f"Cards created successfully! Created {created_count} cards.",
+            snapshot=session.snapshot,  # ✨ Return enriched snapshot with user answers
+            card_ids=[str(cid) for cid in card_ids],  # Return card_ids to frontend
+            cards_created=created_count,
+            partial=partial,
+            cards_service_url=cards_service_url,  # ✨ URL for automatic redirect
         )
-        
-        if result.content:
-            response.content_title = result.content.title
-            response.content_preview = result.content.body[:200] + "..."
-            response.word_count = result.content.word_count
-        
-        if session.delivery_status:
-            response.delivery_status = session.delivery_status
-        
-        if result.workflow_metrics:
-            response.workflow_metrics = result.workflow_metrics.model_dump()
-        
+
+        logger.info(
+            f"✅ Onboarding completed for session {session_id}: "
+            f"{created_count} cards created, card_ids={card_ids}, redirect_url={cards_service_url}"
+        )
+
         return response
         
     except HTTPException:

@@ -79,14 +79,27 @@ class StartOnboardingResponse(BaseModel):
 
 class SubmitAnswersResponse(BaseModel):
     """Response from submitting answers."""
-    
+
     session_id: UUID
     state: SessionState
+    message: str
+
+    # Company snapshot (enriched with user answers)
+    snapshot: Optional[CompanySnapshot] = None
+
+    # Cards API integration
+    card_ids: Optional[List[str]] = None
+    cards_created: Optional[int] = None
+    partial: Optional[bool] = None
+
+    # Cards Service frontend URL for redirect
+    cards_service_url: Optional[str] = None
+
+    # Legacy fields (deprecated - for backward compatibility)
     content_title: Optional[str] = None
     content_preview: Optional[str] = None
     word_count: Optional[int] = None
     delivery_status: Optional[str] = None
-    message: str
     workflow_metrics: Optional[Dict[str, Any]] = None
 
 

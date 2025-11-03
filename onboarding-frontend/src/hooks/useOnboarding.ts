@@ -134,16 +134,41 @@ export const useOnboarding = () => {
       setCurrentStep(4); // Move to execution step
     },
     onSuccess: async (data) => {
-      // ✨ CRITICAL FIX: Fetch full session details to get cgs_response
-      // The /answers endpoint only returns a summary, but we need the full cgs_response
-      // for metadata-driven rendering (display_type, company_snapshot, etc.)
+      // ✨ Update snapshot with enriched version (includes user answers)
+      if (data.snapshot) {
+        setSnapshot(data.snapshot);
+        console.log('✅ Snapshot updated with user answers:', data.snapshot);
+      }
+
+      // ✨ NEW ARCHITECTURE: Automatic redirect to Cards Service
+      if (data.cards_service_url) {
+        console.log('🚀 Redirecting to Cards Service:', data.cards_service_url);
+
+        toast.success('Onboarding complete! Redirecting to your cards...', {
+          duration: 2000,
+        });
+
+        // Wait 2 seconds for user to see the success message, then redirect
+        setTimeout(() => {
+          window.location.href = data.cards_service_url!;
+        }, 2000);
+
+        setLoading(false);
+        return;
+      }
+
+      // ✨ LEGACY PATH: If no cards_service_url, show results in Onboarding frontend
+      // This is for backward compatibility or development mode
+      console.warn('⚠️ No cards_service_url in response - using legacy results view');
+
       try {
         const sessionDetails = await onboardingApi.getSessionDetails(data.session_id);
 
-        // Update session with FULL details including cgs_response
+        // Update session with FULL details including cgs_response AND enriched snapshot
         setSession({
           ...session!,
           state: sessionDetails.state,
+          snapshot: data.snapshot || sessionDetails.snapshot,  // ✨ Use enriched snapshot
           cgs_run_id: sessionDetails.cgs_run_id,
           cgs_response: sessionDetails.cgs_response, // ✨ This is the key field!
           delivery_status: sessionDetails.delivery_status,
@@ -153,6 +178,8 @@ export const useOnboarding = () => {
             content_preview: data.content_preview,
             word_count: data.word_count,
             execution_metrics: data.execution_metrics,
+            card_ids: data.card_ids,  // ✨ Cards API integration
+            cards_created: data.cards_created,
           },
         });
 
@@ -170,6 +197,7 @@ export const useOnboarding = () => {
         setSession({
           ...session!,
           state: data.state,
+          snapshot: data.snapshot,  // ✨ Use enriched snapshot from response
           cgs_run_id: data.cgs_run_id,
           delivery_status: data.delivery_status,
           updated_at: new Date().toISOString(),
@@ -178,6 +206,8 @@ export const useOnboarding = () => {
             content_preview: data.content_preview,
             word_count: data.word_count,
             execution_metrics: data.execution_metrics,
+            card_ids: data.card_ids,  // ✨ Cards API integration
+            cards_created: data.cards_created,
           },
         });
 
