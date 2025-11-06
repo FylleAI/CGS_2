@@ -970,20 +970,24 @@ class AgentExecutor:
                 # Handle different response formats
                 if isinstance(usage, dict):
                     return TokenUsage(
-                        prompt_tokens=usage.get("prompt_tokens", 0),
-                        completion_tokens=usage.get("completion_tokens", 0),
+                        prompt_tokens=self._extract_prompt_tokens(usage),
+                        completion_tokens=self._extract_completion_tokens(usage),
                         total_tokens=usage.get("total_tokens", 0),
-                        reasoning_tokens=usage.get("reasoning_tokens", 0),
+                        reasoning_tokens=self._extract_reasoning_tokens(usage),
                         cached_tokens=usage.get("cached_tokens", 0),
+                        cache_read_tokens=self._extract_cache_read_tokens(usage),
+                        cache_write_tokens=self._extract_cache_write_tokens(usage),
                     )
                 else:
                     # Handle object-style usage
                     return TokenUsage(
-                        prompt_tokens=getattr(usage, "prompt_tokens", 0),
-                        completion_tokens=getattr(usage, "completion_tokens", 0),
+                        prompt_tokens=self._extract_prompt_tokens(usage),
+                        completion_tokens=self._extract_completion_tokens(usage),
                         total_tokens=getattr(usage, "total_tokens", 0),
-                        reasoning_tokens=getattr(usage, "reasoning_tokens", 0),
+                        reasoning_tokens=self._extract_reasoning_tokens(usage),
                         cached_tokens=getattr(usage, "cached_tokens", 0),
+                        cache_read_tokens=self._extract_cache_read_tokens(usage),
+                        cache_write_tokens=self._extract_cache_write_tokens(usage),
                     )
 
             # Fallback to estimation if no usage data
@@ -1013,3 +1017,53 @@ class AgentExecutor:
             completion_tokens=estimated_completion_tokens,
             total_tokens=estimated_prompt_tokens + estimated_completion_tokens,
         )
+
+    @staticmethod
+    def _extract_prompt_tokens(usage_source) -> int:
+        return (
+            AgentExecutor._get_usage_value(usage_source, "prompt_tokens")
+            or AgentExecutor._get_usage_value(usage_source, "input_tokens")
+            or AgentExecutor._get_usage_value(usage_source, "total_input_tokens")
+            or 0
+        )
+
+    @staticmethod
+    def _extract_completion_tokens(usage_source) -> int:
+        return (
+            AgentExecutor._get_usage_value(usage_source, "completion_tokens")
+            or AgentExecutor._get_usage_value(usage_source, "output_tokens")
+            or AgentExecutor._get_usage_value(usage_source, "total_output_tokens")
+            or 0
+        )
+
+    @staticmethod
+    def _extract_reasoning_tokens(usage_source) -> int:
+        return (
+            AgentExecutor._get_usage_value(usage_source, "reasoning_tokens")
+            or AgentExecutor._get_usage_value(usage_source, "thinking_tokens")
+            or 0
+        )
+
+    @staticmethod
+    def _extract_cache_read_tokens(usage_source) -> int:
+        return (
+            AgentExecutor._get_usage_value(usage_source, "cache_read_tokens")
+            or AgentExecutor._get_usage_value(usage_source, "cache_read_input_tokens")
+            or AgentExecutor._get_usage_value(usage_source, "prompt_cache_hit_tokens")
+            or 0
+        )
+
+    @staticmethod
+    def _extract_cache_write_tokens(usage_source) -> int:
+        return (
+            AgentExecutor._get_usage_value(usage_source, "cache_write_tokens")
+            or AgentExecutor._get_usage_value(usage_source, "cache_creation_input_tokens")
+            or AgentExecutor._get_usage_value(usage_source, "prompt_cache_miss_tokens")
+            or 0
+        )
+
+    @staticmethod
+    def _get_usage_value(usage_source, attribute: str) -> int:
+        if isinstance(usage_source, dict):
+            return int(usage_source.get(attribute, 0) or 0)
+        return int(getattr(usage_source, attribute, 0) or 0)
