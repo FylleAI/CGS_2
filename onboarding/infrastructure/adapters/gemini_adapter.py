@@ -70,21 +70,35 @@ class GeminiSynthesisAdapter:
         brand_name: str,
         research_content: str,
         website: Optional[str] = None,
+        min_questions: int = 3,
+        max_questions: int = 5,
     ) -> str:
-        """Build prompt for company snapshot synthesis."""
+        """Build prompt for company snapshot synthesis with dynamic questions."""
         prompt = f"""You are an expert business analyst synthesizing company research into a structured snapshot.
 
 COMPANY: {brand_name}
 """
         if website:
             prompt += f"WEBSITE: {website}\n"
-        
+
         prompt += f"""
 RESEARCH DATA:
 {research_content}
 
 YOUR TASK:
-Analyze the research and produce a structured JSON response with the following schema:
+1. Analyze the research data and identify what information is available vs missing
+2. Generate a structured snapshot with all available data
+3. Generate {min_questions} to {max_questions} TARGETED clarifying questions to fill data gaps
+
+CARD TYPES TO POPULATE (each question should help fill these):
+- ProductCard: valueProposition, features, differentiators, useCases
+- TargetCard: icpName, painPoints, goals, communicationChannels, demographics
+- BrandVoiceCard: toneDescription, styleGuidelines, dosExamples, dontsExamples
+- CompetitorCard: competitorName, positioning, strengths, weaknesses
+- TopicCard: description, keywords, angles, trends
+- CampaignsCard: objective, keyMessages, tone, assets
+
+OUTPUT JSON SCHEMA:
 
 {{
   "company": {{
@@ -93,81 +107,99 @@ Analyze the research and produce a structured JSON response with the following s
     "website": "{website or 'null'}",
     "industry": "string or null",
     "headquarters": "string or null",
-    "size_range": "string or null (e.g., '50-200 employees')",
+    "size_range": "string or null",
     "description": "concise company description (2-3 sentences)",
-    "key_offerings": ["offering1", "offering2", ...],
-    "differentiators": ["differentiator1", "differentiator2", ...],
-    "evidence": [
-      {{"source": "source_reference", "excerpt": "relevant quote", "confidence": 0.9}}
-    ]
+    "key_offerings": ["offering1", "offering2"],
+    "differentiators": ["differentiator1", "differentiator2"],
+    "evidence": [{{"source": "source_reference", "excerpt": "relevant quote", "confidence": 0.9}}]
   }},
   "audience": {{
     "primary": "primary target audience",
-    "secondary": ["secondary audience 1", "secondary audience 2"],
+    "secondary": ["secondary audience 1"],
     "pain_points": ["pain point 1", "pain point 2"],
     "desired_outcomes": ["outcome 1", "outcome 2"]
   }},
   "voice": {{
     "tone": "professional|conversational|authoritative|playful|bold",
-    "style_guidelines": ["guideline 1", "guideline 2"],
+    "style_guidelines": ["guideline 1"],
     "forbidden_phrases": ["phrase to avoid"],
     "cta_preferences": ["preferred CTA style"]
   }},
   "insights": {{
     "positioning": "market positioning statement",
     "key_messages": ["message 1", "message 2"],
-    "recent_news": ["news item 1", "news item 2"],
+    "recent_news": ["news item 1"],
     "competitors": ["competitor 1", "competitor 2"]
   }},
   "clarifying_questions": [
     {{
       "id": "q1",
-      "question": "What specific aspect of [topic] should we focus on?",
-      "reason": "To tailor content to business priorities",
-      "expected_response_type": "string",
-      "options": null,
-      "required": true
+      "question": "Qual è il tono di comunicazione che preferisci per il tuo brand?",
+      "reason": "Per definire correttamente la brand voice e lo stile dei contenuti",
+      "expected_response_type": "select",
+      "options": ["Professionale e autorevole", "Amichevole e conversazionale", "Audace e provocatorio", "Informativo e educativo", "Altro"],
+      "required": true,
+      "maps_to": [
+        {{"card_type": "brand_voice", "field_name": "toneDescription"}},
+        {{"card_type": "campaigns", "field_name": "tone"}}
+      ]
     }},
     {{
       "id": "q2",
-      "question": "What is your preferred content length?",
-      "reason": "To match audience attention span",
-      "expected_response_type": "enum",
-      "options": ["short (200-300 words)", "medium (400-600 words)", "long (800+ words)"],
-      "required": true
+      "question": "Qual è l'obiettivo principale dei tuoi contenuti?",
+      "reason": "Per allineare le campagne e i topic agli obiettivi di business",
+      "expected_response_type": "select",
+      "options": ["Generare lead e nuovi clienti", "Aumentare brand awareness", "Fidelizzare clienti esistenti", "Educare il mercato", "Lanciare nuovi prodotti/servizi", "Altro"],
+      "required": true,
+      "maps_to": [
+        {{"card_type": "target", "field_name": "goals"}},
+        {{"card_type": "campaigns", "field_name": "objective"}}
+      ]
     }},
     {{
       "id": "q3",
-      "question": "Should we include data/statistics?",
-      "reason": "To determine content depth and credibility approach",
-      "expected_response_type": "boolean",
-      "options": null,
-      "required": false
+      "question": "Su quali canali comunichi principalmente con i tuoi clienti?",
+      "reason": "Per personalizzare i contenuti per i canali giusti",
+      "expected_response_type": "select",
+      "options": ["LinkedIn e social professionali", "Instagram e social visual", "Email e newsletter", "Blog e sito web", "Eventi e webinar", "Mix di tutti"],
+      "required": true,
+      "maps_to": [
+        {{"card_type": "target", "field_name": "communicationChannels"}},
+        {{"card_type": "campaigns", "field_name": "assets"}}
+      ]
     }}
   ]
 }}
 
-IMPORTANT GUIDELINES:
-1. Generate EXACTLY 3 clarifying questions (no more, no less)
-2. Questions should be specific, actionable, and relevant to content creation
-3. Use question IDs: q1, q2, q3
-4. expected_response_type must be one of: string, enum, boolean, number
-5. **CRITICAL**: For enum types, you MUST provide 3-5 clear, specific options in the "options" array
-   - Options should be complete, actionable choices (e.g., "short (200-300 words)", not just "short")
-   - Each option should be self-explanatory and mutually exclusive
-   - NEVER leave options as null for enum types
-6. For string types, set options to null
-7. For boolean types, set options to null (Yes/No is automatic)
-8. For number types, set options to null
-9. Extract evidence with source references where possible
-10. Infer brand voice from communication style in research
-11. Be concise but comprehensive
+QUESTION GENERATION RULES:
+1. Generate {min_questions} to {max_questions} questions based on DATA GAPS identified
+2. Each question MUST include "maps_to" array linking to specific card fields
+3. Prioritize questions that fill MULTIPLE card fields (high value)
+4. Use ITALIAN language for question text and options
+5. **ALL QUESTIONS MUST BE MULTIPLE CHOICE** - expected_response_type MUST ALWAYS be "select"
+6. Every question MUST have 4-6 clear, mutually exclusive options in "options" array
+7. Include an option like "Altro" or "Non applicabile" if needed for completeness
+8. Focus on questions that enable better card generation
 
-**VALIDATION RULES**:
-- If expected_response_type is "enum", options MUST be a non-empty array
-- If expected_response_type is NOT "enum", options MUST be null
+CRITICAL - QUESTION WORDING RULES:
+- Questions must be STANDALONE and self-contained
+- The USER HAS NO VISIBILITY into the research data - they only see the questions
+- NEVER reference "data found", "information mentioned", "channels specified", or similar
+- NEVER say "oltre a quelli identificati", "oltre ai canali specificati", etc.
+- BAD: "Oltre ai competitor già identificati, ce ne sono altri?" (user doesn't know what was identified)
+- GOOD: "Chi sono i tuoi principali competitor?" (standalone question)
+- BAD: "Vuoi aggiungere altri canali oltre a quelli emersi?" (user doesn't know what emerged)
+- GOOD: "Su quali canali comunichi con i tuoi clienti?" (standalone question)
+- Questions should feel like a first conversation, not a follow-up to hidden context
 
-Return ONLY valid JSON, no markdown formatting or explanations.
+QUESTION PRIORITY (ask about missing data first):
+1. Brand voice/tone (if not clear from research) → BrandVoiceCard
+2. Target goals/pain points (if incomplete) → TargetCard
+3. Competitors (if none identified) → CompetitorCard
+4. Content preferences/topics → TopicCard, CampaignsCard
+5. Communication channels → TargetCard
+
+Return ONLY valid JSON, no markdown or explanations.
 """
         return prompt
     
@@ -176,25 +208,38 @@ Return ONLY valid JSON, no markdown formatting or explanations.
         brand_name: str,
         research_result: Dict[str, Any],
         trace_id: Optional[str] = None,
+        min_questions: Optional[int] = None,
+        max_questions: Optional[int] = None,
     ) -> CompanySnapshot:
         """
         Synthesize company snapshot from research.
-        
+
         Args:
             brand_name: Company name
             research_result: Research result from Perplexity
             trace_id: Optional trace ID for correlation
-        
+            min_questions: Minimum questions to generate (default from settings)
+            max_questions: Maximum questions to generate (default from settings)
+
         Returns:
             CompanySnapshot with structured data and clarifying questions
         """
-        logger.info(f"Synthesizing snapshot for: {brand_name}")
-        
+        # Use settings defaults if not specified
+        min_q = min_questions or self.settings.min_clarifying_questions
+        max_q = max_questions or self.settings.max_clarifying_questions
+
+        logger.info(
+            f"Synthesizing snapshot for: {brand_name} "
+            f"(questions: {min_q}-{max_q})"
+        )
+
         # Build synthesis prompt
         prompt = self._build_synthesis_prompt(
             brand_name=brand_name,
             research_content=research_result.get("raw_content", ""),
             website=research_result.get("website"),
+            min_questions=min_q,
+            max_questions=max_q,
         )
         
         try:

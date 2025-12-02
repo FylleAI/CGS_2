@@ -168,7 +168,7 @@ const GenerationResults: React.FC<GenerationResultsProps> = ({
                 sx={{ mb: 1 }}
               />
               <Typography variant="caption" color="text.secondary">
-                Complex workflows (Siebert Premium Newsletter) may take 3-6 minutes due to multi-agent processing and Perplexity research
+                Complex workflows (Siebert Newsletter HTML) may take 8-12 minutes due to 5-task multi-agent processing and Perplexity research. Please wait...
               </Typography>
             </Box>
           )}

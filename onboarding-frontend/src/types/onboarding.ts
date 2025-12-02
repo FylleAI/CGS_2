@@ -192,6 +192,7 @@ export interface SubmitAnswersResponse {
   cards_created?: number;
   partial?: boolean;
   cards_service_url?: string;  // ✨ URL for automatic redirect to Cards Service
+  cards_output?: CardsOutput;  // ✨ NEW: Full cards data for local rendering
   content_title?: string;
   content_preview?: string;
   word_count?: number;
@@ -202,6 +203,24 @@ export interface SubmitAnswersResponse {
     [key: string]: any;
   };
   message: string;
+}
+
+// ============================================================================
+// Cards Output Types (NEW - matches backend schema)
+// ============================================================================
+
+export interface CardsOutput {
+  sessionId: string;
+  generatedAt: string;
+  cards: Card[];
+}
+
+export interface Card {
+  id: string;
+  type: string;
+  title: string;
+  sessionId: string;
+  [key: string]: any;  // Allow additional fields per card type
 }
 
 export interface SessionStatusResponse {

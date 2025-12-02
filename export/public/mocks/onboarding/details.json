@@ -1,0 +1,104 @@
+{
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "trace_id": "trace-2024-onboarding-001",
+  "brand_name": "Fylle AI",
+  "website": "https://fylle.ai",
+  "goal": "content_generation",
+  "user_email": "demo@fylle.ai",
+  "state": "done",
+  "created_at": "2024-01-15T10:25:00.000Z",
+  "updated_at": "2024-01-15T10:35:00.000Z",
+  "snapshot": {
+    "version": "1.0",
+    "snapshot_id": "snap-550e8400-e29b-41d4-a716-446655440001",
+    "generated_at": "2024-01-15T10:30:00.000Z",
+    "trace_id": "trace-2024-onboarding-001",
+    "company": {
+      "name": "Fylle AI",
+      "legal_name": "Fylle AI Inc.",
+      "website": "https://fylle.ai",
+      "industry": "Artificial Intelligence & SaaS",
+      "headquarters": "San Francisco, CA",
+      "size_range": "11-50 employees",
+      "description": "Fylle is an AI-powered content generation platform that helps businesses create high-quality, brand-consistent content at scale.",
+      "key_offerings": [
+        "AI-powered content generation",
+        "Brand voice customization",
+        "Multi-format content creation"
+      ],
+      "differentiators": [
+        "Deep company context integration",
+        "Advanced prompt engineering",
+        "Multi-LLM support"
+      ],
+      "evidence": []
+    },
+    "audience": {
+      "primary": "B2B marketing teams and content managers in tech companies",
+      "secondary": [],
+      "pain_points": [],
+      "desired_outcomes": []
+    },
+    "voice": {
+      "tone": "Educational and helpful",
+      "style_guidelines": [],
+      "forbidden_phrases": [],
+      "cta_preferences": []
+    },
+    "insights": {
+      "positioning": "Premium AI content platform for enterprise teams",
+      "key_messages": [],
+      "recent_news": [],
+      "competitors": []
+    },
+    "clarifying_questions": [
+      {
+        "id": "q1",
+        "question": "What type of content do you primarily create or plan to create?",
+        "reason": "Understanding your content focus helps us tailor the generation to your specific use case.",
+        "expected_response_type": "select",
+        "options": ["LinkedIn posts and social media", "Blog articles", "Email newsletters", "Mixed content types"],
+        "required": true
+      },
+      {
+        "id": "q2",
+        "question": "Who is your primary target audience?",
+        "reason": "Knowing your audience allows us to adjust tone and messaging.",
+        "expected_response_type": "string",
+        "required": true
+      },
+      {
+        "id": "q3",
+        "question": "How would you describe your brand voice and tone?",
+        "reason": "This ensures the generated content maintains consistency with your brand.",
+        "expected_response_type": "select",
+        "options": ["Professional and formal", "Casual and conversational", "Educational and helpful"],
+        "required": true
+      }
+    ],
+    "clarifying_answers": {
+      "q1": "LinkedIn posts and social media",
+      "q2": "B2B marketing teams and content managers in tech companies",
+      "q3": "Educational and helpful"
+    },
+    "source_metadata": []
+  },
+  "cgs_run_id": "cgs-run-550e8400-001",
+  "cgs_response": {
+    "card_ids": [
+      "card-company-profile-001",
+      "card-audience-persona-001",
+      "card-brand-voice-001",
+      "card-content-strategy-001"
+    ],
+    "cards_created": 4,
+    "partial": false
+  },
+  "delivery_status": null,
+  "delivery_message_id": null,
+  "error_message": null,
+  "metadata": {
+    "source": "web_app",
+    "user_agent": "Mozilla/5.0"
+  }
+}

@@ -19,8 +19,8 @@
       "Use active voice whenever possible",
       "Include specific examples and real numbers"
     ],
-    "core_message": "You can have your cake and eat it too - enjoy small luxuries while being financially responsible",
-    "community_identity": "Future Wealth Builders / Financial Futures / Money Mavens"
+    "core_message": "Building financial knowledge for long-term wealth creation",
+    "community_identity": "Wealthbuilders"
   },
   
   "target_audience": {
@@ -58,70 +58,86 @@
     "sections": [
       {
         "id": 1,
-        "name": "Community Greeting",
+        "name": "Intro Greeting",
         "word_count": "50-60 words",
         "purpose": "Cultural hook connecting to trending topic + preview of value",
-        "format": "**[Catchy Title with emoji - max 9 words]**\nHey Future Wealth Builders, 👋\n[Cultural hook + preview]",
-        "alternatives": ["Hey Future Wealth Builders", "Hey Financial Futures", "Hey Money Mavens"],
-        "guidelines": "Avoid assuming current wealth status while maintaining aspirational tone"
+        "format": "**[Catchy Title - max 9 words]**\nHey Wealthbuilders,\n[Cultural hook + preview - educational tone]",
+        "alternatives": ["Hey Wealthbuilders"],
+        "guidelines": "Avoid promotional language. Educational tone only. No exclamation marks."
       },
       {
         "id": 2,
-        "name": "Feature Story", 
+        "name": "Feature Story",
         "word_count": "280-320 words",
-        "purpose": "Main financial news with cultural bridge and independent editorial perspective",
-        "format": "**[Section Header with emoji]**\n[Main financial news with cultural bridge]\n[Independent editorial perspective on trends]\n**Our Take:** [Community insight - 30 words max]",
-        "requirements": ["Cultural bridge to trending topics", "Independent editorial perspective", "Community insight under 30 words"]
+        "purpose": "Main financial news with educational context",
+        "format": "**[Section Header]**\n[Main financial news with educational context]\n[Balanced perspective on trends]\n**Context:** [Educational insight - 30 words max]",
+        "requirements": ["Educational context", "Balanced perspective", "No promotional language", "No predictions"],
+        "banned_phrases": ["your opportunity", "your moment", "profit-taking", "enhance your strategy"]
       },
       {
         "id": 3,
         "name": "Market Reality Check",
-        "word_count": "200-250 words", 
-        "purpose": "3-4 key financial trends with Gen Z implications",
-        "format": "**[Reality-focused header]**\n[3-4 key financial trends with Gen Z implications]\n[Bullet points with emoji for mobile scanning]",
-        "requirements": ["3-4 key trends", "Gen Z specific implications", "Emoji bullet points for mobile"]
+        "word_count": "200-250 words",
+        "purpose": "3-4 key financial trends with Gen Z context",
+        "format": "**[Reality-focused header]**\n[3-4 key financial trends with educational context]\n[Bullet points with dot character - NO emoji bullets]",
+        "requirements": ["3-4 key trends", "Educational framing", "Use dot bullets only - NO emoji bullets"],
+        "banned_phrases": ["opportunities", "your moment", "take advantage"]
       },
       {
         "id": 4,
         "name": "By The Numbers",
         "word_count": "120-150 words",
-        "purpose": "Key statistics with cultural references and Gen Z implications", 
-        "format": "**[Data-focused header]**\n**[Stat]** → [Context with cultural reference]\n**[Stat]** → [Gen Z specific implication]\n[3-5 key statistics with emoji formatting]",
-        "requirements": ["3-5 key statistics", "Cultural references", "Gen Z implications", "Emoji formatting"]
+        "purpose": "Key statistics with educational context",
+        "format": "**[Data-focused header]**\n**[Stat]** - [Educational context]\n**[Stat]** - [What this means]\n[3-5 key statistics]",
+        "requirements": ["3-5 key statistics", "Educational context", "No promotional framing"]
       },
       {
         "id": 5,
-        "name": "Your Move This Week",
-        "word_count": "150-180 words",
-        "purpose": "Specific, actionable steps from community perspective",
-        "format": "**[Action-oriented header]**\n[Specific, actionable steps from community perspective]\n**This week's action items:**\n✅ [Concrete step 1]\n✅ [Concrete step 2]\n✅ [Concrete step 3]",
-        "requirements": ["3 concrete action items", "Community perspective", "Checkbox format"]
+        "name": "Market Insights from Malek",
+        "word_count": "130-165 words",
+        "purpose": "Siebert CIO perspective from blog posts",
+        "format": "[1-line hook - max 20 words]\n• [Bullet 1 with citation]\n• [Bullet 2 with citation]\n• [Bullet 3]\n• [Bullet 4]",
+        "requirements": ["1-line hook", "3-4 bullets", "2+ blog.siebert.com citations", "Educational tone"]
       },
       {
         "id": 6,
-        "name": "Community Corner",
-        "word_count": "60-80 words",
-        "purpose": "Reader engagement and community building",
-        "format": "**[Community-focused header]**\n**Reader Spotlight:** [Success story with attribution]\n**Your Turn:** [Engagement prompt]",
-        "requirements": ["Reader spotlight with attribution", "Engagement prompt"]
+        "name": "Your Move This Week",
+        "word_count": "150-180 words",
+        "purpose": "Educational considerations - NOT instructions",
+        "format": "**[Educational header]**\n[Educational context - what is happening]\n\n**Things to consider:**\n• [Educational point 1 - framed as information]\n• [Educational point 2 - framed as consideration]\n• [Educational point 3 - framed as awareness]",
+        "requirements": ["Frame as education NOT advice", "Use 'Some investors...' or 'One approach...'", "NO imperatives"],
+        "banned_phrases": ["Review your", "Increase your", "Evaluate your", "Lock in", "Use volatility", "Take advantage"],
+        "compliant_examples": [
+          "Some investors review their allocations during rate changes",
+          "Dollar-cost averaging is one approach some use during volatility",
+          "Bond duration is a factor some consider when rates change"
+        ]
       },
       {
         "id": 7,
-        "name": "Quick Links & Resources",
-        "word_count": "60-80 words",
-        "purpose": "Curated educational links (OPTIONAL section)",
-        "format": "**This Week's Scroll**\n[3-4 curated educational links from various sources - avoid competitor links]",
-        "requirements": ["3-4 educational links", "Avoid competitor links", "Can be removed if sources in blog content"],
-        "optional": true
+        "name": "Quick Links",
+        "word_count": "50-70 words",
+        "purpose": "Clickable source references for readers to verify information",
+        "format": "📎 **Quick Links**\n- [Source Name](URL)\n- [Source Name](URL)\n- [Source Name](URL)\n- [Source Name](URL)",
+        "requirements": ["4-6 clickable source links", "Use markdown link format [Name](URL)", "Only use verified Perplexity URLs", "Each link on its own line"],
+        "guidelines": "List the main sources cited in the newsletter. These become clickable <a> tags in the final HTML email."
       },
       {
         "id": 8,
         "name": "Sign-off",
-        "word_count": "30-40 words",
-        "purpose": "Community signature with personality touch",
-        "format": "Stay empowered,\n**The Future Millionaires Community** 🚀\n**P.S.** — [Personality touch with insight]",
-        "requirements": ["Community signature", "P.S. with personality touch"]
+        "word_count": "15-25 words",
+        "purpose": "Simple community signature - NO P.S.",
+        "format": "✨ Stay Empowered and Keep Building,\nThe Wealthbuilder Team",
+        "requirements": ["Simple signature only", "NO P.S. line", "NO additional sentences"],
+        "banned_elements": ["P.S.", "additional sentences after signature"]
       }
+    ],
+    "forbidden_sections": [
+      "Reader Spotlight",
+      "Community Wins",
+      "Community Stories",
+      "Your Turn prompts",
+      "P.S. lines"
     ]
   },
   
@@ -164,10 +180,9 @@
     "required_elements": [
       "Cultural references and trending topics",
       "Gen Z specific implications",
-      "Actionable steps and concrete advice",
-      "Statistics with context",
+      "Educational information (NOT advice or instructions)",
+      "Statistics with verified source URLs",
       "Mobile-optimized formatting",
-      "Community perspective throughout",
       "Educational value in every section"
     ],
     "compliance_notes": [
@@ -180,10 +195,10 @@
   
   "perplexity_research_queries": [
     "Latest financial news and market trends relevant to Gen Z investors last 7 days",
-    "Investment opportunities and strategies for young adults 2025",
+    "Federal Reserve policy updates and economic indicators this week",
     "Financial technology and apps trending among Gen Z",
     "Economic developments affecting young professionals and students",
-    "Market analysis with implications for beginner investors"
+    "Market data and statistics from official sources (treasury.gov, CME FedWatch)"
   ],
   
   "cultural_integration": {

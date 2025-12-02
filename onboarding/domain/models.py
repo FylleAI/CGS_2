@@ -89,6 +89,13 @@ class InsightsInfo(BaseModel):
     competitors: List[str] = Field(default_factory=list)
 
 
+class QuestionCardMapping(BaseModel):
+    """Maps a question to a card field it populates."""
+
+    card_type: str = Field(..., description="Card type (e.g., 'target', 'brand_voice')")
+    field_name: str = Field(..., description="Field name in the card")
+
+
 class ClarifyingQuestion(BaseModel):
     """A clarifying question to ask the user."""
 
@@ -96,20 +103,24 @@ class ClarifyingQuestion(BaseModel):
     question: str = Field(..., description="The question text")
     reason: str = Field(..., description="Why this question is being asked")
     expected_response_type: str = Field(
-        ..., description="Expected response type: string, enum, boolean, number"
+        ..., description="Expected response type: string, select, boolean, number"
     )
     options: Optional[List[str]] = Field(
-        default=None, description="Options for enum-type questions"
+        default=None, description="Options for select-type questions"
     )
     required: bool = Field(default=True, description="Whether answer is required")
+    maps_to: List[QuestionCardMapping] = Field(
+        default_factory=list,
+        description="Card fields this question populates"
+    )
 
     @field_validator("options")
     @classmethod
     def validate_enum_options(cls, v: Optional[List[str]], info) -> Optional[List[str]]:
-        """Ensure enum questions have options."""
+        """Ensure select questions have options."""
         response_type = info.data.get("expected_response_type")
-        if response_type == "enum" and (not v or len(v) == 0):
-            raise ValueError("Questions with expected_response_type='enum' must have options")
+        if response_type in ("enum", "select") and (not v or len(v) == 0):
+            raise ValueError("Questions with select type must have options")
         return v
 
 

@@ -9,7 +9,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Depends, status, Header
 
-# Conditional import for Cards client (may not be available during development)
+# NEW: Import card pipeline (replaces legacy CardsClient)
+from onboarding.application.cards import run_pipeline_from_snapshot
+from onboarding.domain.cards import CardsOutput
+
+# LEGACY: Conditional import for Cards client (DEPRECATED - will be removed)
 try:
     from fylle_cards_client import CardsClient
     from fylle_cards_client.client import CardsAPIError
@@ -20,8 +24,7 @@ except ImportError:
     CardsAPIError = Exception
     import logging
     logging.getLogger(__name__).warning(
-        "⚠️ fylle_cards_client not available - Cards creation will be skipped. "
-        "This is expected during development before Cards microservice is ready."
+        "⚠️ fylle_cards_client not available - Using new card pipeline instead."
     )
 
 from onboarding.domain.models import OnboardingInput, SessionState
@@ -43,6 +46,7 @@ from onboarding.api.dependencies import (
     get_execute_onboarding_use_case,  # DEPRECATED: Will be removed
     get_create_cards_use_case,
     get_repository,
+    get_cards_generator_service,
 )
 # Conditional import for metrics (may not be available)
 try:
@@ -141,6 +145,18 @@ async def start_onboarding(
             if response_type == 'enum':
                 response_type = 'select'
 
+            # Build maps_to from question if available
+            maps_to = None
+            if hasattr(q, 'maps_to') and q.maps_to:
+                from onboarding.api.models import QuestionCardMappingResponse
+                maps_to = [
+                    QuestionCardMappingResponse(
+                        card_type=m.card_type,
+                        field_name=m.field_name,
+                    )
+                    for m in q.maps_to
+                ]
+
             questions.append(
                 QuestionResponse(
                     id=q.id,
@@ -149,6 +165,7 @@ async def start_onboarding(
                     expected_response_type=response_type,
                     options=q.options,
                     required=q.required,
+                    maps_to=maps_to,
                 )
             )
         
@@ -176,6 +193,7 @@ async def submit_answers(
     request: SubmitAnswersRequest,
     collect_answers_uc = Depends(get_collect_answers_use_case),
     create_cards_uc = Depends(get_create_cards_use_case),
+    cards_generator = Depends(get_cards_generator_service),
     repository = Depends(get_repository),
     x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
     x_trace_id: Optional[str] = Header(None, alias="X-Trace-ID"),
@@ -184,15 +202,15 @@ async def submit_answers(
     """
     Submit answers to clarifying questions and create cards.
 
-    **Onboarding → Cards Integration**:
-    1. Collect answers
-    2. Build CompanySnapshot (from Gemini synthesis + user answers)
-    3. Create 4 cards via Cards API /batch (idempotent)
-    4. Save card_ids in session
-    5. Return card_ids to frontend
+    **Onboarding V2 → Cards Integration**:
+    1. Collect answers to clarifying questions
+    2. Use CardsGeneratorService to generate all 8 card types
+    3. Save cards in session metadata
+    4. Return cards to frontend
 
-    Note: Workflow execution is separate - frontend will call Workflow API
-    when content generation is needed.
+    The new pipeline uses Gemini to generate cards based on:
+    - CompanySnapshot (from research)
+    - User answers (mapped via maps_to)
     """
     trace_id = x_trace_id or str(session_id)
     logger.info(f"Submitting answers for session: {session_id} (trace_id={trace_id})")
@@ -249,160 +267,124 @@ async def submit_answers(
         session = await collect_answers_uc.execute(session, request.answers)
 
         # ========================================================================
-        # SPRINT 4 DAY 1: CARDS API INTEGRATION
+        # V2 CARDS GENERATOR SERVICE (replaces legacy pipeline)
         # ========================================================================
 
-        # STEP 1: Build CompanySnapshot v1 from session
-        # The snapshot is already available in session.snapshot after collect_answers
+        # STEP 1: Validate CompanySnapshot is available
         if not session.snapshot:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="CompanySnapshot not available after collecting answers",
             )
 
-        # STEP 2: Call Cards API /batch to create 4 cards atomically
-        tenant_id = x_tenant_id or str(session.session_id)  # Fallback to session_id if no tenant header
-        idem_key = idempotency_key or f"onboarding-{session_id}-batch"
-
+        tenant_id = x_tenant_id or str(session.session_id)
         start_time = time.time()
-        card_ids = []
-        created_count = 0
-        partial = False
 
-        # Check if Cards client is available
-        if not CARDS_CLIENT_AVAILABLE:
-            logger.warning(
-                json.dumps({
-                    "event": "cards_batch_skipped",
-                    "trace_id": trace_id,
-                    "tenant_id": tenant_id,
-                    "session_id": str(session_id),
-                    "reason": "Cards client not available - development mode",
-                })
-            )
-            # Skip cards creation - continue with empty card_ids
-            card_ids = []
-            created_count = 0
-            partial = False
-        else:
+        logger.info(
+            json.dumps({
+                "event": "cards_v2_generation_start",
+                "trace_id": trace_id,
+                "tenant_id": tenant_id,
+                "session_id": str(session_id),
+            })
+        )
+
+        try:
+            # Check if V2 generator is available, fallback to legacy if not
+            if cards_generator:
+                # V2: Use CardsGeneratorService
+                cards_snapshot = await cards_generator.generate_cards(
+                    session_id=str(session_id),
+                    snapshot=session.snapshot,
+                    answers=request.answers,
+                )
+
+                # Convert to dict format
+                cards_output_dict = cards_snapshot.to_dict()
+                card_ids = [card.get("id") for card in cards_snapshot.cards]
+                created_count = len(cards_snapshot.cards)
+                card_types = [card.get("type") for card in cards_snapshot.cards]
+            else:
+                # Legacy: Use old pipeline
+                cards_output_obj: CardsOutput = await run_pipeline_from_snapshot(
+                    snapshot=session.snapshot,
+                    session_id=str(session_id),
+                    user_email=session.user_email or "unknown@example.com",
+                    website=session.website,
+                )
+                card_ids = [card.id for card in cards_output_obj.cards]
+                created_count = len(cards_output_obj.cards)
+                card_types = [card.type for card in cards_output_obj.cards]
+                cards_output_dict = json.loads(cards_output_obj.model_dump_json())
+
+            # Calculate duration
+            duration_ms = int((time.time() - start_time) * 1000)
+
             logger.info(
                 json.dumps({
-                    "event": "cards_batch_start",
+                    "event": "cards_v2_generation_complete",
                     "trace_id": trace_id,
                     "tenant_id": tenant_id,
                     "session_id": str(session_id),
-                    "idempotency_key": idem_key,
+                    "created_count": created_count,
+                    "duration_ms": duration_ms,
+                    "card_types": card_types,
+                    "using_v2": cards_generator is not None,
                 })
             )
 
-            try:
-                # Initialize Cards API client
-                cards_client = CardsClient(
-                    base_url=CARDS_API_URL,
+            # Record metrics
+            for card_type in card_types:
+                onboarding_cards_created_total.labels(
                     tenant_id=tenant_id,
-                    trace_id=trace_id,
-                    session_id=str(session_id),
-                )
-
-                # Convert snapshot to dict for Cards API
-                snapshot_dict = json.loads(session.snapshot.model_dump_json())
-
-                # Call batch endpoint with idempotency
-                batch_response = cards_client.create_cards_batch(
-                    company_snapshot=snapshot_dict,
-                    source_session_id=session_id,
-                    created_by="onboarding-service",
-                    idempotency_key=idem_key,
-                )
-
-                # Extract card IDs
-                card_ids = [card.card_id for card in batch_response.cards]
-                created_count = batch_response.created_count
-                partial = created_count < 4
-
-                # Calculate duration
-                duration_ms = int((time.time() - start_time) * 1000)
-
-                logger.info(
-                    json.dumps({
-                        "event": "cards_batch_created",
-                        "trace_id": trace_id,
-                        "tenant_id": tenant_id,
-                        "session_id": str(session_id),
-                        "created_count": created_count,
-                        "partial": partial,
-                        "duration_ms": duration_ms,
-                        "idempotency_key": idem_key,
-                    })
-                )
-
-                # STEP 5: Metrics - Record cards created per type
-                for card in batch_response.cards:
-                    onboarding_cards_created_total.labels(
-                        tenant_id=tenant_id,
-                        card_type=card.card_type.value if hasattr(card.card_type, 'value') else str(card.card_type),
-                    ).inc()
-
-                # Record batch duration
-                onboarding_batch_duration_ms.labels(tenant_id=tenant_id).observe(duration_ms)
-
-                # Record partial creation if applicable
-                if partial:
-                    onboarding_partial_creation_total.labels(tenant_id=tenant_id).inc()
-                    logger.warning(
-                        json.dumps({
-                            "event": "cards_batch_partial",
-                            "trace_id": trace_id,
-                            "tenant_id": tenant_id,
-                            "session_id": str(session_id),
-                            "created_count": created_count,
-                            "expected_count": 4,
-                        })
-                    )
-
-            except CardsAPIError as e:
-                # Cards API error - return 502 with trace_id
-                logger.error(
-                    json.dumps({
-                        "event": "cards_batch_error",
-                        "trace_id": trace_id,
-                        "tenant_id": tenant_id,
-                        "session_id": str(session_id),
-                        "error": str(e),
-                    })
-                )
-
-                # Record error metric
-                onboarding_errors_total.labels(
-                    tenant_id=tenant_id,
-                    error_type="cards_api",
+                    card_type=card_type,
                 ).inc()
 
-                # Update session to failed
-                session.update_state(SessionState.FAILED)
-                session.error_message = f"Cards API error: {str(e)}"
-                await repository.save_session(session)
+            onboarding_batch_duration_ms.labels(tenant_id=tenant_id).observe(duration_ms)
 
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail={
-                        "error": "BadGateway",
-                        "detail": f"Cards API error: {str(e)}",
-                        "request_id": trace_id,
-                    },
-                )
+        except Exception as e:
+            # Pipeline error
+            logger.error(
+                json.dumps({
+                    "event": "cards_v2_generation_error",
+                    "trace_id": trace_id,
+                    "tenant_id": tenant_id,
+                    "session_id": str(session_id),
+                    "error": str(e),
+                })
+            )
 
-        # STEP 3: Save card_ids in session metadata (whether cards were created or not)
-        session.metadata["card_ids"] = [str(cid) for cid in card_ids]
+            onboarding_errors_total.labels(
+                tenant_id=tenant_id,
+                error_type="cards_v2_generator",
+            ).inc()
+
+            session.update_state(SessionState.FAILED)
+            session.error_message = f"Cards generation error: {str(e)}"
+            await repository.save_session(session)
+
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "error": "CardsGenerationError",
+                    "detail": f"Failed to generate cards: {str(e)}",
+                    "request_id": trace_id,
+                },
+            )
+
+        # STEP 3: Save cards output in session metadata
+        session.metadata["card_ids"] = card_ids
         session.metadata["cards_created_count"] = created_count
-        session.metadata["cards_status"] = "skipped" if not CARDS_CLIENT_AVAILABLE else ("partial" if partial else "created")
+        session.metadata["cards_status"] = "created"
         session.metadata["cards_trace_id"] = trace_id
+        # Store full cards output as dict for frontend consumption
+        session.metadata["cards_output"] = cards_output_dict
 
         # ========================================================================
-        # END CARDS API INTEGRATION
+        # END CARDS GENERATION
         # ========================================================================
 
-        # Update session state to DONE (cards created successfully)
+        # Update session state to DONE
         session.update_state(SessionState.DONE)
         await repository.save_session(session)
 
@@ -416,10 +398,12 @@ async def submit_answers(
             state=session.state,
             message=f"Cards created successfully! Created {created_count} cards.",
             snapshot=session.snapshot,  # ✨ Return enriched snapshot with user answers
-            card_ids=[str(cid) for cid in card_ids],  # Return card_ids to frontend
+            card_ids=card_ids,  # Return card_ids to frontend
             cards_created=created_count,
-            partial=partial,
+            partial=False,  # New pipeline always creates all cards
             cards_service_url=cards_service_url,  # ✨ URL for automatic redirect
+            # NEW: Include full cards output for direct UI consumption
+            cards_output=session.metadata.get("cards_output"),
         )
 
         logger.info(

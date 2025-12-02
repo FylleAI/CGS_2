@@ -1,0 +1,14 @@
+{
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "trace_id": "trace-2024-onboarding-001",
+  "brand_name": "Fylle AI",
+  "goal": "content_generation",
+  "state": "delivering",
+  "created_at": "2024-01-15T10:25:00.000Z",
+  "updated_at": "2024-01-15T10:33:00.000Z",
+  "has_snapshot": true,
+  "snapshot_complete": true,
+  "cgs_run_id": "run-2024-001",
+  "delivery_status": "sending",
+  "error_message": null
+}

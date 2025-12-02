@@ -134,91 +134,45 @@ export const useOnboarding = () => {
       setCurrentStep(4); // Move to execution step
     },
     onSuccess: async (data) => {
+      console.log('✅ Submit answers response:', data);
+
       // ✨ Update snapshot with enriched version (includes user answers)
       if (data.snapshot) {
         setSnapshot(data.snapshot);
         console.log('✅ Snapshot updated with user answers:', data.snapshot);
       }
 
-      // ✨ NEW ARCHITECTURE: Automatic redirect to Cards Service
-      if (data.cards_service_url) {
-        console.log('🚀 Redirecting to Cards Service:', data.cards_service_url);
+      // ✨ NEW: Always show cards locally (no redirect for now)
+      // This allows us to inspect card data quality
+      console.log('🎴 Cards output:', data.cards_output);
 
-        toast.success('Onboarding complete! Redirecting to your cards...', {
-          duration: 2000,
-        });
+      // Update session with cards_output in metadata
+      setSession({
+        ...session!,
+        state: data.state,
+        snapshot: data.snapshot,
+        cgs_run_id: data.cgs_run_id,
+        delivery_status: data.delivery_status,
+        updated_at: new Date().toISOString(),
+        metadata: {
+          content_title: data.content_title,
+          content_preview: data.content_preview,
+          word_count: data.word_count,
+          execution_metrics: data.execution_metrics,
+          card_ids: data.card_ids,
+          cards_created: data.cards_created,
+          cards_output: data.cards_output,  // ✨ NEW: Full cards data
+          cards_service_url: data.cards_service_url,
+        },
+      });
 
-        // Wait 2 seconds for user to see the success message, then redirect
-        setTimeout(() => {
-          window.location.href = data.cards_service_url!;
-        }, 2000);
+      // Move to results step
+      setCurrentStep(5);
+      setLoading(false);
 
-        setLoading(false);
-        return;
-      }
-
-      // ✨ LEGACY PATH: If no cards_service_url, show results in Onboarding frontend
-      // This is for backward compatibility or development mode
-      console.warn('⚠️ No cards_service_url in response - using legacy results view');
-
-      try {
-        const sessionDetails = await onboardingApi.getSessionDetails(data.session_id);
-
-        // Update session with FULL details including cgs_response AND enriched snapshot
-        setSession({
-          ...session!,
-          state: sessionDetails.state,
-          snapshot: data.snapshot || sessionDetails.snapshot,  // ✨ Use enriched snapshot
-          cgs_run_id: sessionDetails.cgs_run_id,
-          cgs_response: sessionDetails.cgs_response, // ✨ This is the key field!
-          delivery_status: sessionDetails.delivery_status,
-          updated_at: sessionDetails.updated_at,
-          metadata: {
-            content_title: data.content_title,
-            content_preview: data.content_preview,
-            word_count: data.word_count,
-            execution_metrics: data.execution_metrics,
-            card_ids: data.card_ids,  // ✨ Cards API integration
-            cards_created: data.cards_created,
-          },
-        });
-
-        // Move to results step
-        setCurrentStep(5);
-        setLoading(false);
-
-        toast.success('Content generated successfully!', {
-          duration: TOAST_CONFIG.SUCCESS_DURATION,
-        });
-      } catch (err: any) {
-        // If fetching details fails, fall back to summary data
-        console.error('Failed to fetch session details:', err);
-
-        setSession({
-          ...session!,
-          state: data.state,
-          snapshot: data.snapshot,  // ✨ Use enriched snapshot from response
-          cgs_run_id: data.cgs_run_id,
-          delivery_status: data.delivery_status,
-          updated_at: new Date().toISOString(),
-          metadata: {
-            content_title: data.content_title,
-            content_preview: data.content_preview,
-            word_count: data.word_count,
-            execution_metrics: data.execution_metrics,
-            card_ids: data.card_ids,  // ✨ Cards API integration
-            cards_created: data.cards_created,
-          },
-        });
-
-        // Move to results step anyway
-        setCurrentStep(5);
-        setLoading(false);
-
-        toast.warning('Content generated, but some details may be missing', {
-          duration: TOAST_CONFIG.SUCCESS_DURATION,
-        });
-      }
+      toast.success(`${data.cards_created || 0} cards generated successfully!`, {
+        duration: TOAST_CONFIG.SUCCESS_DURATION,
+      });
     },
     onError: (err: any) => {
       setError({

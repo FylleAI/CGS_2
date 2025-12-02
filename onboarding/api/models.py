@@ -42,16 +42,25 @@ class ExecuteWorkflowRequest(BaseModel):
     )
 
 
+# Question mapping for card fields
+class QuestionCardMappingResponse(BaseModel):
+    """Maps question to card field."""
+
+    card_type: str
+    field_name: str
+
+
 # Response models
 class QuestionResponse(BaseModel):
     """Clarifying question response."""
-    
+
     id: str
     question: str
     reason: str
     expected_response_type: str
     options: Optional[List[str]] = None
     required: bool
+    maps_to: Optional[List[QuestionCardMappingResponse]] = None
 
 
 class SnapshotSummary(BaseModel):
@@ -94,6 +103,10 @@ class SubmitAnswersResponse(BaseModel):
 
     # Cards Service frontend URL for redirect
     cards_service_url: Optional[str] = None
+
+    # NEW: Full cards output (CardsOutput JSON) for direct UI consumption
+    # This is the canonical output from the new card pipeline
+    cards_output: Optional[Dict[str, Any]] = None
 
     # Legacy fields (deprecated - for backward compatibility)
     content_title: Optional[str] = None

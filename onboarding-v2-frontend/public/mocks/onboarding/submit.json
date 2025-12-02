@@ -1,0 +1,174 @@
+{
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "state": "done",
+  "message": "Answers collected successfully. Your company snapshot has been enriched with your preferences. 4 cards have been created.",
+  "snapshot": {
+    "version": "1.0",
+    "snapshot_id": "snap-550e8400-e29b-41d4-a716-446655440001",
+    "generated_at": "2024-01-15T10:30:00.000Z",
+    "trace_id": "trace-2024-onboarding-001",
+    "company": {
+      "name": "Fylle AI",
+      "legal_name": "Fylle AI Inc.",
+      "website": "https://fylle.ai",
+      "industry": "Artificial Intelligence & SaaS",
+      "headquarters": "San Francisco, CA",
+      "size_range": "11-50 employees",
+      "description": "Fylle is an AI-powered content generation platform that helps businesses create high-quality, brand-consistent content at scale. The platform combines advanced LLMs with deep company context to generate authentic content that resonates with target audiences.",
+      "key_offerings": [
+        "AI-powered content generation",
+        "Brand voice customization",
+        "Multi-format content creation",
+        "Workflow automation",
+        "Team collaboration tools"
+      ],
+      "differentiators": [
+        "Deep company context integration",
+        "Advanced prompt engineering",
+        "Multi-LLM support",
+        "Enterprise-grade security",
+        "Seamless workflow integration"
+      ],
+      "evidence": [
+        {
+          "source": "https://fylle.ai/about",
+          "excerpt": "Fylle helps businesses maintain brand consistency while scaling content production",
+          "confidence": 0.95
+        },
+        {
+          "source": "https://fylle.ai/features",
+          "excerpt": "Support for multiple LLM providers including OpenAI, Anthropic, and Google",
+          "confidence": 0.92
+        }
+      ]
+    },
+    "audience": {
+      "primary": "B2B marketing teams and content managers in tech companies",
+      "secondary": [
+        "Growth marketers",
+        "Product marketing managers",
+        "Content strategists",
+        "CMOs and marketing leaders"
+      ],
+      "pain_points": [
+        "Difficulty maintaining brand consistency across content",
+        "Time-consuming content creation process",
+        "Lack of scalability in content production",
+        "Challenge of keeping content authentic and engaging"
+      ],
+      "desired_outcomes": [
+        "Faster content creation without sacrificing quality",
+        "Consistent brand voice across all channels",
+        "Scalable content production",
+        "Higher engagement rates"
+      ]
+    },
+    "voice": {
+      "tone": "Educational and helpful",
+      "style_guidelines": [
+        "Use clear, accessible language",
+        "Focus on practical value and actionable insights",
+        "Balance technical depth with readability",
+        "Incorporate real-world examples"
+      ],
+      "forbidden_phrases": [
+        "Leverage synergies",
+        "Paradigm shift",
+        "Game-changer",
+        "Revolutionary"
+      ],
+      "cta_preferences": [
+        "Try it free",
+        "Learn more",
+        "Get started",
+        "Book a demo"
+      ]
+    },
+    "insights": {
+      "positioning": "Premium AI content platform for enterprise teams",
+      "key_messages": [
+        "Maintain brand consistency at scale",
+        "Enterprise-grade AI with human oversight",
+        "Seamless integration with existing workflows"
+      ],
+      "recent_news": [
+        "Launched multi-LLM support in Q4 2023",
+        "Partnership with leading content marketing agencies",
+        "Series A funding announcement"
+      ],
+      "competitors": [
+        "Jasper AI",
+        "Copy.ai",
+        "Writesonic",
+        "Anyword"
+      ]
+    },
+    "clarifying_questions": [
+      {
+        "id": "q1",
+        "question": "What type of content do you primarily create or plan to create?",
+        "reason": "Understanding your content focus helps us tailor the generation to your specific use case and format preferences.",
+        "expected_response_type": "select",
+        "options": [
+          "LinkedIn posts and social media",
+          "Blog articles and long-form content",
+          "Email newsletters",
+          "Product descriptions and marketing copy",
+          "Technical documentation",
+          "Mixed content types"
+        ],
+        "required": true
+      },
+      {
+        "id": "q2",
+        "question": "Who is your primary target audience?",
+        "reason": "Knowing your audience allows us to adjust tone, complexity, and messaging to resonate with the right people.",
+        "expected_response_type": "string",
+        "required": true
+      },
+      {
+        "id": "q3",
+        "question": "How would you describe your brand voice and tone?",
+        "reason": "This ensures the generated content maintains consistency with your existing brand identity and communication style.",
+        "expected_response_type": "select",
+        "options": [
+          "Professional and formal",
+          "Casual and conversational",
+          "Technical and detailed",
+          "Inspiring and motivational",
+          "Educational and helpful",
+          "Playful and creative"
+        ],
+        "required": true
+      }
+    ],
+    "clarifying_answers": {
+      "q1": "LinkedIn posts and social media",
+      "q2": "B2B marketing teams and content managers in tech companies",
+      "q3": "Educational and helpful"
+    },
+    "source_metadata": [
+      {
+        "tool": "perplexity",
+        "timestamp": "2024-01-15T10:28:00.000Z",
+        "cost_usd": 0.05,
+        "token_usage": 2500
+      },
+      {
+        "tool": "gemini",
+        "timestamp": "2024-01-15T10:29:30.000Z",
+        "cost_usd": 0.08,
+        "token_usage": 4000
+      }
+    ]
+  },
+  "card_ids": [
+    "card-company-profile-001",
+    "card-audience-persona-001",
+    "card-brand-voice-001",
+    "card-content-strategy-001"
+  ],
+  "cards_created": 4,
+  "partial": false,
+  "cards_service_url": "/cards"
+}

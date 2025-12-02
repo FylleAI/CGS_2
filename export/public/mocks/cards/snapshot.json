@@ -1,0 +1,376 @@
+{
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "generatedAt": "2024-11-27T10:30:00Z",
+  "cards": [
+    {
+      "id": "card-product-001",
+      "type": "product",
+      "title": "Piattaforma AI per Content Marketing",
+      "createdAt": "2024-11-27T10:30:00Z",
+      "updatedAt": "2024-11-27T10:30:00Z",
+      "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+      "valueProposition": "Automatizza la creazione di contenuti marketing personalizzati utilizzando l'intelligenza artificiale, riducendo i tempi di produzione del 70% e aumentando l'engagement del 45%.",
+      "features": [
+        "Generazione automatica di copy per social media",
+        "Analisi del tono di voce del brand",
+        "Ottimizzazione SEO integrata",
+        "A/B testing automatizzato",
+        "Dashboard analytics in tempo reale"
+      ],
+      "differentiators": [
+        "Unica piattaforma con apprendimento continuo dal feedback",
+        "Integrazione nativa con tutti i principali CMS",
+        "Supporto multilingua con localizzazione culturale"
+      ],
+      "useCases": [
+        "Creazione di campagne email personalizzate",
+        "Gestione contenuti blog aziendali",
+        "Social media management automatizzato",
+        "Landing page optimization"
+      ],
+      "performanceMetrics": [
+        { "metric": "Tempo risparmiato", "value": "70%" },
+        { "metric": "Aumento engagement", "value": "+45%" },
+        { "metric": "ROI medio", "value": "3.2x" }
+      ]
+    },
+    {
+      "id": "card-target-001",
+      "type": "target",
+      "title": "Marketing Manager - PMI Tech",
+      "createdAt": "2024-11-27T10:30:00Z",
+      "updatedAt": "2024-11-27T10:30:00Z",
+      "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+      "icpName": "Marco, il Marketing Manager Multitasking",
+      "description": "Responsabile marketing in aziende tech B2B con 20-100 dipendenti. Gestisce da solo o con un piccolo team tutte le attività di marketing, dalla strategia all'esecuzione.",
+      "painPoints": [
+        "Troppi contenuti da produrre con risorse limitate",
+        "Difficoltà a mantenere coerenza nel tono di voce",
+        "Mancanza di tempo per analisi approfondite",
+        "Budget limitato per tool e formazione"
+      ],
+      "goals": [
+        "Aumentare la lead generation del 30%",
+        "Ridurre il tempo di produzione contenuti",
+        "Dimostrare ROI delle attività marketing",
+        "Costruire brand awareness nel settore"
+      ],
+      "preferredLanguage": "Italiano, tecnico ma accessibile",
+      "communicationChannels": [
+        "LinkedIn",
+        "Email",
+        "Webinar",
+        "Blog di settore"
+      ],
+      "demographics": {
+        "ageRange": "32-45",
+        "location": "Nord Italia",
+        "role": "Marketing Manager / Head of Marketing",
+        "industry": "SaaS B2B, Tech, Software"
+      }
+    },
+    {
+      "id": "card-target-002",
+      "type": "target",
+      "title": "Founder Startup Early-Stage",
+      "createdAt": "2024-11-27T10:30:00Z",
+      "updatedAt": "2024-11-27T10:30:00Z",
+      "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+      "icpName": "Giulia, la Founder Visionaria",
+      "description": "Fondatrice di startup in fase seed/serie A, deve gestire personalmente la comunicazione del brand mentre costruisce il prodotto e raccoglie investimenti.",
+      "painPoints": [
+        "Zero budget per team marketing dedicato",
+        "Necessità di sembrare più strutturati di quanto si è",
+        "Content creation ruba tempo allo sviluppo prodotto",
+        "Difficoltà a trovare il giusto posizionamento"
+      ],
+      "goals": [
+        "Costruire credibilità per fundraising",
+        "Generare primi clienti/early adopters",
+        "Creare una presenza digitale professionale",
+        "Validare il messaging del prodotto"
+      ],
+      "preferredLanguage": "Italiano/Inglese, dinamico e startup-oriented",
+      "communicationChannels": [
+        "Twitter/X",
+        "LinkedIn",
+        "Product Hunt",
+        "Newsletter"
+      ],
+      "demographics": {
+        "ageRange": "28-40",
+        "location": "Milano, Roma, remote",
+        "role": "CEO / Co-founder",
+        "industry": "Tech Startup, SaaS"
+      }
+    },
+    {
+      "id": "card-campaigns-001",
+      "type": "campaigns",
+      "title": "Lancio Q1 2025 - Feature AI Assistant",
+      "createdAt": "2024-11-27T10:30:00Z",
+      "updatedAt": "2024-11-27T10:30:00Z",
+      "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+      "objective": "Generare 500 trial signup e 50 conversioni a pagamento nel primo mese dal lancio della nuova feature AI Assistant.",
+      "keyMessages": [
+        "Il tuo assistente AI che scrive come te",
+        "Risparmia 10 ore a settimana sulla content creation",
+        "Setup in 5 minuti, risultati immediati"
+      ],
+      "tone": "Entusiasta ma professionale, focus sui benefici concreti",
+      "assets": [
+        { "name": "Landing page dedicata", "type": "web", "status": "completato" },
+        { "name": "Video demo 2 min", "type": "video", "status": "in produzione" },
+        { "name": "Email sequence (5 email)", "type": "email", "status": "draft" },
+        { "name": "Post LinkedIn (10)", "type": "social", "status": "pianificato" },
+        { "name": "Case study cliente beta", "type": "content", "status": "in revisione" }
+      ],
+      "results": [
+        { "metric": "Trial signup", "value": "324", "trend": "up" },
+        { "metric": "Conversioni", "value": "28", "trend": "up" },
+        { "metric": "CAC", "value": "€45", "trend": "down" }
+      ],
+      "learnings": [
+        "Il video demo converte 3x meglio della landing senza video",
+        "LinkedIn outperforma Twitter per il nostro target",
+        "Il messaggio 'risparmia tempo' risuona più di 'aumenta qualità'"
+      ]
+    },
+    {
+      "id": "card-topic-001",
+      "type": "topic",
+      "title": "AI nel Content Marketing",
+      "createdAt": "2024-11-27T10:30:00Z",
+      "updatedAt": "2024-11-27T10:30:00Z",
+      "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+      "description": "Tema centrale nella comunicazione aziendale: come l'intelligenza artificiale sta trasformando la creazione e distribuzione di contenuti marketing.",
+      "keywords": [
+        "AI content creation",
+        "marketing automation",
+        "generative AI",
+        "content strategy",
+        "AI copywriting",
+        "marketing efficiency"
+      ],
+      "angles": [
+        "ROI dell'AI nel marketing: numeri reali",
+        "AI vs creatività umana: complemento, non sostituzione",
+        "Come iniziare con l'AI senza essere esperti tech",
+        "Errori comuni nell'adozione di tool AI"
+      ],
+      "relatedContent": [
+        { "title": "Guida definitiva all'AI Content Marketing", "type": "blog", "url": "/blog/guida-ai-content" },
+        { "title": "Webinar: AI per Marketing Manager", "type": "webinar", "url": "/webinar/ai-marketing" },
+        { "title": "Template: Prompt per Content Creation", "type": "resource", "url": "/resources/prompt-templates" }
+      ],
+      "trends": [
+        { "trend": "Crescita ricerche 'AI marketing tool' +340% YoY", "relevance": "high" },
+        { "trend": "Aziende enterprise adottano AI content 67%", "relevance": "high" },
+        { "trend": "Concern su autenticità contenuti AI", "relevance": "medium" }
+      ]
+    },
+    {
+      "id": "card-topic-002",
+      "type": "topic",
+      "title": "Produttività Team Marketing",
+      "createdAt": "2024-11-27T10:30:00Z",
+      "updatedAt": "2024-11-27T10:30:00Z",
+      "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+      "description": "Come i team marketing possono fare di più con meno risorse, ottimizzando processi e strumenti.",
+      "keywords": [
+        "marketing productivity",
+        "team efficiency",
+        "workflow automation",
+        "marketing ops",
+        "time management"
+      ],
+      "angles": [
+        "La giornata tipo del marketing manager efficiente",
+        "Tool stack essenziale per team snelli",
+        "Metriche di produttività che contano davvero",
+        "Delegare all'AI: cosa sì e cosa no"
+      ],
+      "relatedContent": [
+        { "title": "Checklist: Audit produttività marketing", "type": "resource" },
+        { "title": "Case study: Da 2 a 10 contenuti/settimana", "type": "case-study" }
+      ],
+      "trends": [
+        { "trend": "Burnout marketing team in crescita", "relevance": "high" },
+        { "trend": "Richiesta 'do more with less' dal management", "relevance": "high" }
+      ]
+    },
+    {
+      "id": "card-brandvoice-001",
+      "type": "brand_voice",
+      "title": "Linee Guida Tono di Voce",
+      "createdAt": "2024-11-27T10:30:00Z",
+      "updatedAt": "2024-11-27T10:30:00Z",
+      "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+      "toneDescription": "Professionale ma accessibile. Parliamo come un collega esperto che vuole aiutarti, non come un venditore o un manuale tecnico. Usiamo un linguaggio chiaro, diretto e orientato all'azione.",
+      "styleGuidelines": [
+        "Frasi brevi e dirette, massimo 20 parole",
+        "Voce attiva, mai passiva",
+        "Seconda persona singolare (tu, non voi)",
+        "Numeri e dati concreti quando possibile",
+        "Evitare gergo tecnico non necessario"
+      ],
+      "dosExamples": [
+        "Risparmia 10 ore a settimana sulla creazione contenuti",
+        "Inizia gratis, nessuna carta di credito richiesta",
+        "Il 73% dei nostri clienti vede risultati in 2 settimane",
+        "Hai domande? Parliamone."
+      ],
+      "dontsExamples": [
+        "La nostra soluzione enterprise-grade leveraggia cutting-edge AI",
+        "Siamo leader di mercato nel settore",
+        "Rivoluzionario, game-changing, disruption",
+        "Non perdere questa incredibile opportunità!"
+      ],
+      "termsToUse": [
+        "Semplice",
+        "Veloce",
+        "Risultati",
+        "Provalo",
+        "Scopri",
+        "Team"
+      ],
+      "termsToAvoid": [
+        "Rivoluzionario",
+        "Best-in-class",
+        "Sinergia",
+        "Leverage",
+        "Disruptive",
+        "Game-changer"
+      ]
+    },
+    {
+      "id": "card-competitor-001",
+      "type": "competitor",
+      "title": "ContentAI Pro",
+      "createdAt": "2024-11-27T10:30:00Z",
+      "updatedAt": "2024-11-27T10:30:00Z",
+      "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+      "competitorName": "ContentAI Pro",
+      "positioning": "Tool enterprise per grandi team marketing, focus su governance e compliance dei contenuti AI-generated.",
+      "keyMessages": [
+        "Enterprise-grade AI content platform",
+        "Compliance e brand safety garantiti",
+        "Integrazione con stack enterprise"
+      ],
+      "strengths": [
+        "Brand riconosciuto nel mercato enterprise",
+        "Funzionalità avanzate di governance",
+        "Team vendita dedicato",
+        "Integrazioni enterprise robuste"
+      ],
+      "weaknesses": [
+        "Pricing elevato (da €500/mese)",
+        "Complessità di setup (settimane)",
+        "UI datata e poco intuitiva",
+        "Poco adatto a team piccoli"
+      ],
+      "differentiationOpportunities": [
+        "Posizionarsi come alternativa agile per PMI",
+        "Enfatizzare semplicità e time-to-value",
+        "Pricing trasparente e accessibile",
+        "Onboarding self-service in minuti"
+      ]
+    },
+    {
+      "id": "card-competitor-002",
+      "type": "competitor",
+      "title": "WriteBot",
+      "createdAt": "2024-11-27T10:30:00Z",
+      "updatedAt": "2024-11-27T10:30:00Z",
+      "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+      "competitorName": "WriteBot",
+      "positioning": "Tool freemium per singoli creator e freelancer, focus su volume di output.",
+      "keyMessages": [
+        "Genera contenuti illimitati",
+        "Gratis per sempre (con limiti)",
+        "50+ template pronti all'uso"
+      ],
+      "strengths": [
+        "Modello freemium attrattivo",
+        "Grande base utenti",
+        "Molti template disponibili",
+        "Facile da usare"
+      ],
+      "weaknesses": [
+        "Output generico, poco personalizzabile",
+        "Nessuna feature di brand voice",
+        "Supporto limitato",
+        "Non adatto a team/collaborazione"
+      ],
+      "differentiationOpportunities": [
+        "Enfatizzare personalizzazione brand voice",
+        "Feature di collaborazione team",
+        "Qualità vs quantità dell'output",
+        "Analytics e ottimizzazione continua"
+      ]
+    },
+    {
+      "id": "card-performance-001",
+      "type": "performance",
+      "title": "Performance Q4 2024",
+      "createdAt": "2024-11-27T10:30:00Z",
+      "updatedAt": "2024-11-27T10:30:00Z",
+      "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+      "period": "Ottobre - Dicembre 2024",
+      "metrics": [
+        { "channel": "LinkedIn", "contentType": "Post educativo", "ctr": 4.2, "engagement": 8.5, "impressions": 45000 },
+        { "channel": "LinkedIn", "contentType": "Case study", "ctr": 3.8, "engagement": 12.3, "impressions": 28000 },
+        { "channel": "Email", "contentType": "Newsletter", "ctr": 2.1, "conversions": 45 },
+        { "channel": "Blog", "contentType": "How-to guide", "ctr": 1.8, "impressions": 12000 },
+        { "channel": "Blog", "contentType": "Comparison post", "ctr": 2.4, "impressions": 8500 }
+      ],
+      "topPerformingContent": [
+        { "title": "5 Modi per Risparmiare Tempo con l'AI", "type": "LinkedIn post", "metric": "Engagement", "value": "15.2%" },
+        { "title": "Case Study: Come Acme Corp ha 3x il Content Output", "type": "Blog", "metric": "Conversioni", "value": "23" },
+        { "title": "Template: Prompt per Social Media", "type": "Resource", "metric": "Download", "value": "342" }
+      ],
+      "insights": [
+        "I post con numeri specifici performano 2x meglio",
+        "Il martedì mattina è il momento migliore per LinkedIn",
+        "I case study generano più conversioni dei how-to",
+        "Video sotto i 60 secondi hanno retention 3x maggiore"
+      ]
+    },
+    {
+      "id": "card-feedback-001",
+      "type": "feedback",
+      "title": "Onboarding troppo lungo",
+      "createdAt": "2024-11-27T10:30:00Z",
+      "updatedAt": "2024-11-27T10:30:00Z",
+      "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+      "source": "customer_feedback",
+      "summary": "Diversi utenti trial abbandonano durante l'onboarding perché percepito come troppo lungo.",
+      "details": "Analizzando i dati di 150 trial degli ultimi 30 giorni, il 34% abbandona durante il processo di onboarding. I feedback raccolti via Intercom indicano che gli utenti si aspettano di vedere valore in meno di 5 minuti, mentre il nostro onboarding attuale richiede circa 15 minuti.",
+      "actionItems": [
+        "Ridurre step onboarding da 8 a 4",
+        "Aggiungere opzione 'quick start' con default intelligenti",
+        "Mostrare primo output AI entro 2 minuti",
+        "A/B testare onboarding breve vs completo"
+      ],
+      "relatedCards": ["card-campaigns-001"],
+      "priority": "high"
+    },
+    {
+      "id": "card-feedback-002",
+      "type": "feedback",
+      "title": "A/B Test: CTA Button Color",
+      "createdAt": "2024-11-27T10:30:00Z",
+      "updatedAt": "2024-11-27T10:30:00Z",
+      "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+      "source": "ab_test",
+      "summary": "Il bottone CTA verde performa meglio del blu sulla landing page principale.",
+      "details": "Test condotto su 5.000 visitatori per 2 settimane. Variante A (blu): CTR 3.2%. Variante B (verde): CTR 4.1%. Differenza statisticamente significativa (p < 0.05). Il verde è più coerente con il nostro brand e comunica meglio 'azione positiva'.",
+      "actionItems": [
+        "Implementare CTA verde su tutte le landing page",
+        "Aggiornare design system con nuovo colore CTA primario",
+        "Testare stesso colore su email CTA"
+      ],
+      "priority": "medium"
+    }
+  ]
+}

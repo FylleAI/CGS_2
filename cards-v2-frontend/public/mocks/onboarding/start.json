@@ -1,0 +1,54 @@
+{
+  "session_id": "550e8400-e29b-41d4-a716-446655440000",
+  "trace_id": "trace-2024-onboarding-001",
+  "state": "awaiting_user",
+  "snapshot_summary": {
+    "company_name": "Fylle AI",
+    "industry": "Artificial Intelligence & SaaS",
+    "description": "Fylle is an AI-powered content generation platform that helps businesses create high-quality, brand-consistent content at scale. The platform combines advanced LLMs with deep company context to generate authentic content that resonates with target audiences.",
+    "target_audience": "Marketing teams, content managers, and business leaders in B2B tech companies",
+    "tone": "Professional, innovative, and educational",
+    "questions_count": 3
+  },
+  "clarifying_questions": [
+    {
+      "id": "q1",
+      "question": "What type of content do you primarily create or plan to create?",
+      "reason": "Understanding your content focus helps us tailor the generation to your specific use case and format preferences.",
+      "expected_response_type": "select",
+      "options": [
+        "LinkedIn posts and social media",
+        "Blog articles and long-form content",
+        "Email newsletters",
+        "Product descriptions and marketing copy",
+        "Technical documentation",
+        "Mixed content types"
+      ],
+      "required": true
+    },
+    {
+      "id": "q2",
+      "question": "Who is your primary target audience?",
+      "reason": "Knowing your audience allows us to adjust tone, complexity, and messaging to resonate with the right people.",
+      "expected_response_type": "string",
+      "required": true
+    },
+    {
+      "id": "q3",
+      "question": "How would you describe your brand voice and tone?",
+      "reason": "This ensures the generated content maintains consistency with your existing brand identity and communication style.",
+      "expected_response_type": "select",
+      "options": [
+        "Professional and formal",
+        "Casual and conversational",
+        "Technical and detailed",
+        "Inspiring and motivational",
+        "Educational and helpful",
+        "Playful and creative"
+      ],
+      "required": true
+    }
+  ],
+  "message": "Onboarding started for Fylle AI. Please answer the clarifying questions to help us understand your content needs better.",
+  "next_action": "POST /api/v1/onboarding/550e8400-e29b-41d4-a716-446655440000/answers"
+}

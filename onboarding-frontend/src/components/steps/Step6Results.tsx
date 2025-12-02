@@ -1,20 +1,14 @@
 /**
  * Step6Results Component
- * Metadata-driven rendering using Renderer Registry
  *
- * STABLE VERSION - Supports:
- * - company_snapshot: Full company profile card
- * - content_preview: Generic JSON fallback
+ * NEW: Shows generated cards from cards_output
+ * Uses CardsDebugView for minimal/debug visualization
  */
 
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import { rendererRegistry } from '@/renderers/RendererRegistry';
+import { CardsDebugView } from '../cards/CardsDebugView';
 import type { OnboardingSession } from '@/types/onboarding';
-
-// Import renderers to auto-register them
-import '@/renderers/ContentRenderer';
-import '@/renderers/CompanySnapshotRenderer';
 
 interface Step6ResultsProps {
   session: OnboardingSession;
@@ -25,44 +19,61 @@ export const Step6Results: React.FC<Step6ResultsProps> = ({
   session,
   onStartNew,
 }) => {
-  // Get display_type from CGS response content metadata (metadata-driven!)
-  const displayType = session.cgs_response?.content?.metadata?.display_type || 'content_preview';
+  // NEW: Get cards_output from session metadata
+  const cardsOutput = session.metadata?.cards_output || null;
 
-  console.log(`🎨 Step6Results: Rendering display_type="${displayType}"`);
+  console.log('🎴 Step6Results: cards_output =', cardsOutput);
+  console.log('🎴 Step6Results: session.metadata =', session.metadata);
 
-  // Get renderer from registry
-  const renderer = rendererRegistry.getRenderer(displayType);
+  // If no cards_output, show error with debug info
+  if (!cardsOutput) {
+    return (
+      <Box sx={{ p: 4, maxWidth: 800, mx: 'auto' }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, mb: 2 }}>
+          ⚠️ No Cards Generated
+        </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+          The session completed but no cards_output was found in metadata.
+        </Typography>
 
-  // Fallback if renderer not found
-  if (!renderer) {
-    console.warn(`⚠️ No renderer for "${displayType}", using content_preview fallback`);
-
-    const fallbackRenderer = rendererRegistry.getRenderer('content_preview');
-
-    if (!fallbackRenderer) {
-      return (
-        <Box sx={{ p: 4, textAlign: 'center' }}>
-          <Typography variant="h6" color="error">
-            ❌ Error: No renderer available
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Display type: {displayType}
-          </Typography>
+        {/* Debug info */}
+        <Box sx={{
+          p: 2,
+          backgroundColor: '#f5f5f5',
+          borderRadius: 1,
+          fontFamily: 'monospace',
+          fontSize: '0.8rem',
+          overflow: 'auto'
+        }}>
+          <strong>Session ID:</strong> {session.session_id}<br/>
+          <strong>State:</strong> {session.state}<br/>
+          <strong>Metadata keys:</strong> {session.metadata ? Object.keys(session.metadata).join(', ') : 'none'}<br/>
+          <pre>{JSON.stringify(session.metadata, null, 2)}</pre>
         </Box>
-      );
-    }
 
-    // Use fallback
-    const fallbackData = fallbackRenderer.dataExtractor(session);
-    const FallbackComponent = fallbackRenderer.component;
-    return <FallbackComponent session={session} data={fallbackData} onStartNew={onStartNew} />;
+        <Box sx={{ textAlign: 'center', mt: 4 }}>
+          <button
+            onClick={onStartNew}
+            style={{
+              padding: '12px 32px',
+              fontSize: '1rem',
+              fontWeight: 600,
+              backgroundColor: '#1976d2',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+            }}
+          >
+            Start New Onboarding
+          </button>
+        </Box>
+      </Box>
+    );
   }
 
-  // Extract data and render
-  const data = renderer.dataExtractor(session);
-  const RendererComponent = renderer.component;
-
-  return <RendererComponent session={session} data={data} onStartNew={onStartNew} />;
+  // Render cards using debug view
+  return <CardsDebugView cardsOutput={cardsOutput} onStartNew={onStartNew} />;
 };
 
 export default Step6Results;

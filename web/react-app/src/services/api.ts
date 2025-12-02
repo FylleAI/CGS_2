@@ -15,7 +15,7 @@ import { frontendLogger, EventType } from './logger';
 // Configure axios instance
 const api = axios.create({
   baseURL: API_BASE_URL, // Use direct API URL
-  timeout: 600000, // Increased to 10 minutes for complex workflows (Siebert, multi-agent)
+  timeout: 900000, // 15 minutes for complex workflows (Siebert 5-task multi-agent with Perplexity research)
   headers: {
     'Content-Type': 'application/json',
   },
@@ -657,7 +657,7 @@ export const apiService = {
 
     try {
       const response = await api.post<any>('/api/v1/content/generate', payload, {
-        timeout: 600000 // 10 minutes for complex workflows (Siebert multi-agent, Perplexity research)
+        timeout: 900000 // 15 minutes for complex 5-task workflows (Siebert multi-agent, Perplexity research)
       });
 
 	      // Debug: raw backend response for investigation

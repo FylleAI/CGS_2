@@ -132,3 +132,25 @@ def get_execute_onboarding_use_case() -> ExecuteOnboardingUseCase:
         auto_delivery=settings.enable_auto_delivery,
     )
 
+
+def get_create_cards_use_case():
+    """
+    Get create cards use case.
+
+    Note: Cards creation is handled inline in the endpoint using CardsClient.
+    This dependency exists for future refactoring to a proper use case pattern.
+    Returns None as the logic is currently in the endpoint.
+    """
+    return None
+
+
+# NEW: CardsGeneratorService
+@lru_cache()
+def get_cards_generator_service():
+    """Get CardsGeneratorService for V2 card generation."""
+    from onboarding.application.cards_generator_service import CardsGeneratorService
+    settings = get_settings()
+    if not settings.cards_generation_enabled:
+        return None
+    return CardsGeneratorService(settings)
+

@@ -3,16 +3,47 @@ Siebert Premium Newsletter workflow handler.
 Optimized workflow with Perplexity integration and 8-section Gen Z format.
 """
 
-import logging
 import json
+import logging
+import re
 from datetime import datetime
-
-from typing import Dict, Any, List
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from ..base.workflow_base import WorkflowHandler
 from ..registry import register_workflow
 
 logger = logging.getLogger(__name__)
+
+
+def load_client_newsletter_template(client_name: str) -> Optional[Dict[str, Any]]:
+    """Load newsletter template configuration for a client.
+
+    Args:
+        client_name: The client identifier (e.g., 'siebert')
+
+    Returns:
+        Dictionary with template configuration or None if not found
+    """
+    template_path = (
+        Path(__file__).resolve().parents[4]
+        / "data"
+        / "profiles"
+        / client_name
+        / "newsletter_template.json"
+    )
+
+    try:
+        with open(template_path, "r", encoding="utf-8") as f:
+            template = json.load(f)
+            logger.info(f"📋 Loaded newsletter template for {client_name}")
+            return template
+    except FileNotFoundError:
+        logger.warning(f"⚠️ Newsletter template not found for {client_name}: {template_path}")
+        return None
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ Invalid JSON in newsletter template for {client_name}: {e}")
+        return None
 
 
 @register_workflow("siebert_premium_newsletter")
@@ -66,66 +97,88 @@ class SiebertPremiumNewsletterHandler(WorkflowHandler):
         """Prepare context for Siebert premium newsletter."""
         context = super().prepare_context(context)
 
-        # Set Siebert-specific defaults
+        # Load client newsletter template for dynamic configuration
+        client_name = context.get("client_name", "siebert")
+        newsletter_template = load_client_newsletter_template(client_name)
+
+        # Store template in context for potential use by agents
+        if newsletter_template:
+            context["newsletter_template"] = newsletter_template
+            logger.info(f"📋 Newsletter template loaded for {client_name}")
+
+        # Basic defaults
         context.setdefault("target_word_count", 1000)
-        context.setdefault(
-            "exclude_topics", ["crypto day trading", "get rich quick", "penny stocks"]
-        )
         context.setdefault("cultural_trends", "")
         context.setdefault("research_timeframe", "last 7 days")
         context.setdefault("premium_sources", "")
         context.setdefault("custom_instructions", "")
-        context.setdefault("client_name", "siebert")
-        context.setdefault(
-            "client_profile", "siebert"
-        )  # Ensure consistent client identification
+        context.setdefault("client_name", client_name)
+        context.setdefault("client_profile", client_name)
 
-        # Branding and dating
+        # Date context
         now = datetime.now()
-        context.setdefault(
-            "current_date", now.strftime("%B %d, %Y")
-        )  # e.g., September 18, 2025
-        context.setdefault(
-            "current_month_year", now.strftime("%B %Y")
-        )  # e.g., September 2025
-        context.setdefault(
-            "community_name", "Wealthbuilder"
-        )  # enforce community brand name
-        context.setdefault(
-            "newsletter_title", "WEALTHBUILDER NEWSLETTER"
-        )  # title/header brand
+        context.setdefault("current_date", now.strftime("%B %d, %Y"))
+        context.setdefault("current_month_year", now.strftime("%B %Y"))
 
-        # Set Siebert target URLs for premium research (specific URLs instead of domains)
-        context.setdefault(
-            "siebert_target_urls",
-            "https://www.federalreserve.gov/newsevents/pressreleases/monetary|https://www.thedailyupside.com/finance/|https://www.thedailyupside.com/investments/|https://www.thedailyupside.com/economics/|https://www.thedailyupside.com/newsletter/|https://moneywithkatie.com/blog/category/investing|https://thehustle.co/news|https://www.morningbrew.com/tag/finance|https://www.morningbrew.com/tag/economy|https://blog.siebert.com/tag/daily-market#BlogListing|https://www.axios.com/newsletters/axios-markets|https://www.axios.com/newsletters/axios-macro|https://decrypt.co/|https://www.coindesk.com/",
-        )
+        # Dynamic values from template or fallback to defaults
+        if newsletter_template:
+            # Newsletter title from template
+            campaign_context = newsletter_template.get("campaign_context", "")
+            context.setdefault("newsletter_title", campaign_context or "WEALTHBUILDER NEWSLETTER")
 
-        # Calculate word count distribution for 8 sections (Siebert format)
-        total_words = context["target_word_count"]
-        context["siebert_section_word_counts"] = {
-            "community_greeting": int(total_words * 0.055),  # ~55 words
-            "feature_story": int(total_words * 0.30),  # ~300 words
-            "market_reality_check": int(total_words * 0.225),  # ~225 words
-            "by_the_numbers": int(total_words * 0.135),  # ~135 words
-            "your_move_this_week": int(total_words * 0.165),  # ~165 words
-            "community_corner": int(total_words * 0.07),  # ~70 words
-            "quick_links": int(total_words * 0.07),  # ~70 words (optional)
-            "sign_off": int(total_words * 0.035),  # ~35 words
-        }
+            # Exclude topics from template
+            content_req = newsletter_template.get("content_requirements", {})
+            template_exclude = content_req.get("exclude_topics", [])
+            context.setdefault("exclude_topics", template_exclude or ["crypto day trading", "get rich quick", "penny stocks"])
 
-        # Convert exclude_topics from string to array if needed
+            # Premium research sources from template
+            template_sources = content_req.get("premium_research_sources", [])
+            if template_sources and not context.get("siebert_target_urls"):
+                context["siebert_target_urls"] = "|".join(template_sources)
+                logger.info(f"📰 Loaded {len(template_sources)} premium sources from template")
+
+            # Section word counts from template sections
+            sections = newsletter_template.get("newsletter_structure", {}).get("sections", [])
+            if sections:
+                context["siebert_section_word_counts"] = self._calculate_section_word_counts(
+                    sections, context["target_word_count"]
+                )
+                logger.info("📊 Section word counts calculated from template")
+        else:
+            # Fallback to hardcoded defaults
+            context.setdefault("newsletter_title", "WEALTHBUILDER NEWSLETTER")
+            context.setdefault("exclude_topics", ["crypto day trading", "get rich quick", "penny stocks"])
+            context.setdefault(
+                "siebert_target_urls",
+                "https://www.federalreserve.gov/newsevents/pressreleases/monetary|"
+                "https://www.thedailyupside.com/finance/|https://www.thedailyupside.com/investments/|"
+                "https://www.thedailyupside.com/economics/|https://www.thedailyupside.com/newsletter/|"
+                "https://moneywithkatie.com/blog/category/investing|https://thehustle.co/news|"
+                "https://www.morningbrew.com/tag/finance|https://www.morningbrew.com/tag/economy|"
+                "https://blog.siebert.com/tag/daily-market#BlogListing|https://www.axios.com/newsletters/axios-markets|"
+                "https://www.axios.com/newsletters/axios-macro|https://decrypt.co/|https://www.coindesk.com/",
+            )
+            # Fallback word count distribution
+            total_words = context["target_word_count"]
+            context["siebert_section_word_counts"] = {
+                "intro_greeting": int(total_words * 0.055),
+                "feature_story": int(total_words * 0.30),
+                "market_reality_check": int(total_words * 0.225),
+                "by_the_numbers": int(total_words * 0.135),
+                "your_move_this_week": int(total_words * 0.165),
+                "reader_spotlight": int(total_words * 0.07),
+                "quick_links": int(total_words * 0.07),
+                "sign_off": int(total_words * 0.035),
+            }
+
+        # Process exclude_topics format
         exclude_topics = context.get("exclude_topics", [])
         if isinstance(exclude_topics, str) and exclude_topics:
             context["exclude_topics"] = [
                 topic.strip() for topic in exclude_topics.split(",") if topic.strip()
             ]
         elif not isinstance(exclude_topics, list):
-            context["exclude_topics"] = [
-                "crypto day trading",
-                "get rich quick",
-                "penny stocks",
-            ]
+            context["exclude_topics"] = ["crypto day trading", "get rich quick", "penny stocks"]
 
         # Ensure cultural_trends is a string
         if not isinstance(context.get("cultural_trends", ""), str):
@@ -134,29 +187,83 @@ class SiebertPremiumNewsletterHandler(WorkflowHandler):
         # Process premium sources
         premium_sources = context.get("premium_sources", "")
         if premium_sources and isinstance(premium_sources, str):
-            # Convert newline-separated sources to pipe-separated for tool calls
             sources_list = [s.strip() for s in premium_sources.split("\n") if s.strip()]
-            if sources_list:
-                context["premium_sources"] = "|".join(sources_list)
-                logger.info(f"🎯 Using {len(sources_list)} custom premium sources")
-            else:
-                context["premium_sources"] = ""
+            context["premium_sources"] = "|".join(sources_list) if sources_list else ""
         else:
             context["premium_sources"] = ""
 
         # Ensure research_timeframe is valid
-        valid_timeframes = ["last 7 days", "yesterday", "last month"]
-        if context.get("research_timeframe") not in valid_timeframes:
+        if context.get("research_timeframe") not in {"last 7 days", "yesterday", "last month"}:
             context["research_timeframe"] = "last 7 days"
 
-        logger.info(
-            f"🔧 Siebert newsletter context prepared for client: {context['client_name']}"
-        )
-        logger.info(
-            f"📊 8-section word counts: {context['siebert_section_word_counts']}"
-        )
+        logger.info(f"🔧 Siebert newsletter context prepared for client: {context['client_name']}")
+        logger.info(f"📊 8-section word counts: {context['siebert_section_word_counts']}")
 
         return context
+
+    def _calculate_section_word_counts(
+        self, sections: List[Dict[str, Any]], total_words: int
+    ) -> Dict[str, int]:
+        """Calculate word counts for each section based on template definition.
+
+        Args:
+            sections: List of section definitions from template
+            total_words: Total target word count
+
+        Returns:
+            Dictionary mapping section names to word counts
+        """
+        word_counts = {}
+        section_name_map = {
+            # New names (from updated template)
+            "Intro Greeting": "intro_greeting",
+            "Reader Spotlight": "reader_spotlight",
+            # Legacy names (for backward compatibility)
+            "Community Greeting": "intro_greeting",
+            "Community Corner": "reader_spotlight",
+            # Standard section names
+            "Feature Story": "feature_story",
+            "Market Reality Check": "market_reality_check",
+            "By The Numbers": "by_the_numbers",
+            "Your Move This Week": "your_move_this_week",
+            "Quick Links & Resources": "quick_links",
+            "Sign-off": "sign_off",
+        }
+
+        for section in sections:
+            section_name = section.get("name", "")
+            word_count_str = section.get("word_count", "")
+
+            # Parse word count range (e.g., "50-60 words" -> average 55)
+            if word_count_str:
+                numbers = re.findall(r"\d+", word_count_str)
+                if len(numbers) >= 2:
+                    avg_words = (int(numbers[0]) + int(numbers[1])) // 2
+                elif len(numbers) == 1:
+                    avg_words = int(numbers[0])
+                else:
+                    avg_words = 50
+
+                internal_name = section_name_map.get(section_name, section_name.lower().replace(" ", "_"))
+                word_counts[internal_name] = avg_words
+
+        # If template didn't provide all sections, use percentage-based fallback
+        if len(word_counts) < 8:
+            logger.warning("⚠️ Template missing some sections, using percentage fallback")
+            fallback = {
+                "intro_greeting": int(total_words * 0.055),
+                "feature_story": int(total_words * 0.30),
+                "market_reality_check": int(total_words * 0.225),
+                "by_the_numbers": int(total_words * 0.135),
+                "your_move_this_week": int(total_words * 0.165),
+                "reader_spotlight": int(total_words * 0.07),
+                "quick_links": int(total_words * 0.07),
+                "sign_off": int(total_words * 0.035),
+            }
+            for key, value in fallback.items():
+                word_counts.setdefault(key, value)
+
+        return word_counts
 
     def post_process_task(
         self, task_id: str, task_output: str, context: Dict[str, Any]

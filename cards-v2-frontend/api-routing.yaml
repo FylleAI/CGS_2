@@ -1,0 +1,90 @@
+  global:
+    version: v1
+    base_url: https://localhost:8443
+    #base_url: https://e36b7ba3-378d-4769-9d6b-b2b151c2c1eb-00-3bat4ho30ixhg.worf.replit.dev:8000/
+
+    mocks_path: ./public/mocks/
+
+  dashboard:
+    endpoints: REMOTE
+    
+  products:
+    endpoints: REMOTE
+
+  jobs:
+    endpoints: REMOTE
+
+  organizations:
+    endpoints: REMOTE
+
+  admin:
+    endpoints: REMOTE
+
+  admin-cache:
+    alias: admin/cache
+    endpoints: REMOTE
+
+  admin-settings-types:
+    alias: admin/settings/types
+    endpoints: REMOTE
+
+  admin-api-keys:
+    alias: admin/api-keys
+    endpoints: REMOTE
+
+  agentic-ai:
+    alias: agentic-ai/dashboard
+    endpoints: REMOTE
+
+  agents:
+    endpoints: REMOTE
+
+  agent-roles:
+    endpoints: REMOTE
+
+  workflows:
+    endpoints: REMOTE
+
+  executions:
+    endpoints: REMOTE
+
+  prompts:
+    endpoints: REMOTE
+
+  environments:
+    endpoints: REMOTE
+
+  ai:
+    alias: ai
+    endpoints: REMOTE
+  
+  ai-providers:
+    alias: ai/providers
+    endpoints: REMOTE
+
+  ai-provider-keys:
+    alias: ai/providers/keys
+    endpoints: REMOTE
+
+  ai-workspaces:
+    alias: ai/providers/workspaces
+    endpoints: REMOTE
+  
+  ai-workspace-providers:
+    alias: ai/providers/workspaces/*/providers
+    endpoints: REMOTE
+  
+  prompt-bricks:
+    endpoints: REMOTE
+
+  prompt-patterns:
+    alias: prompt/patterns
+    endpoints: REMOTE
+
+  prompt-meta-prompts:
+    alias: prompt/meta-prompts
+    endpoints: REMOTE
+
+  onboarding:
+    endpoints: LOCAL_MOCKS
+    mocks_path: ./public/mocks/onboarding/

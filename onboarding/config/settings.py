@@ -21,6 +21,15 @@ class OnboardingSettings(BaseSettings):
     # API settings
     onboarding_api_host: str = Field(default="0.0.0.0", env="ONBOARDING_API_HOST")
     onboarding_api_port: int = Field(default=8001, env="ONBOARDING_API_PORT")
+
+    # CORS settings
+    cors_origins: List[str] = Field(
+        default=["http://localhost:3003", "http://localhost:3000", "http://localhost:5173"],
+        env="CORS_ORIGINS"
+    )
+    cors_allow_credentials: bool = Field(default=True, env="CORS_ALLOW_CREDENTIALS")
+    cors_allow_methods: List[str] = Field(default=["*"], env="CORS_ALLOW_METHODS")
+    cors_allow_headers: List[str] = Field(default=["*"], env="CORS_ALLOW_HEADERS")
     
     # CGS integration
     cgs_api_url: str = Field(default="http://localhost:8000", env="CGS_API_URL")
@@ -68,14 +77,28 @@ class OnboardingSettings(BaseSettings):
     use_supabase: bool = Field(default=True, env="USE_SUPABASE")
     
     # Onboarding workflow settings
+    min_clarifying_questions: int = Field(
+        default=3, env="ONBOARDING_MIN_CLARIFYING_QUESTIONS"
+    )
     max_clarifying_questions: int = Field(
-        default=3, env="ONBOARDING_MAX_CLARIFYING_QUESTIONS"
+        default=5, env="ONBOARDING_MAX_CLARIFYING_QUESTIONS"
     )
     session_timeout_minutes: int = Field(
         default=60, env="ONBOARDING_SESSION_TIMEOUT_MINUTES"
     )
     enable_auto_delivery: bool = Field(
         default=True, env="ONBOARDING_ENABLE_AUTO_DELIVERY"
+    )
+
+    # Cards generation settings
+    cards_generation_enabled: bool = Field(
+        default=True, env="CARDS_GENERATION_ENABLED"
+    )
+    cards_default_language: str = Field(
+        default="it", env="CARDS_DEFAULT_LANGUAGE"
+    )
+    cards_generation_timeout: int = Field(
+        default=120, env="CARDS_GENERATION_TIMEOUT"
     )
     
     # Retry and resilience settings
