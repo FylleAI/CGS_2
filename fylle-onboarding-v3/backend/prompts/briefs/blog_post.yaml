@@ -1,0 +1,98 @@
+# Blog Post Brief Generation Prompts
+# Used for generating blog post editorial briefs
+
+prompts:
+  system:
+    template: |
+      You are an expert content strategist. Your task is to generate comprehensive editorial briefs for blog content.
+      
+      Briefs should be actionable, SEO-aware, and aligned with the brand's voice and strategy.
+      
+      Always respond in valid JSON format.
+
+  generate_questions:
+    template: |
+      Generate brief-specific questions for a Blog Post editorial brief.
+      
+      Company Context:
+      {{context}}
+      
+      Generate 5-8 multiple choice questions covering:
+      1. Blog post length preferences
+      2. Heading/subheading structure
+      3. Introduction style
+      4. Use of bullet points and lists
+      5. Image/visual requirements
+      6. SEO considerations
+      7. Internal linking strategy
+      8. CTA placement
+      
+      Response format:
+      {
+        "questions": [
+          {
+            "id": "string",
+            "question": "string",
+            "options": ["Option A", "Option B", "Option C", "Option D"],
+            "required": true,
+            "section": "brand_voice|editorial_structure|citations|non_negotiables",
+            "reason": "Why this question matters"
+          }
+        ]
+      }
+      
+      All questions MUST be multiple choice with 3-5 options.
+      Questions should be in Italian language.
+
+  generate_brief:
+    template: |
+      Generate a complete Blog Post Editorial Brief based on:
+      
+      Company Context:
+      {{context}}
+      
+      User Answers:
+      {{answers}}
+      
+      Create a comprehensive brief with:
+      
+      {
+        "purpose": "Brief purpose statement for blog content",
+        "nonNegotiables": {
+          "minWordCount": "Minimum word count",
+          "maxWordCount": "Maximum word count",
+          "requiredElements": ["List of required elements"]
+        },
+        "brandVoice": {
+          "voice": "Detailed voice description for blog",
+          "styleRules": ["List of style rules"],
+          "emojiPolicy": "Policy on emoji usage in blogs",
+          "opening": "How to open blog posts",
+          "bannedPhrasing": ["Phrases to avoid"]
+        },
+        "glossary": {
+          "term": "definition"
+        },
+        "editorialStructure": {
+          "format": "Overall format description",
+          "headingHierarchy": "H1, H2, H3 usage rules",
+          "sections": ["Typical section structure"],
+          "sectionDetails": {
+            "introduction": "How to write intro",
+            "body": "Body structure guidelines",
+            "conclusion": "Conclusion requirements"
+          }
+        },
+        "seoGuidelines": {
+          "keywordUsage": "How to use keywords",
+          "metaDescription": "Meta description guidelines",
+          "internalLinking": "Internal linking rules",
+          "externalLinking": "External linking rules"
+        },
+        "citationRules": {
+          "format": "How to format citations",
+          "placement": "Where to place citations",
+          "sources": ["Acceptable source types"],
+          "dateRules": "Rules for dating sources"
+        }
+      }

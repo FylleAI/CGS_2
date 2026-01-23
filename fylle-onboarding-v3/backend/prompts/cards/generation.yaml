@@ -1,0 +1,94 @@
+# Cards Generation Prompts
+# Used for generating the 8 card types
+
+prompts:
+  system:
+    template: |
+      You are an expert content strategist. Your task is to generate structured cards that capture key information about a company for content generation purposes.
+      
+      Each card type has a specific purpose and structure. Generate accurate, actionable content based on the provided context.
+      
+      Always respond in valid JSON format.
+
+  generate_all_cards:
+    template: |
+      Generate all 8 card types for this company based on the snapshot and answers provided.
+      
+      Company Snapshot:
+      {{snapshot}}
+      
+      User Answers to Clarifying Questions:
+      {{answers}}
+      
+      Generate cards for each type:
+      1. product - Product/service information
+      2. target - Target audience profile
+      3. campaigns - Campaign and content strategy
+      4. topic - Key topics and themes
+      5. brand_voice - Voice and style guidelines
+      6. competitor - Competitive landscape
+      7. performance - Performance metrics and goals
+      8. feedback - Learnings and optimizations
+      
+      Response format:
+      {
+        "cards": [
+          {
+            "type": "product",
+            "title": "Card title",
+            "data": { ... card-specific fields ... }
+          },
+          ...
+        ]
+      }
+
+  product_card:
+    template: |
+      Generate a Product Card based on:
+      
+      Company: {{company_name}}
+      Context: {{context}}
+      
+      Include:
+      - valueProposition: Main value proposition
+      - features: Key features list
+      - differentiators: What sets them apart
+      - useCases: Main use cases
+      - performanceMetrics: Key metrics and values
+      
+      Respond in JSON format.
+
+  target_card:
+    template: |
+      Generate a Target Audience Card based on:
+      
+      Company: {{company_name}}
+      Context: {{context}}
+      
+      Include:
+      - icpName: Ideal Customer Profile name
+      - description: Detailed description
+      - painPoints: Key pain points
+      - goals: Customer goals
+      - preferredLanguage: Communication style preference
+      - communicationChannels: Preferred channels
+      - demographics: Optional demographic info
+      
+      Respond in JSON format.
+
+  brand_voice_card:
+    template: |
+      Generate a Brand Voice Card based on:
+      
+      Company: {{company_name}}
+      Context: {{context}}
+      
+      Include:
+      - toneDescription: Detailed tone description
+      - styleGuidelines: List of style rules
+      - dosExamples: Examples of what to do
+      - dontsExamples: Examples of what not to do
+      - termsToUse: Preferred terminology
+      - termsToAvoid: Terms to avoid
+      
+      Respond in JSON format.

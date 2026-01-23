@@ -1,0 +1,86 @@
+# Newsletter Brief Generation Prompts
+# Used for generating newsletter editorial briefs
+
+prompts:
+  system:
+    template: |
+      You are an expert editorial strategist. Your task is to generate comprehensive editorial briefs for newsletter content.
+      
+      Briefs should be actionable, specific, and aligned with the brand's voice and strategy.
+      
+      Always respond in valid JSON format.
+
+  generate_questions:
+    template: |
+      Generate brief-specific questions for a Newsletter editorial brief.
+      
+      Company Context:
+      {{context}}
+      
+      Generate 5-8 multiple choice questions covering:
+      1. Emoji policy in newsletters
+      2. Opening/intro structure
+      3. Section formatting
+      4. Citation/source handling
+      5. CTA placement and style
+      6. Length preferences
+      7. Visual elements
+      
+      Response format:
+      {
+        "questions": [
+          {
+            "id": "string",
+            "question": "string",
+            "options": ["Option A", "Option B", "Option C", "Option D"],
+            "required": true,
+            "section": "brand_voice|editorial_structure|citations|non_negotiables",
+            "reason": "Why this question matters"
+          }
+        ]
+      }
+      
+      All questions MUST be multiple choice with 3-5 options.
+      Questions should be in Italian language.
+
+  generate_brief:
+    template: |
+      Generate a complete Newsletter Editorial Brief based on:
+      
+      Company Context:
+      {{context}}
+      
+      User Answers:
+      {{answers}}
+      
+      Create a comprehensive brief with:
+      
+      {
+        "purpose": "Brief purpose statement",
+        "nonNegotiables": {
+          "key": "value pairs of must-haves"
+        },
+        "brandVoice": {
+          "voice": "Detailed voice description",
+          "styleRules": ["List of style rules"],
+          "emojiPolicy": "Policy on emoji usage",
+          "opening": "How to open newsletters",
+          "bannedPhrasing": ["Phrases to avoid"]
+        },
+        "glossary": {
+          "term": "definition"
+        },
+        "editorialStructure": {
+          "format": "Overall format description",
+          "sections": ["Section names"],
+          "sectionDetails": {
+            "sectionName": "Details about section"
+          }
+        },
+        "citationRules": {
+          "format": "How to format citations",
+          "placement": "Where to place citations",
+          "sources": ["Acceptable source types"],
+          "dateRules": "Rules for dating sources"
+        }
+      }

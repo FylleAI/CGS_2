@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>Fylle - AI Marketing Platform</title>
+    <meta name="description" content="Enterprise AI Marketing platform for intelligent content generation, campaign automation, and marketing analytics with advanced AI capabilities." />
+
+    <!-- Open Graph tags for social sharing -->
+    <meta property="og:title" content="Fylle - AI Marketing Platform" />
+    <meta property="og:description" content="Advanced AI-powered marketing automation and content generation platform for modern enterprises." />
+    <meta property="og:type" content="website" />
+
+    <!-- Preload fonts for better performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- White Label Colors Bootstrap - Apply ONLY for draft mode (preview) -->
+    <script>
+    (function () {
+      try {
+        var org = localStorage.getItem('tenant:orgSlug') || 'fylle';
+        // Fallback: try to get orgSlug from other sources if tenant:orgSlug is not available
+        if (!org || org === 'fylle') {
+          // Try to get from Clerk or other sources
+          var clerkOrg = document.querySelector('[data-clerk-org-slug]')?.getAttribute('data-clerk-org-slug');
+          if (clerkOrg) org = clerkOrg;
+        }
+
+        // 🔥 FIX: Applica override da localStorage SOLO se in modalità draft
+        var isDraft = localStorage.getItem('wl:' + org + ':mode') === 'draft';
+        if (!isDraft) {
+          console.log('🎨 [BOOTSTRAP] White Label: No draft mode, skipping localStorage override');
+          return; // ⬅️ NON applicare override se non in bozza
+        }
+
+        var raw = localStorage.getItem('wl:' + org + ':colors');
+        if (!raw) return;
+
+        var colors = JSON.parse(raw);
+        var root = document.documentElement;
+
+        // Cleanup: rimuovi style tags esistenti per evitare duplicati
+        var existingLightStyle = document.getElementById('white-label-light-vars');
+        var existingDarkStyle = document.getElementById('white-label-dark-vars');
+        if (existingLightStyle) existingLightStyle.remove();
+        if (existingDarkStyle) existingDarkStyle.remove();
+
+        // PULIZIA PREVENTIVA: rimuovi qualunque variabile rimasta inline dall'html
+        try { document.documentElement.removeAttribute('style'); } catch {}
+
+        // Genera LIGHT theme in un <style> tag
+        var lightStyle = document.createElement('style');
+        lightStyle.id = 'white-label-light-vars';
+        document.head.appendChild(lightStyle);
+
+        var lightVars = Object.entries(colors)
+          .filter(function (entry) { return entry[1] && entry[1].light && entry[1].light.trim(); })
+          .map(function (entry) { return '  ' + entry[0] + ': ' + entry[1].light + ';'; })
+          .join('\n');
+
+        lightStyle.textContent = lightVars ? ':root {\n' + lightVars + '\n}' : '';
+
+        // Genera DARK theme in un <style> tag separato
+        var darkStyle = document.createElement('style');
+        darkStyle.id = 'white-label-dark-vars';
+        document.head.appendChild(darkStyle);
+
+        var darkVars = Object.entries(colors)
+          .filter(function (entry) { return entry[1] && entry[1].dark && entry[1].dark.trim(); })
+          .map(function (entry) { return '  ' + entry[0] + ': ' + entry[1].dark + ';'; })
+          .join('\n');
+
+        darkStyle.textContent = darkVars ? ':root.dark {\n' + darkVars + '\n}' : '';
+
+        console.log('🎨 [BOOTSTRAP] White Label colors applied globally from localStorage for org:', org);
+        console.log('🎨 [BOOTSTRAP] Applied colors:', Object.keys(colors).length, 'variables');
+      } catch (e) {
+        console.warn('⚠️ [BOOTSTRAP] Could not apply White Label colors:', e);
+      }
+    })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

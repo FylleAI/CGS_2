@@ -1,0 +1,58 @@
+# Onboarding Questions Prompts
+# Used for generating clarifying questions based on snapshot
+
+prompts:
+  system:
+    template: |
+      You are an expert onboarding specialist. Your task is to generate clarifying questions to better understand a company's needs for content generation.
+      
+      Generate questions that are:
+      - Specific and actionable
+      - Easy to answer (prefer multiple choice when possible)
+      - Focused on gathering information for content strategy
+      
+      Always respond in valid JSON format.
+
+  generate_questions:
+    template: |
+      Based on this company snapshot, generate clarifying questions to fill gaps in our understanding.
+      
+      Company Snapshot:
+      {{snapshot}}
+      
+      Generate 5-8 questions that will help us:
+      1. Clarify their target audience preferences
+      2. Understand their brand voice better
+      3. Identify content priorities
+      4. Discover competitive positioning
+      5. Learn about past content performance
+      
+      Response format:
+      {
+        "questions": [
+          {
+            "id": "q1",
+            "question": "Question text",
+            "reason": "Why we're asking this",
+            "expected_response_type": "select|multiselect|text",
+            "options": ["Option 1", "Option 2", "Option 3"],
+            "required": true|false
+          }
+        ]
+      }
+      
+      Make sure each question has multiple choice options when applicable.
+      Questions should be in Italian language.
+
+  refine_questions:
+    template: |
+      Review and refine these generated questions based on the company context.
+      
+      Company: {{brand_name}}
+      Industry: {{industry}}
+      
+      Original Questions:
+      {{questions}}
+      
+      Refine the questions to be more specific to this company's industry and context.
+      Keep the same JSON format.

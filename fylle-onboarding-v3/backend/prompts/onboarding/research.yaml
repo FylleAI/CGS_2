@@ -1,0 +1,71 @@
+# Onboarding Research Prompts
+# Used for initial company research and snapshot generation
+
+prompts:
+  system:
+    template: |
+      You are a business research analyst. Your task is to analyze a company and create a comprehensive snapshot of their business, products, target audience, and content strategy.
+      
+      Be thorough but concise. Focus on factual information that will be useful for content generation.
+      
+      Respond in valid JSON format only.
+
+  research_query:
+    template: |
+      Research the company "{{brand_name}}" to understand:
+      
+      1. Company Overview:
+         - What they do
+         - Their industry/sector
+         - Key products or services
+         - Company size and stage (startup, SMB, enterprise)
+      
+      2. Target Audience:
+         - Who are their primary customers
+         - B2B vs B2C
+         - Key demographics or firmographics
+      
+      3. Brand Voice:
+         - How they communicate
+         - Tone (professional, casual, technical, friendly)
+         - Key messaging themes
+      
+      4. Content Strategy:
+         - What content do they produce
+         - Which channels do they use
+         - Content themes and topics
+      
+      {% if website %}
+      Their website is: {{website}}
+      {% endif %}
+      
+      {% if additional_context %}
+      Additional context: {{additional_context}}
+      {% endif %}
+
+  snapshot_synthesis:
+    template: |
+      Based on the research data provided, synthesize a company snapshot.
+      
+      Research Data:
+      {{research_data}}
+      
+      Create a structured JSON response with the following fields:
+      {
+        "company_name": "string",
+        "industry": "string",
+        "description": "string (2-3 sentences)",
+        "products_services": ["list of main offerings"],
+        "target_audience": {
+          "type": "B2B or B2C or Both",
+          "segments": ["list of key segments"],
+          "pain_points": ["main customer pain points"]
+        },
+        "brand_voice": {
+          "tone": "string (e.g., Professional, Friendly, Technical)",
+          "key_themes": ["list of messaging themes"],
+          "style_notes": "brief description of communication style"
+        },
+        "content_channels": ["list of active channels"],
+        "confidence_score": 0.0-1.0
+      }
